@@ -1,0 +1,39 @@
+{ "frames": {
+   "seat": {
+    "frame": { "x": 0, "y": 0, "w": 467, "h": 539 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 230, "y": 320, "w": 467, "h": 539 },
+    "sourceSize": { "w": 960, "h": 960 },
+    "duration": 100
+   },
+   "torso": {
+    "frame": { "x": 469, "y": 0, "w": 293, "h": 246 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 312, "y": 254, "w": 293, "h": 246 },
+    "sourceSize": { "w": 960, "h": 960 },
+    "duration": 100
+   },
+   "head": {
+    "frame": { "x": 764, "y": 0, "w": 140, "h": 156 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 337, "y": 124, "w": 140, "h": 156 },
+    "sourceSize": { "w": 960, "h": 960 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.3.18.6-dev",
+  "image": "sheet.png",
+  "format": "RGBA8888",
+  "size": { "w": 904, "h": 539 },
+  "scale": "1",
+  "slices": [
+   { "name": "torso", "keys": [{ "frame": 0, "bounds": {"x": 312, "y": 254, "w": 293, "h": 260 }, "pivot": {"x": 79, "y": 259 } }] },
+   { "name": "head", "keys": [{ "frame": 0, "bounds": {"x": 337, "y": 124, "w": 140, "h": 162 }, "pivot": {"x": 60, "y": 161 } }] }
+  ]
+ }
+}
