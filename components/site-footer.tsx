@@ -21,7 +21,15 @@ const GROUPS = [
 
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-rule bg-surface/50">
+    <footer className="bg-surface/50">
+      {/* The five dyes, edge to edge, like the selvage of a batik cloth. */}
+      <div className="flex h-1.5" aria-hidden>
+        <span className="flex-[3] bg-accent" />
+        <span className="flex-1 bg-daun" />
+        <span className="flex-1 bg-kunyit" />
+        <span className="flex-1 bg-mengkudu" />
+        <span className="flex-1 bg-ungu" />
+      </div>
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr]">
         <div className="max-w-sm">
           <Logo />
