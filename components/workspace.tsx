@@ -35,7 +35,7 @@ import {
 } from './icons';
 import { openMiniMonitor, usePipSupported } from './mini-monitor';
 import Onboarding from './onboarding';
-import PostureFigure, { FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TILT_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
+import PostureFigure, { FigurePicker, FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TILT_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
 import RoutineRunner from './routine';
 import { Badge, Meter, Stat } from './ui';
 import { ConfirmDialog, Segmented, Switch, Tabs } from './ui-client';
@@ -431,7 +431,7 @@ export default function Workspace() {
           <section aria-label="Postur langsung" className="min-w-0 space-y-4">
             <div className="stage card relative overflow-hidden">
               <div className="mx-auto aspect-[1150/1180] max-h-[52vh] w-full lg:max-h-[60vh]">
-                <PostureFigure posture={posture} />
+                <PostureFigure posture={posture} who={prefs.figure} />
               </div>
               <div className="absolute top-3 left-3 flex flex-col items-start gap-2">
                 <span className="chip">Tampak samping</span>
@@ -439,7 +439,7 @@ export default function Workspace() {
               </div>
               <figure className="card absolute top-3 right-3 w-[30%] max-w-48 min-w-24 p-1.5">
                 <div className="relative aspect-[560/760] rounded-xl bg-surface">
-                  <FrontFigure posture={sideOnly ? null : posture} />
+                  <FrontFigure posture={sideOnly ? null : posture} who={prefs.figure} />
                   {sideOnly && (
                     <p className="absolute inset-0 grid place-items-center rounded-xl bg-raised/85 p-2 text-center text-[11px] leading-snug font-semibold text-muted">
                       Tidak terukur dari kamera samping
@@ -712,6 +712,9 @@ export default function Workspace() {
 
               {tab === 'settings' && (
                 <>
+                  <Field label="Figur">
+                    <FigurePicker value={prefs.figure} onChange={(figure) => update({ figure })} />
+                  </Field>
                   <div className="space-y-4 rounded-xl bg-surface p-4">
                     <p className="text-pretty">
                       <span className="font-semibold">Dua monitor? </span>
@@ -819,7 +822,7 @@ export default function Workspace() {
             {overlays}
             <main className="flex h-dvh flex-col gap-2.5 p-3">
               <div className="stage relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-rule">
-                <PostureFigure posture={posture} />
+                <PostureFigure posture={posture} who={prefs.figure} />
                 {posture && (
                   <div className="absolute top-2 left-2">
                     <StatePill posture={posture} threshold={S.drift} small />
@@ -827,7 +830,7 @@ export default function Workspace() {
                 )}
                 <div className="absolute top-2 right-2 w-[30%] rounded-xl border border-rule bg-raised p-1">
                   <div className="aspect-[560/760] rounded-lg bg-surface">
-                    <FrontFigure posture={sideOnly ? null : posture} />
+                    <FrontFigure posture={sideOnly ? null : posture} who={prefs.figure} />
                   </div>
                 </div>
               </div>
