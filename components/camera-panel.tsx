@@ -17,14 +17,14 @@ const CALIBRATE_MS = 4000;
 const PLACEMENT: Record<CameraView, { title: string; body: string; reads: string; misses?: string }> = {
   front: {
     title: 'Kamera di atas layar',
-    body: 'Sejajar mata, seperti webcam laptop biasa.',
-    reads: 'Condong ke depan, miring ke samping, kepala miring, dan kedipan.',
+    body: 'Sejajar mata, kayak webcam laptop biasa.',
+    reads: 'Bungkuk ke depan, miring ke samping, kepala miring, dan kedipan.',
   },
   side: {
     title: 'Kamera di samping',
-    body: 'Di kiri atau kanan, setinggi bahu, 1 sampai 2 meter dari kursi, sampai telinga, bahu, dan pinggul terlihat.',
-    reads: 'Sudut leher dan punggung secara langsung, lebih akurat untuk condong ke depan.',
-    misses: 'Miring ke samping dan kedipan tidak terukur dari posisi ini.',
+    body: 'Di kiri atau kanan, setinggi bahu, 1 sampai 2 meter dari kursi, sampai telinga, bahu, dan pinggul kelihatan.',
+    reads: 'Sudut leher dan punggung langsung, lebih akurat buat bungkuk ke depan.',
+    misses: 'Miring ke samping dan kedipan nggak kebaca dari posisi ini.',
   },
 };
 
@@ -61,12 +61,12 @@ export default function CameraPanel({ camera, onStart, onStop, calibrated, calib
     const ok = await calibrate(CALIBRATE_MS);
     clearInterval(id);
     setProgress(null);
-    if (ok) toast('Kalibrasi tersimpan. Pelacakan postur dimulai.');
+    if (ok) toast('Kalibrasi kesimpan. Postur mulai dicek.');
     else
       setCalError(
         view === 'front'
-          ? 'Wajahmu kurang lama terlihat. Hadap ke layar dengan cahaya dari depan, lalu coba lagi.'
-          : 'Telinga, bahu, dan pinggul kurang lama terlihat. Mundurkan kamera atau naikkan sedikit, lalu coba lagi.',
+          ? 'Wajahmu kurang lama kelihatan. Hadap ke layar, cahayanya dari depan, terus coba lagi.'
+          : 'Telinga, bahu, dan pinggul kurang lama kelihatan. Mundurin kamera atau naikin dikit, terus coba lagi.',
       );
   }
 
@@ -120,7 +120,7 @@ export default function CameraPanel({ camera, onStart, onStop, calibrated, calib
         <div className="space-y-4 border-t border-rule pt-5">
           <p className="flex gap-3 text-sm text-muted text-pretty">
             <IconLock className="mt-0.5 size-4 shrink-0 text-accent" />
-            Setiap frame dianalisis di tab ini lalu dibuang. Yang disimpan hanya sudut dan waktu kedip, sebagai angka di memori.
+            Tiap gambar dicek di tab ini lalu dibuang. Yang disimpan cuma sudut dan waktu kedip, berupa angka di memori.
           </p>
           {camera.state === 'error' && (
             <p className="flex gap-2 text-sm text-alert-ink">
@@ -130,7 +130,7 @@ export default function CameraPanel({ camera, onStart, onStop, calibrated, calib
           )}
           <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={onStart}>
             <IconCamera className="size-4" />
-            {camera.state === 'error' ? 'Coba lagi' : 'Nyalakan kamera'}
+            {camera.state === 'error' ? 'Coba lagi' : 'Nyalain kamera'}
           </button>
         </div>
       ) : (
@@ -140,23 +140,23 @@ export default function CameraPanel({ camera, onStart, onStop, calibrated, calib
               ref={slot}
               className="grid aspect-[4/3] w-32 shrink-0 place-items-center overflow-hidden rounded-xl bg-surface text-center text-xs text-muted sm:w-36 [&>video]:h-full [&>video]:w-full [&>video]:-scale-x-100 [&>video]:object-cover"
             >
-              {camera.state === 'starting' && <span className="px-2">Menyalakan…</span>}
-              {previewElsewhere && <span className="px-2">Pratinjau ada di monitor mini</span>}
+              {camera.state === 'starting' && <span className="px-2">Nyalain…</span>}
+              {previewElsewhere && <span className="px-2">Videonya ada di jendela kecil</span>}
             </div>
             <div className="space-y-2 text-sm">
               {camera.state === 'starting' ? (
-                <p className="text-muted">Memuat model {view === 'front' ? 'wajah (4 MB)' : 'tubuh (6 MB)'}, hanya pertama kali.</p>
+                <p className="text-muted">Ngambil model {view === 'front' ? 'wajah (4 MB)' : 'badan (6 MB)'}, cuma sekali di awal.</p>
               ) : calibrated ? (
                 <>
                   <Badge tone="accent" icon={IconCheck}>
                     Terkalibrasi
                   </Badge>
-                  <p className="text-muted">Kalibrasi ulang kalau kamera atau kursi berpindah.</p>
+                  <p className="text-muted">Kalibrasi ulang kalau kamera atau kursinya pindah.</p>
                 </>
               ) : (
                 <>
                   <Badge tone="alert">Belum dikalibrasi</Badge>
-                  <p className="text-muted">Duduk tegak di posisi kerja biasa, lalu tekan Kalibrasi.</p>
+                  <p className="text-muted">Duduk tegak kayak biasa kerja, terus tekan Kalibrasi.</p>
                 </>
               )}
             </div>

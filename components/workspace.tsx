@@ -44,14 +44,14 @@ const noop = () => () => {};
 type Tab = 'track' | 'breaks' | 'evening' | 'settings';
 
 const SENSITIVITY_NOTE: Record<Sensitivity, string> = {
-  gentle: 'Hanya menandai condong atau miring yang jelas, setelah sekitar 16 detik.',
-  balanced: 'Menandai condong atau miring sedang, setelah sekitar 10 detik.',
-  strict: 'Menandai pergeseran kecil, setelah sekitar 6 detik.',
+  gentle: 'Cuma nandain bungkuk atau miring yang jelas, setelah sekitar 16 detik.',
+  balanced: 'Nandain bungkuk atau miring sedang, setelah sekitar 10 detik.',
+  strict: 'Geser dikit aja ketahuan, setelah sekitar 6 detik.',
 };
 
 const CUE_TEXT: Record<Routine, [string, string]> = {
-  eye: ['Waktunya istirahat mata 20 detik.', 'Lihat benda yang jauh dan kedipkan mata penuh.'],
-  reset: ['Waktunya peregangan 60 detik.', 'Leher, bahu, dan mata, dipandu langkah demi langkah.'],
+  eye: ['Waktunya istirahat mata 20 detik.', 'Lihat yang jauh, terus kedip penuh.'],
+  reset: ['Waktunya stretching 60 detik.', 'Leher, bahu, dan mata, dipandu satu-satu.'],
 };
 
 /** Which way the posture has moved most: forward, sideways, or a head tilt. */
@@ -66,42 +66,42 @@ function dominant(p: Posture) {
 function postureWord(p: Posture, threshold: number) {
   const drift = driftOf(p);
   if (drift < threshold * 0.45) return 'Tegak';
-  if (drift < threshold) return 'Mulai bergeser';
+  if (drift < threshold) return 'Mulai geser';
   const d = dominant(p);
-  return d.kind === 'forward' ? 'Condong ke depan' : d.kind === 'side' ? `Miring ke ${d.dir}` : `Kepala miring ke ${d.dir}`;
+  return d.kind === 'forward' ? 'Bungkuk ke depan' : d.kind === 'side' ? `Miring ke ${d.dir}` : `Kepala miring ke ${d.dir}`;
 }
 
 function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: boolean, routine: Routine | null, view: CameraView) {
-  if (routine) return 'Jeda sedang berjalan. Pendar tepi berhenti sampai selesai.';
-  if (snap.away) return 'Kamu sedang menjauh dari layar. Waktu ini tidak dihitung sebagai waktu layar, dan menjadi jeda.';
-  if (mode === 'timer') return 'Mode timer: jeda datang sesuai jadwal. Postur dan kedipan tidak dilacak.';
-  if (mode === 'camera' && !cameraOn) return 'Kamera mati. Nyalakan di tab Pelacakan, atau pakai mode timer.';
-  if (mode === 'camera' && !calibrated) return 'Kalibrasi sekali agar Niskala tahu posisi tegakmu.';
+  if (routine) return 'Lagi jeda. Pinggir layar nggak bakal nyala sampai selesai.';
+  if (snap.away) return 'Kamu lagi nggak di depan layar. Waktu ini nggak dihitung waktu layar, tapi jadi jeda.';
+  if (mode === 'timer') return 'Mode timer: jeda datang sesuai jadwal. Postur dan kedipan nggak dicek.';
+  if (mode === 'camera' && !cameraOn) return 'Kamera mati. Nyalain di tab Mode, atau pakai mode timer.';
+  if (mode === 'camera' && !calibrated) return 'Kalibrasi sekali dulu biar Niskala tahu posisi tegakmu.';
   if (mode === 'camera' && !snap.posture)
     return view === 'front'
-      ? 'Wajah tidak terlihat. Pelacakan lanjut saat kamu kembali.'
-      : 'Telinga, bahu, atau pinggul tidak terlihat. Pelacakan lanjut saat badanmu kembali masuk bingkai.';
-  if (snap.glow > 0 && snap.driftFor === 0 && snap.lowBlinkFor === 0) return 'Sudah kembali baik. Pendar memudar dalam beberapa detik.';
+      ? 'Wajahmu nggak kelihatan. Lanjut lagi pas kamu balik.'
+      : 'Telinga, bahu, atau pinggul nggak kelihatan. Lanjut lagi pas badanmu masuk bingkai.';
+  if (snap.glow > 0 && snap.driftFor === 0 && snap.lowBlinkFor === 0) return 'Udah bagus lagi. Pinggir layar padam sebentar lagi.';
   if (snap.glow > 0 && snap.postureStrain >= snap.eyeStrain && snap.posture) {
     const d = dominant(snap.posture);
     // Right after a break the timer restarts while the glow is still fading; skip a "0 dtk" duration.
     const t = snap.driftFor >= 1 ? ` selama ${duration(snap.driftFor)}` : '';
-    if (d.kind === 'forward') return `Tepi layar berpendar karena kamu condong ke depan${t}. Duduk tegak, atau lakukan peregangan 60 detik.`;
-    if (d.kind === 'side') return `Tepi layar berpendar karena badanmu miring ke ${d.dir}${t}. Geser duduk ke tengah kursi.`;
-    return `Tepi layar berpendar karena kepalamu miring ke ${d.dir}${t}. Luruskan leher dan sejajarkan layar dengan mata.`;
+    if (d.kind === 'forward') return `Pinggir layar nyala karena kamu bungkuk ke depan${t}. Duduk tegak, atau stretching 60 detik.`;
+    if (d.kind === 'side') return `Pinggir layar nyala karena badanmu miring ke ${d.dir}${t}. Geser duduk ke tengah kursi.`;
+    return `Pinggir layar nyala karena kepalamu miring ke ${d.dir}${t}. Luruskan leher, terus sejajarin layar sama mata.`;
   }
   if (snap.glow > 0)
-    return `Tepi layar berpendar karena kamu hanya berkedip ${Math.round(snap.blinkRate ?? 0)} kali per menit${snap.lowBlinkFor >= 1 ? ` selama ${duration(snap.lowBlinkFor)}` : ''}. Kedipkan mata penuh atau lihat jauh sebentar.`;
-  if (snap.driftFor > 0) return 'Postur mulai bergeser. Pendar hanya muncul kalau berlangsung lama.';
-  if (snap.lowBlinkFor > 0) return 'Kedipan melambat. Pendar hanya muncul kalau terus rendah.';
-  return 'Tegak dan berkedip normal. Tidak ada yang perlu diperhatikan.';
+    return `Pinggir layar nyala karena kamu cuma ngedip ${Math.round(snap.blinkRate ?? 0)} kali per menit${snap.lowBlinkFor >= 1 ? ` selama ${duration(snap.lowBlinkFor)}` : ''}. Kedip penuh, atau lihat jauh sebentar.`;
+  if (snap.driftFor > 0) return 'Postur mulai geser. Pinggir layar baru nyala kalau kelamaan.';
+  if (snap.lowBlinkFor > 0) return 'Kedipan mulai jarang. Pinggir layar baru nyala kalau terus begitu.';
+  return 'Tegak, ngedip normal. Aman.';
 }
 
 function nextBreak(snap: Snapshot) {
   if (snap.cue) return { value: 'Sekarang', detail: ROUTINES[snap.cue].short.toLowerCase() };
   const opts = [
     snap.nextEyeS !== null ? { s: snap.nextEyeS, what: 'istirahat mata' } : null,
-    snap.nextResetS !== null ? { s: snap.nextResetS, what: 'peregangan' } : null,
+    snap.nextResetS !== null ? { s: snap.nextResetS, what: 'stretching' } : null,
   ].filter((o) => o !== null);
   if (!opts.length) return { value: 'Mati', detail: 'tanpa jadwal' };
   const n = opts.reduce((a, b) => (b.s < a.s ? b : a));
@@ -110,11 +110,11 @@ function nextBreak(snap: Snapshot) {
 
 function guidance(snap: Snapshot, bedtime: number) {
   const { stage, minutesToBed } = snap.night;
-  if (stage === 'day') return `Layar mulai menghangat pukul ${hhmm((bedtime + 1440 - 120) % 1440)}, dua jam sebelum jam tidurmu (${hhmm(bedtime)}).`;
+  if (stage === 'day') return `Layar mulai hangat jam ${hhmm((bedtime + 1440 - 120) % 1440)}, dua jam sebelum jam tidurmu (${hhmm(bedtime)}).`;
   if (stage === 'wind-down')
-    return `${minutesToBed} menit lagi menuju jam tidur. Selesaikan tugas yang sedang dikerjakan dan simpan tugas baru untuk besok. Catat di mana kamu berhenti agar besok mudah melanjutkan.`;
+    return `${minutesToBed} menit lagi jam tidur. Beresin yang lagi dikerjain, tugas baru simpan buat besok. Catat kamu berhenti di mana biar besok gampang lanjut.`;
   const ran = snap.session ? minutes(snap.session.active_s) : '';
-  return `Sudah ${-minutesToBed} menit lewat jam tidurmu, dan sesi ini berjalan ${ran}. Layar terang selarut ini menunda kantuk. Simpan pekerjaan dan berhenti di jeda berikutnya.`;
+  return `Udah ${-minutesToBed} menit lewat jam tidurmu, dan sesi ini jalan ${ran}. Layar terang jam segini bikin susah ngantuk. Simpan kerjaanmu dan berhenti di jeda berikutnya.`;
 }
 
 function StatePill({ posture, threshold, small = false }: { posture: Posture; threshold: number; small?: boolean }) {
@@ -257,7 +257,7 @@ export default function Workspace() {
       w.addEventListener('pagehide', () => setPip(null), { once: true });
       setPip(w);
     } catch {
-      toast('Jendela mengambang diblokir browser. Izinkan pop-up untuk situs ini, lalu coba lagi.', 'info');
+      toast('Jendela kecil diblokir browser. Izinin pop-up buat situs ini, terus coba lagi.', 'info');
     }
   }
 
@@ -266,9 +266,9 @@ export default function Workspace() {
     if (await allowNotifications()) {
       // Read fresh prefs: the permission prompt may have taken a while.
       prefsStore.set({ ...prefsStore.get(), notify: true });
-      toast('Notifikasi desktop aktif.');
+      toast('Notifikasi desktop nyala.');
     } else {
-      toast('Izin notifikasi ditolak. Aktifkan dari pengaturan situs di browser.', 'info');
+      toast('Izin notifikasi ditolak. Nyalain dari pengaturan situs di browser.', 'info');
     }
   }
 
@@ -283,13 +283,13 @@ export default function Workspace() {
   function stopRoutine() {
     if (!routine) return;
     mon.snooze(routine);
-    toast('Jeda dihentikan. Diingatkan lagi 5 menit lagi.', 'info');
+    toast('Jeda distop. Diingetin lagi 5 menit lagi.', 'info');
     setRoutine(null);
   }
 
   function snooze(kind: Routine) {
     mon.snooze(kind);
-    toast('Diingatkan lagi 5 menit lagi.', 'info');
+    toast('Oke, diingetin lagi 5 menit lagi.', 'info');
   }
 
   useEffect(() => {
@@ -316,7 +316,7 @@ export default function Workspace() {
   useEffect(() => {
     const t = snap.returnedAfter;
     if (t === null || t < 120) return;
-    toast(`Selamat datang kembali. ${minutes(t)} menjauh dihitung sebagai ${t >= 300 ? 'peregangan' : 'istirahat mata'}.`);
+    toast(`Selamat datang lagi. ${minutes(t)} tadi dihitung ${t >= 300 ? 'stretching' : 'istirahat mata'}.`);
   }, [snap.returnedAfter]);
 
   const onKey = useEffectEvent((e: KeyboardEvent) => {
@@ -347,9 +347,9 @@ export default function Workspace() {
     : snap.cue
       ? 'Waktunya jeda · Niskala'
       : snap.glow > 0
-        ? `${snap.postureStrain >= snap.eyeStrain && snap.posture ? postureWord(snap.posture, S.drift) : 'Kedip rendah'} · Niskala`
+        ? `${snap.postureStrain >= snap.eyeStrain && snap.posture ? postureWord(snap.posture, S.drift) : 'Kedip jarang'} · Niskala`
         : snap.away
-          ? 'Sedang menjauh · Niskala'
+          ? 'Lagi pergi · Niskala'
           : 'Ruang Kerja · Niskala';
   // A side camera sees the profile: forward lean only, no sideways lean or blinks.
   const sideOnly = mode === 'camera' && view === 'side';
@@ -361,7 +361,7 @@ export default function Workspace() {
   };
   const modeBadge =
     mode === 'camera'
-      ? { text: cameraOn ? 'Kamera aktif · di perangkat' : 'Kamera mati', icon: IconCamera }
+      ? { text: cameraOn ? 'Kamera nyala · di perangkat' : 'Kamera mati', icon: IconCamera }
       : mode === 'timer'
         ? { text: 'Mode timer', icon: IconTimer }
         : { text: 'Mode demo', icon: IconSliders };
@@ -418,11 +418,11 @@ export default function Workspace() {
           <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
             <button type="button" className="btn btn-sm flex-1 sm:flex-none" disabled={routine !== null} onClick={() => setRoutine('reset')}>
               <IconStretch className="size-4" />
-              Peregangan 60 dtk
+              Stretching 60 dtk
             </button>
             <button type="button" className="btn btn-sm flex-1 sm:flex-none" onClick={toggleMini} aria-pressed={pip !== null}>
               <IconPip className="size-4" />
-              {pip ? 'Tutup jendela mengambang' : 'Jendela mengambang'}
+              {pip ? 'Tutup jendela kecil' : 'Jendela kecil'}
             </button>
           </div>
         </div>
@@ -433,19 +433,19 @@ export default function Workspace() {
               <div className="mx-auto aspect-[1150/1180] max-h-[52vh] w-full lg:max-h-[60vh]">
                 <PostureFigure posture={posture} who={prefs.figure} />
               </div>
-              <div className="absolute top-3 left-3 flex flex-col items-start gap-2">
-                <span className="chip">Tampak samping</span>
-                {posture && <StatePill posture={posture} threshold={S.drift} />}
-              </div>
+              {posture && (
+                <div className="absolute top-3 left-3">
+                  <StatePill posture={posture} threshold={S.drift} />
+                </div>
+              )}
               <figure className="card absolute top-3 right-3 w-[30%] max-w-48 min-w-24 p-1.5">
                 <div className="relative aspect-[560/760] rounded-xl bg-surface">
                   <FrontFigure posture={sideOnly ? null : posture} who={prefs.figure} />
                   {sideOnly && (
                     <p className="absolute inset-0 grid place-items-center rounded-xl bg-raised/85 p-2 text-center text-[11px] leading-snug font-semibold text-muted">
-                      Tidak terukur dari kamera samping
+                      Nggak kebaca dari kamera samping
                     </p>
                   )}
-                  <span className="chip absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px]">Depan</span>
                 </div>
               </figure>
               {deg && (
@@ -461,7 +461,7 @@ export default function Workspace() {
 
             {routine ? (
               pip ? (
-                <p className="card p-4 text-muted">{ROUTINES[routine].title} sedang berjalan di jendela mengambang.</p>
+                <p className="card p-4 text-muted">{ROUTINES[routine].title} lagi jalan di jendela kecil.</p>
               ) : (
                 runner
               )
@@ -475,16 +475,16 @@ export default function Workspace() {
                 {tracked && (
                   <div className="card grid gap-5 p-4 sm:grid-cols-2">
                     <Meter
-                      label="Ketegangan postur"
+                      label="Tegang di postur"
                       value={snap.postureStrain}
                       threshold={0.3}
-                      hint={snap.glow > 0 && snap.postureStrain >= snap.eyeStrain ? 'tepi berpendar' : glowFrom(snap.postureStrain) > 0 ? 'hampir' : 'aman'}
+                      hint={snap.glow > 0 && snap.postureStrain >= snap.eyeStrain ? 'pinggir nyala' : glowFrom(snap.postureStrain) > 0 ? 'hampir' : 'aman'}
                     />
                     <Meter
-                      label="Kelelahan mata"
+                      label="Capek di mata"
                       value={snap.eyeStrain}
                       threshold={0.3}
-                      hint={sideOnly ? 'tidak terukur dari samping' : snap.blinkRate === null ? 'mengukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
+                      hint={sideOnly ? 'nggak kebaca dari samping' : snap.blinkRate === null ? 'ngukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
                     />
                   </div>
                 )}
@@ -492,7 +492,7 @@ export default function Workspace() {
                   <Stat
                     icon={IconPosture}
                     label="Postur"
-                    value={posture ? postureWord(posture, S.drift) : 'Tidak dilacak'}
+                    value={posture ? postureWord(posture, S.drift) : 'Nggak dicek'}
                     tone={posture && driftOf(posture) >= S.drift ? 'alert' : undefined}
                   />
                   <Stat
@@ -500,11 +500,11 @@ export default function Workspace() {
                     label="Miring"
                     value={
                       sideOnly && cameraOn
-                        ? 'Tidak terukur'
+                        ? 'Nggak kebaca'
                         : !deg
-                          ? 'Tidak dilacak'
+                          ? 'Nggak dicek'
                           : Math.abs(deg.side) < 2 && Math.abs(deg.tilt) < 3
-                            ? 'Seimbang'
+                            ? 'Lurus'
                             : Math.abs(deg.side) * (TILT_MAX_DEG / SIDE_MAX_DEG) >= Math.abs(deg.tilt)
                               ? `Badan ${Math.abs(deg.side)}° ${sideWord(deg.side)}`
                               : `Kepala ${Math.abs(deg.tilt)}° ${sideWord(deg.tilt)}`
@@ -514,10 +514,10 @@ export default function Workspace() {
                     icon={IconEye}
                     hue="hue-daun"
                     label="Kedip"
-                    value={sideOnly ? 'Tidak terukur' : snap.blinkRate === null ? (tracked ? 'Mengukur' : 'Tidak dilacak') : `${Math.round(snap.blinkRate)}/mnt`}
+                    value={sideOnly ? 'Nggak kebaca' : snap.blinkRate === null ? (tracked ? 'Ngukur' : 'Nggak dicek') : `${Math.round(snap.blinkRate)}/mnt`}
                     tone={snap.blinkRate !== null && snap.blinkRate < S.lowBlink ? 'alert' : undefined}
                   />
-                  <Stat icon={IconTimer} hue="hue-kunyit" label="Condong sesi ini" value={minutes(session?.slouch_s ?? 0)} />
+                  <Stat icon={IconTimer} hue="hue-kunyit" label="Bungkuk sesi ini" value={minutes(session?.slouch_s ?? 0)} />
                 </div>
               </>
             )}
@@ -529,7 +529,7 @@ export default function Workspace() {
               value={tab}
               onChange={setTab}
               tabs={[
-                { value: 'track', label: 'Pelacakan', icon: IconCamera },
+                { value: 'track', label: 'Mode', icon: IconCamera },
                 { value: 'breaks', label: 'Jeda', icon: IconTimer },
                 { value: 'evening', label: 'Malam', icon: IconMoon },
                 { value: 'settings', label: 'Setelan', icon: IconGauge },
@@ -539,7 +539,7 @@ export default function Workspace() {
               {tab === 'track' && (
                 <>
                   <Segmented<Mode>
-                    label="Cara memantau"
+                    label="Cara ngecek"
                     value={mode}
                     onChange={setMode}
                     options={[
@@ -565,13 +565,13 @@ export default function Workspace() {
                   )}
                   {mode === 'timer' && (
                     <p className="text-sm text-muted text-pretty">
-                      Kamera tidak dipakai. Istirahat mata dan peregangan mengikuti jadwal di tab Jeda.
+                      Kamera nggak dipakai. Istirahat mata dan stretching ikut jadwal di tab Jeda.
                     </p>
                   )}
                   {mode === 'demo' && (
                     <div className="space-y-4">
                       <Slider label="Kepala ke depan" value={sim.head * HEAD_MAX_DEG} max={HEAD_MAX_DEG} unit="°" onChange={(v) => setSim({ ...sim, head: v / HEAD_MAX_DEG })} />
-                      <Slider label="Punggung membungkuk" value={sim.torso * TORSO_MAX_DEG} max={TORSO_MAX_DEG} unit="°" onChange={(v) => setSim({ ...sim, torso: v / TORSO_MAX_DEG })} />
+                      <Slider label="Punggung bungkuk" value={sim.torso * TORSO_MAX_DEG} max={TORSO_MAX_DEG} unit="°" onChange={(v) => setSim({ ...sim, torso: v / TORSO_MAX_DEG })} />
                       <Slider
                         label="Badan miring"
                         value={sim.side * SIDE_MAX_DEG}
@@ -588,15 +588,15 @@ export default function Workspace() {
                         unit="°"
                         onChange={(v) => setSim({ ...sim, tilt: v / TILT_MAX_DEG })}
                       />
-                      <Slider label="Laju kedip" value={sim.blink} max={30} unit="/mnt" onChange={(v) => setSim({ ...sim, blink: v })} />
-                      <Switch checked={sim.late} onChange={(late) => setSim({ ...sim, late })} label="Larut malam" description="Jam diatur 40 menit lewat jam tidur." />
+                      <Slider label="Kedipan" value={sim.blink} max={30} unit="/mnt" onChange={(v) => setSim({ ...sim, blink: v })} />
+                      <Switch checked={sim.late} onChange={(late) => setSim({ ...sim, late })} label="Pura-pura udah larut" description="Jamnya dibikin 40 menit lewat jam tidur." />
                       <div className="flex flex-wrap items-center gap-2 border-t border-rule pt-4">
-                        <span className="text-[13px] text-muted">Tampilkan pengingat:</span>
+                        <span className="text-sm font-semibold">Coba pengingat:</span>
                         <button type="button" className="btn btn-sm" onClick={() => mon.triggerCue('eye')}>
                           Istirahat mata
                         </button>
                         <button type="button" className="btn btn-sm" onClick={() => mon.triggerCue('reset')}>
-                          Peregangan
+                          Stretching
                         </button>
                       </div>
                     </div>
@@ -618,9 +618,9 @@ export default function Workspace() {
                       ]}
                     />
                   </Field>
-                  <Field label="Peregangan 60 detik">
+                  <Field label="Stretching 60 detik">
                     <Segmented
-                      label="Peregangan"
+                      label="Stretching"
                       value={prefs.resetMin}
                       onChange={(resetMin) => update({ resetMin })}
                       options={[
@@ -632,10 +632,10 @@ export default function Workspace() {
                     />
                   </Field>
                   <div>
-                    <Switch checked={prefs.sound} onChange={(sound) => update({ sound })} label="Bunyi lembut" description="Saat jeda tiba atau pendar menguat." />
+                    <Switch checked={prefs.sound} onChange={(sound) => update({ sound })} label="Bunyi pelan" description="Pas jeda datang, atau pinggir layar mulai nyala." />
                     <button type="button" className="btn btn-ghost btn-sm mt-1 -ml-3" onClick={chime}>
                       <IconVolume className="size-4" />
-                      Dengarkan contoh
+                      Coba dengar
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2 border-t border-rule pt-5">
@@ -645,23 +645,23 @@ export default function Workspace() {
                     </button>
                     <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('reset')}>
                       <IconStretch className="size-4" />
-                      Peregangan
+                      Stretching
                     </button>
                   </div>
                   <div className="rounded-xl bg-surface p-4 text-[13px] text-muted">
-                    <p className="mb-2 font-semibold text-ink">Pintasan keyboard</p>
+                    <p className="mb-2 font-semibold text-ink">Tombol pintas</p>
                     <ul className="grid grid-cols-2 gap-x-3 gap-y-2">
                       <li>
-                        <kbd className="kbd">R</kbd> peregangan
+                        <kbd className="kbd">R</kbd> stretching
                       </li>
                       <li>
                         <kbd className="kbd">E</kbd> istirahat mata
                       </li>
                       <li>
-                        <kbd className="kbd">M</kbd> jendela mengambang
+                        <kbd className="kbd">M</kbd> jendela kecil
                       </li>
                       <li>
-                        <kbd className="kbd">Esc</kbd> hentikan jeda
+                        <kbd className="kbd">Esc</kbd> stop jeda
                       </li>
                     </ul>
                   </div>
@@ -707,7 +707,7 @@ export default function Workspace() {
                     <IconMoon className="mt-0.5 size-4 shrink-0 text-accent" />
                     <p className="text-pretty">{guidance(snap, prefs.bedtime)}</p>
                   </div>
-                  <p className="text-[13px] text-muted">Rona hangat hanya menutupi Niskala. Nyalakan juga night light sistem untuk seluruh layar.</p>
+                  <p className="text-sm text-pretty">Warna hangat ini cuma di Niskala. Nyalain juga night light di sistem biar seluruh layar ikut.</p>
                 </>
               )}
 
@@ -721,20 +721,20 @@ export default function Workspace() {
                       <span className="font-semibold">Dua monitor? </span>
                       <span className="text-muted">
                         {pipSupported
-                          ? 'Jendela mengambang selalu tampil di atas aplikasi lain. Seret ke monitor tempat kamu bekerja.'
-                          : 'Jendela mengambang terbuka sebagai jendela kecil. Seret ke monitor tempat kamu bekerja.'}
+                          ? 'Jendela kecil selalu di atas aplikasi lain. Seret aja ke monitor tempat kamu kerja.'
+                          : 'Jendela kecil kebuka terpisah. Seret aja ke monitor tempat kamu kerja.'}
                       </span>
                     </p>
                     <button type="button" className="btn btn-sm" onClick={toggleMini}>
                       <IconPip className="size-4" />
-                      {pip ? 'Tutup jendela mengambang' : 'Buka jendela mengambang'}
+                      {pip ? 'Tutup jendela kecil' : 'Buka jendela kecil'}
                     </button>
                     {notifySupported && (
                       <Switch
                         checked={prefs.notify}
                         onChange={setNotify}
                         label="Notifikasi desktop"
-                        description="Muncul saat jeda tiba atau postur bergeser, ketika Niskala tidak sedang kamu lihat."
+                        description="Muncul pas jeda datang atau postur geser, waktu kamu lagi nggak lihat Niskala."
                       />
                     )}
                   </div>
@@ -744,8 +744,8 @@ export default function Workspace() {
                       value={prefs.sensitivity}
                       onChange={(sensitivity) => update({ sensitivity })}
                       options={[
-                        { value: 'gentle', label: 'Longgar' },
-                        { value: 'balanced', label: 'Seimbang' },
+                        { value: 'gentle', label: 'Santai' },
+                        { value: 'balanced', label: 'Sedang' },
                         { value: 'strict', label: 'Ketat' },
                       ]}
                     />
@@ -753,17 +753,17 @@ export default function Workspace() {
                   </Field>
                   <div className="space-y-4 border-t border-rule pt-5">
                     <p className="text-sm text-muted text-pretty">
-                      Tersimpan di browser ini: setelan, kalibrasi, dan ringkasan tiap sesi. Tidak ada gambar atau data wajah yang
+                      Yang disimpan di browser ini: setelan, kalibrasi, dan ringkasan tiap sesi. Nggak ada gambar atau data wajah yang
                       disimpan.
                     </p>
                     {syncConfigured && (
                       <div>
-                        <Switch checked={prefs.sync} onChange={(sync) => update({ sync })} label="Cadangkan ringkasan" description="Anonim, bisa dimatikan kapan saja." />
+                        <Switch checked={prefs.sync} onChange={(sync) => update({ sync })} label="Cadangkan ringkasan" description="Anonim, bisa dimatiin kapan aja." />
                         <p className="mt-2 text-[13px] text-muted">
-                          {mon.sync.state === 'off' && 'Mati. Tidak ada yang keluar dari browser ini.'}
-                          {mon.sync.state === 'idle' && 'Nyala. Pencadangan pertama dalam satu menit.'}
-                          {mon.sync.state === 'ok' && `Dicadangkan pukul ${new Date(mon.sync.at).toLocaleTimeString('id-ID')}.`}
-                          {mon.sync.state === 'error' && `Gagal mencadangkan (${mon.sync.message}). Data tetap aman di sini.`}
+                          {mon.sync.state === 'off' && 'Mati. Nggak ada yang keluar dari browser ini.'}
+                          {mon.sync.state === 'idle' && 'Nyala. Cadangan pertama dalam semenit.'}
+                          {mon.sync.state === 'ok' && `Udah dicadangin jam ${new Date(mon.sync.at).toLocaleTimeString('id-ID')}.`}
+                          {mon.sync.state === 'error' && `Gagal nyadangin (${mon.sync.message}). Datamu tetap aman di sini.`}
                         </p>
                       </div>
                     )}
@@ -781,19 +781,19 @@ export default function Workspace() {
                           a.download = 'niskala-data.json';
                           a.click();
                           URL.revokeObjectURL(a.href);
-                          toast('Data diunduh sebagai niskala-data.json.');
+                          toast('Data kesimpan sebagai niskala-data.json.');
                         }}
                       >
                         <IconDownload className="size-4" />
-                        Unduh data saya
+                        Unduh dataku
                       </button>
                       <button type="button" className="btn btn-sm justify-start" onClick={() => update({ onboarded: false })}>
                         <IconRefresh className="size-4" />
-                        Ulangi pengaturan awal
+                        Ulang setup awal
                       </button>
                       <button type="button" className="btn btn-ghost btn-sm justify-start text-danger hover:text-danger" onClick={() => setConfirmDelete(true)}>
                         <IconTrash className="size-4" />
-                        Hapus data lokal
+                        Hapus data di browser ini
                       </button>
                     </div>
                   </div>
@@ -806,8 +806,8 @@ export default function Workspace() {
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Hapus data lokal?"
-        body="Kalibrasi, setelan, dan semua ringkasan sesi di browser ini akan dihapus. Tindakan ini tidak bisa dibatalkan."
+        title="Hapus semua data di browser ini?"
+        body="Kalibrasi, setelan, dan semua ringkasan sesi di browser ini bakal dihapus. Nggak bisa dibalikin."
         confirm="Hapus"
         onClose={() => setConfirmDelete(false)}
         onConfirm={() => {
@@ -851,7 +851,7 @@ export default function Workspace() {
                     <IconTimer className="size-4 shrink-0 text-accent" />
                     <span className="text-muted">{next.value === 'Mati' ? 'Jadwal jeda mati' : `Jeda berikutnya ${next.value}`}</span>
                     <button type="button" className="btn btn-ghost btn-sm ml-auto" onClick={() => setRoutine('reset')}>
-                      Peregangan
+                      Stretching
                     </button>
                   </p>
                 ))}

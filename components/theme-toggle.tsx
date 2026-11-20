@@ -6,7 +6,7 @@ import { IconAuto, IconMoon, IconSun } from './icons';
 
 const OPTIONS: { value: Theme; label: string; icon: typeof IconSun }[] = [
   { value: 'light', label: 'Terang (Lontar)', icon: IconSun },
-  { value: 'auto', label: 'Ikuti sistem', icon: IconAuto },
+  { value: 'auto', label: 'Ikut sistem', icon: IconAuto },
   { value: 'dark', label: 'Gelap (Malam)', icon: IconMoon },
 ];
 

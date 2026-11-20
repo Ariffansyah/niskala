@@ -90,10 +90,10 @@ function poseSample(r: PoseLandmarkerResult, w: number, h: number): Sample | nul
 
 export function describeCameraError(e: unknown) {
   const name = e instanceof DOMException ? e.name : '';
-  if (name === 'NotAllowedError') return 'Akses kamera diblokir. Izinkan dari bilah alamat, atau pakai mode Timer.';
-  if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'Kamera tidak ditemukan. Pilih kamera lain, atau pakai mode Timer.';
-  if (name === 'NotReadableError') return 'Kamera sedang dipakai aplikasi lain. Tutup aplikasinya, lalu coba lagi.';
-  return `Modul penglihatan gagal dimulai: ${e instanceof Error ? e.message : String(e)}`;
+  if (name === 'NotAllowedError') return 'Akses kamera diblokir. Izinin dari ikon di kolom alamat, atau pakai mode Timer.';
+  if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'Kameranya nggak ketemu. Pilih kamera lain, atau pakai mode Timer.';
+  if (name === 'NotReadableError') return 'Kameranya lagi dipakai aplikasi lain. Tutup dulu aplikasinya, terus coba lagi.';
+  return `Pengecek kamera gagal jalan: ${e instanceof Error ? e.message : String(e)}`;
 }
 
 /** Video inputs; labels are only filled in after camera permission was granted once. */

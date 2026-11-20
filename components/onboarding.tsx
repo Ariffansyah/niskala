@@ -11,15 +11,15 @@ const MODES: { value: Mode; title: string; body: string; icon: ComponentType<SVG
   {
     value: 'camera',
     title: 'Kamera',
-    body: 'Membaca postur dan kedipan. Kamera boleh di depan atau di samping meja. Video dianalisis di tab ini dan tidak pernah diunggah.',
+    body: 'Ngecek postur dan kedipan. Kameranya boleh di depan atau di samping meja. Video dicek di tab ini dan nggak pernah diunggah.',
     icon: IconCamera,
     tag: 'Disarankan',
   },
-  { value: 'timer', title: 'Timer saja', body: 'Tanpa kamera. Istirahat mata dan peregangan datang sesuai jadwal.', icon: IconTimer },
-  { value: 'demo', title: 'Demo', body: 'Slider menggantikan kamera, untuk melihat bagaimana semuanya merespons.', icon: IconSliders },
+  { value: 'timer', title: 'Timer aja', body: 'Tanpa kamera. Istirahat mata dan stretching datang sesuai jadwal.', icon: IconTimer },
+  { value: 'demo', title: 'Demo', body: 'Pakai slider, bukan kamera. Buat lihat gimana semuanya bereaksi.', icon: IconSliders },
 ];
 
-const STEPS = ['Cara memantau', 'Jam tidur', 'Jadwal jeda'];
+const STEPS = ['Cara ngecek', 'Jam tidur', 'Jadwal jeda'];
 
 export default function Onboarding({ prefs }: { prefs: Prefs }) {
   const [step, setStep] = useState(0);
@@ -67,9 +67,9 @@ export default function Onboarding({ prefs }: { prefs: Prefs }) {
           {step === 0 && (
             <>
               <h1 id="setup-title" className="text-2xl sm:text-3xl">
-                Bagaimana Niskala memantaumu?
+                Niskala ngecek kamu pakai apa?
               </h1>
-              <div className="mt-6 grid gap-3" role="radiogroup" aria-label="Cara memantau">
+              <div className="mt-6 grid gap-3" role="radiogroup" aria-label="Cara ngecek">
                 {MODES.map((m) => (
                   <label
                     key={m.value}
@@ -112,8 +112,7 @@ export default function Onboarding({ prefs }: { prefs: Prefs }) {
               <div className="mt-5 flex gap-3 rounded-xl bg-surface p-4 text-sm">
                 <IconMoon className="mt-0.5 size-4 shrink-0 text-accent" />
                 <p className="text-muted text-pretty">
-                  Dua jam sebelumnya, layar Niskala mulai menghangat dan kamu diingatkan untuk menyelesaikan pekerjaan alih-alih
-                  memulai yang baru.
+                  Dua jam sebelumnya, layar Niskala mulai hangat dan kamu diingetin buat beresin kerjaan, bukan mulai yang baru.
                 </p>
               </div>
             </>
@@ -122,7 +121,7 @@ export default function Onboarding({ prefs }: { prefs: Prefs }) {
           {step === 2 && (
             <>
               <h1 id="setup-title" className="text-2xl sm:text-3xl">
-                Seberapa sering jeda datang?
+                Seberapa sering mau jeda?
               </h1>
               <div className="mt-6 space-y-5">
                 <div>
@@ -139,9 +138,9 @@ export default function Onboarding({ prefs }: { prefs: Prefs }) {
                   />
                 </div>
                 <div>
-                  <p className="label mb-2">Peregangan 60 detik</p>
+                  <p className="label mb-2">Stretching 60 detik</p>
                   <Segmented
-                    label="Peregangan"
+                    label="Stretching"
                     value={draft.resetMin}
                     options={[
                       { value: 30, label: '30 mnt' },
@@ -155,8 +154,8 @@ export default function Onboarding({ prefs }: { prefs: Prefs }) {
                 <Switch
                   checked={draft.sound}
                   onChange={(sound) => set({ sound })}
-                  label="Bunyi lembut saat jeda tiba"
-                  description="Dua nada pendek, seperti bonang kecil."
+                  label="Bunyi pelan pas jeda datang"
+                  description="Dua nada pendek, kayak bonang kecil."
                 />
               </div>
             </>
@@ -166,7 +165,7 @@ export default function Onboarding({ prefs }: { prefs: Prefs }) {
         <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-rule pt-6">
           {step > 0 && (
             <button type="button" className="btn" onClick={() => setStep(step - 1)}>
-              Kembali
+              Balik
             </button>
           )}
           <button type="button" className="btn btn-primary" onClick={() => (last ? finish(draft) : setStep(step + 1))}>

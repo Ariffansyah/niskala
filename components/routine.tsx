@@ -53,12 +53,12 @@ export default function RoutineRunner({ kind, posture, blinkTotal, onDone, onExi
   let feedback: string | null = null;
   if (step.check === 'head' && posture) {
     const deg = Math.round(posture.head * HEAD_MAX_DEG);
-    feedback = deg <= 3 ? 'Kepala sudah sejajar bahu.' : `Kepala masih ${deg}° ke depan. Tarik sedikit lagi.`;
+    feedback = deg <= 3 ? 'Kepala udah sejajar bahu.' : `Kepala masih ${deg}° ke depan. Tarik dikit lagi.`;
   } else if (step.check === 'tilt' && posture) {
     const deg = Math.round(posture.tilt * TILT_MAX_DEG);
-    feedback = Math.abs(deg) < 4 ? 'Kepala masih tegak. Biarkan miring perlahan.' : `Kepala miring ${Math.abs(deg)}° ke ${sideWord(deg)}.`;
+    feedback = Math.abs(deg) < 4 ? 'Kepala masih tegak. Biarin miring pelan-pelan.' : `Kepala miring ${Math.abs(deg)}° ke ${sideWord(deg)}.`;
   } else if (step.check === 'blinks' && blinkTotal !== null && stepBlinks.start !== null) {
-    feedback = `${blinkTotal - stepBlinks.start} kedipan terhitung.`;
+    feedback = `${blinkTotal - stepBlinks.start} kedipan kehitung.`;
   }
 
   return (
@@ -115,11 +115,11 @@ export default function RoutineRunner({ kind, posture, blinkTotal, onDone, onExi
         {steps.length > 1 && (
           <button type="button" className={`btn ${compact ? 'btn-sm' : ''}`} onClick={() => goTo(starts[index] + step.seconds)}>
             <IconNext className="size-4" />
-            {index === steps.length - 1 ? 'Selesai' : 'Langkah berikutnya'}
+            {index === steps.length - 1 ? 'Selesai' : 'Lanjut langkah'}
           </button>
         )}
         <button type="button" className={`btn btn-ghost ${compact ? 'btn-sm' : ''}`} onClick={onExit}>
-          Hentikan
+          Stop
         </button>
       </div>
     </div>

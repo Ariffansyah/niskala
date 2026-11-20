@@ -12,32 +12,32 @@ export type Step = {
 
 export const ROUTINES: Record<RoutineKind, { title: string; short: string; steps: Step[] }> = {
   reset: {
-    title: 'Peregangan 60 detik',
-    short: 'Peregangan',
+    title: 'Stretching 60 detik',
+    short: 'Stretching',
     steps: [
       {
         title: 'Tarik dagu',
-        how: 'Pandangan tetap lurus. Tarik dagu lurus ke belakang, seolah membuat dagu ganda.',
+        how: 'Pandangan tetap lurus, tarik dagu ke belakang kayak lagi bikin dagu dobel.',
         seconds: 15,
-        cues: ['Tarik dagu, tahan', 'Lepaskan', 'Tarik dagu, tahan', 'Lepaskan', 'Tarik dagu, tahan', 'Lepaskan'],
+        cues: ['Tarik dagu, tahan', 'Lepas', 'Tarik dagu, tahan', 'Lepas', 'Tarik dagu, tahan', 'Lepas'],
         check: 'head',
       },
       {
         title: 'Putar bahu',
-        how: 'Lingkaran pelan: angkat ke arah telinga, tarik ke belakang, lalu turunkan.',
+        how: 'Pelan-pelan: angkat ke telinga, tarik ke belakang, terus turunin.',
         seconds: 15,
         cues: ['Naik', 'Ke belakang', 'Turun', 'Naik', 'Ke belakang', 'Turun', 'Naik', 'Ke belakang', 'Turun'],
       },
       {
-        title: 'Regang leher samping',
-        how: 'Bahu tetap turun. Biarkan kepala miring karena beratnya sendiri.',
+        title: 'Leher ke samping',
+        how: 'Bahu tetap turun. Biarin kepala miring sendiri karena beratnya.',
         seconds: 15,
         cues: ['Telinga kiri ke bahu kiri', 'Telinga kanan ke bahu kanan'],
         check: 'tilt',
       },
       {
-        title: 'Fokus jauh dan kedip penuh',
-        how: 'Lihat benda terjauh yang terlihat, idealnya 6 meter atau lebih. Pejamkan mata penuh setiap berkedip.',
+        title: 'Lihat jauh, kedip penuh',
+        how: 'Lihat benda paling jauh yang kelihatan, kalau bisa 6 meter lebih. Tiap kedip, merem penuh.',
         seconds: 15,
         cues: ['Lihat jauh', 'Kedip penuh, pelan', 'Lihat jauh', 'Kedip penuh, pelan'],
         check: 'blinks',
@@ -49,10 +49,10 @@ export const ROUTINES: Record<RoutineKind, { title: string; short: string; steps
     short: 'Istirahat mata',
     steps: [
       {
-        title: 'Lihat sejauh 6 meter',
-        how: 'Ke luar jendela kalau bisa. Lemaskan pandangan dan kedipkan mata penuh beberapa kali.',
+        title: 'Lihat yang jauh',
+        how: 'Ke luar jendela kalau bisa. Santaiin mata, terus kedip penuh beberapa kali.',
         seconds: 20,
-        cues: ['Lihat jauh', 'Tetap lihat jauh', 'Kedip penuh, pelan', 'Hampir selesai'],
+        cues: ['Lihat jauh', 'Terus lihat jauh', 'Kedip penuh, pelan', 'Dikit lagi'],
         check: 'blinks',
       },
     ],

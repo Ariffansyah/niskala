@@ -70,10 +70,10 @@ const AWAY_EYE_BREAK_S = 120;
 const AWAY_RESET_S = 300;
 
 const NOTE = {
-  posture: ['Postur bergeser cukup lama', 'Tegakkan badan, atau lakukan peregangan 60 detik.'],
-  eyes: ['Mata jarang berkedip', 'Kedipkan mata penuh beberapa kali, lalu lihat jauh sebentar.'],
-  eye: ['Waktunya istirahat mata', 'Lihat sejauh 6 meter selama 20 detik.'],
-  reset: ['Waktunya peregangan 60 detik', 'Leher, bahu, dan mata, dipandu langkah demi langkah.'],
+  posture: ['Udah lama bungkuk atau miring', 'Tegakin badan, atau stretching 60 detik.'],
+  eyes: ['Kamu jarang ngedip', 'Kedip penuh beberapa kali, terus lihat jauh sebentar.'],
+  eye: ['Waktunya istirahat mata', 'Lihat yang jauh, sekitar 6 meter, selama 20 detik.'],
+  reset: ['Waktunya stretching 60 detik', 'Leher, bahu, dan mata, dipandu satu-satu.'],
 } as const;
 
 const INITIAL: Snapshot = {
