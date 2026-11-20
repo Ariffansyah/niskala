@@ -1,10 +1,12 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { sideWord } from '@/lib/format';
 import { UPRIGHT } from '@/lib/signals';
+import type { FigureId } from '@/lib/store';
 import { IconPosture } from './icons';
-import PostureFigure, { FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
+import PostureFigure, { FigurePicker, FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
 
 const THRESHOLD = 45;
 // Shorter than the workspace's ~10 s so the effect shows up while someone is reading the page.
@@ -14,6 +16,7 @@ export default function LandingDemo() {
   const [slouch, setSlouch] = useState(0);
   const [lean, setLean] = useState(0);
   const [glow, setGlow] = useState(false);
+  const [who, setWho] = useState<FigureId>('raka');
   const off = Math.max(slouch, Math.abs(lean)) >= THRESHOLD;
 
   useEffect(() => {
@@ -38,17 +41,29 @@ export default function LandingDemo() {
   };
 
   return (
-    <figure className="relative min-w-0">
+    <figure className="relative isolate min-w-0">
       <div aria-hidden className="edge-glow" style={{ opacity: glow ? 0.8 : 0 }} />
-      <div className="stage card relative overflow-hidden">
-        <div className="mx-auto aspect-[1150/1180] max-h-[62vh] w-full">
-          <PostureFigure posture={posture} />
-        </div>
-        <span className="chip absolute top-3 left-3">Tampak samping</span>
-        <div className="card absolute top-3 right-3 w-[30%] p-1.5">
-          <div className="relative aspect-[560/760] rounded-xl bg-surface">
-            <FrontFigure posture={posture} />
-            <span className="chip absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px]">Depan</span>
+      {/* The logo's kawung at room scale behind the stage, a different dye peeking out at each corner. */}
+      <svg viewBox="0 0 32 32" aria-hidden className="absolute top-[42%] left-1/2 -z-10 hidden w-[150%] -translate-1/2 lg:block">
+        <path className="fill-kunyit-soft" d="M16.84 15.16A7.23 7.23 0 0 1 25.82 6.18A7.23 7.23 0 0 1 16.84 15.16Z" />
+        <path className="fill-daun-soft" d="M16.84 16.84A7.23 7.23 0 0 1 25.82 25.82A7.23 7.23 0 0 1 16.84 16.84Z" />
+        <path className="fill-mengkudu-soft" d="M15.16 16.84A7.23 7.23 0 0 1 6.18 25.82A7.23 7.23 0 0 1 15.16 16.84Z" />
+        <path className="fill-ungu-soft" d="M15.16 15.16A7.23 7.23 0 0 1 6.18 6.18A7.23 7.23 0 0 1 15.16 15.16Z" />
+      </svg>
+      {/* The stage stands in for a screen, so the webcam clips onto its top edge and a plant keeps it company. */}
+      <div className="relative">
+        <Image src="/3d/webcam.webp" alt="" width={460} height={388} unoptimized loading="eager" className="absolute -top-9 left-1/2 z-10 h-auto w-20 -translate-x-1/2 drop-shadow-md sm:-top-11 sm:w-24" />
+        <Image src="/3d/plant.webp" alt="" width={210} height={460} unoptimized className="absolute -bottom-3 -left-9 z-10 hidden h-auto w-16 drop-shadow-lg lg:block xl:w-[4.5rem]" />
+        <div className="stage card relative overflow-hidden">
+          <div className="mx-auto aspect-[1150/1180] max-h-[62vh] w-full">
+            <PostureFigure posture={posture} who={who} />
+          </div>
+          <span className="chip absolute top-3 left-3">Tampak samping</span>
+          <div className="card absolute top-3 right-3 w-[30%] p-1.5">
+            <div className="relative aspect-[560/760] rounded-xl bg-surface">
+              <FrontFigure posture={posture} who={who} />
+              <span className="chip absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px]">Depan</span>
+            </div>
           </div>
         </div>
       </div>
@@ -75,6 +90,10 @@ export default function LandingDemo() {
       </div>
 
       <figcaption className="card mt-3 space-y-3 p-4">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm font-semibold">Pilih figur</span>
+          <FigurePicker value={who} onChange={setWho} size="size-10" />
+        </div>
         <label className="block">
           <span className="flex justify-between gap-4 text-sm">
             <span className="font-semibold">Geser untuk membungkuk</span>
