@@ -2,7 +2,7 @@
 
 Techcomfest 2027, Sub-theme 3: Smart Lifestyle & Digital Wellbeing (SDG 3).
 
-A browser workspace that watches posture and blink rate through the webcam, entirely on-device. It responds with a soft edge glow instead of pop-ups, guides 20-second eye breaks and a 60-second desk reset, and warms the screen as bedtime approaches.
+A browser workspace (UI in Bahasa Indonesia) that watches posture and blink rate through the webcam, entirely on-device. Posture covers both planes: forward lean and head drop, and sideways lean and head tilt. It responds with a soft edge glow instead of pop-ups, guides 20-second eye breaks and a 60-second desk reset, and warms the screen as bedtime approaches.
 
 In Balinese thought *sekala* is the seen world and *niskala* the unseen. The visual identity follows batik *sogan* dyes: lontar cream, soga brown, nila indigo as the one accent, and kunyit turmeric reserved for strain. The dark theme is *malam*.
 
@@ -20,11 +20,12 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 | --- | --- |
 | `/` | Landing page with a live slouch demo that drives the real edge glow |
 | `/app` | Workspace: first-run setup, tracking, breaks, evening, sensitivity, data |
-| `/insights` | 7, 14 or 30 days of screen time, leaning share, breaks and late minutes |
-| `/privacy` | What is processed, stored, and optionally backed up |
+| `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks and late minutes |
+| `/privasi` | What is processed, stored, and optionally backed up |
 
 ## Workspace features
 
+- **Two views of the figure:** side view (*tampak samping*) for forward lean, front view (*tampak depan*, mirrored like the webcam) for sideways lean and head tilt.
 - **Three modes:** Camera (posture and blinks), Timer only (no camera, scheduled breaks), and Demo (sliders).
 - **Edge glow:** turmeric for sustained leaning or low blinking, indigo when a scheduled break is due. Never a modal.
 - **Breaks:** a 20-second eye break (20-20-20 rule) and a 60-second desk reset. Both are timed and step-by-step, with live head-angle and blink feedback from the camera, and can be snoozed for 5 minutes.
@@ -40,12 +41,16 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 | Module | Role |
 | --- | --- |
 | `lib/vision.ts` | MediaPipe Face Landmarker per video frame. Its loop follows the video element into the mini monitor window. |
-| `lib/signals.ts` | Pure math: baseline, posture drift, blink counter, strain accumulators, sensitivity presets, bedtime stages |
+| `lib/signals.ts` | Pure math: baseline, posture on four axes (head, torso, side, tilt), blink counter, strain accumulators, sensitivity presets, bedtime stages |
 | `lib/insights.ts` | Per-day aggregation for the Insights page |
 | `lib/use-monitor.ts` | 4 Hz loop: drift, strain, glow, break cues, session totals, save and sync |
 | `lib/store.ts` | localStorage stores shaped for `useSyncExternalStore`, plus the pre-paint theme script |
 | `lib/sync.ts` | Optional Supabase backup (anonymous auth, RLS). The SDK loads only after opt-in. |
-| `components/posture-figure.tsx` | 2.5D figure: four cel-shaded layers rotated around hip, shoulder and neck pivots |
+| `components/posture-figure.tsx` | 2.5D figure: side view (four layers: hip, shoulder, neck pivots) and front view (three layers: hip and neck roll) |
+| `components/ui.tsx`, `ui-client.tsx` | Design-system parts: badge, stat card, meter, progress ring; switch, segmented control, tabs, confirm dialog, toasts |
+| `components/icons.tsx` | One-style icon set (24 px grid, 1.75 stroke) |
+
+**Sideways lean.** The midpoint between the eye corners is compared with the calibration in eye-widths; the midpoint barely moves when the head turns, so glancing at a second monitor is not read as a lean. Head tilt is the angle of the eye line in the raw frame, ordered by position so it never wraps around ±180°.
 
 **Debouncing.** Drift must pass the sensitivity threshold. Strain builds over 6 to 16 seconds, and the glow stays dark for the first 30%, so a glance at your phone never lights the edge.
 
@@ -64,6 +69,8 @@ Without them the backup option is hidden. On Vercel, `VERCEL_PROJECT_PRODUCTION_
 `assets/figure/figure.blend` holds the scene: a primitive-built figure at a desk with laptop and mug, a three-band toon emission shader with a rim term, inverted-hull outlines in soga brown, an orthographic camera, and `pivot_hip` → `pivot_arms` / `pivot_neck` empties.
 
 Each body group (seat, torso, arms, head) is rendered alone, with the groups in front of it set as holdouts (`assets/figure/render/`). `figure.aseprite` stacks the layers, holds the pivot slices, and exports a 256-colour packed sheet (`public/figure/sheet.png`, 70 KB) plus `lib/figure-sheet.json`. In the browser the arms counter-rotate around the shoulder, so the hands stay on the keyboard as the back rounds.
+
+The front view uses a second orthographic camera (`OrthoFront`) at webcam height with the desk, laptop and mug hidden. Its base, upper and head layers are in `render-front/`, assembled in `figure-front.aseprite`, and exported as `public/figure/front.png` (34 KB) with `lib/figure-front.json`.
 
 ## Known limits
 
