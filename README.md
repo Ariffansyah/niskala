@@ -4,7 +4,7 @@ Techcomfest 2027, Sub-theme 3: Smart Lifestyle & Digital Wellbeing (SDG 3).
 
 A browser workspace (UI in Bahasa Indonesia) that watches posture and blink rate through the webcam, entirely on-device. Posture covers both planes: forward lean and head drop, and sideways lean and head tilt. It responds with a soft edge glow instead of pop-ups, guides 20-second eye breaks and a 60-second desk reset, and warms the screen as bedtime approaches.
 
-In Balinese thought *sekala* is the seen world and *niskala* the unseen. The visual identity follows batik *sogan* dyes: lontar cream, soga brown, nila indigo as the one accent, and kunyit turmeric reserved for strain. The dark theme is *malam*.
+In Balinese thought *sekala* is the seen world and *niskala* the unseen. The logo is *kawung*, one of the oldest batik motifs: four petals that also read as eyes, one of them lit in kunyit, the thing Niskala makes visible. The palette follows batik dyes: lontar cream paper, soga brown line art, nila indigo for the brand and every primary action, and kunyit turmeric for strain. Three more dyes tell topics apart: daun leaf green for the eyes and for what went well, mengkudu morinda red for time away from the desk, and ungu eggplant for the evening. A `.hue-*` class sets a card or section's dye. The dark theme is *malam*.
 
 ## Run
 
@@ -77,6 +77,12 @@ Without them the backup option is hidden. On Vercel, `VERCEL_PROJECT_PRODUCTION_
 Each body group (seat, torso, arms, head) is rendered alone, with the groups in front of it set as holdouts (`assets/figure/render/`). `figure.aseprite` stacks the layers, holds the pivot slices, and exports a 256-colour packed sheet (`public/figure/sheet.png`, 70 KB) plus `lib/figure-sheet.json`. In the browser the arms counter-rotate around the shoulder, so the hands stay on the keyboard as the back rounds.
 
 The front view uses a second orthographic camera (`OrthoFront`) at webcam height with the desk, laptop and mug hidden. Its base, upper and head layers are in `render-front/`, assembled in `figure-front.aseprite`, and exported as `public/figure/front.png` (34 KB) with `lib/figure-front.json`.
+
+**Four figures, one rig.** Raka (nila hoodie) is the original. Ayu (blunt bob, daun sweater), Sekar (side-swept bob, mengkudu hoodie) and Bima (short curls, glasses, ungu sweater) share his body and pivots; only hair, accessories and the toon colours change, so the slices stay the same. `variants.py`, run inside Blender, renders their layers into `assets/figure/<name>/`, and `pack.sh` builds their sheets (`public/figure/<name>.png`, `<name>-front.png`) with Aseprite. Each palette is rebuilt from its own pixels; reusing Raka's would snap every colour to nila. The workspace lets you pick a figure in Setelan or during setup.
+
+## 3D objects
+
+`assets/objects/objects.blend` holds the kawung logo, a webcam, an eye, an hourglass, a mug, a moon and star, a padlock and a snake plant, modelled from primitives with the figure's toon shader and outlines. Each is rendered at 512 px and served as a trimmed WebP from `public/3d/` (9 to 15 KB each). `logo-wobble.webp` is 24 frames of the logo turning, played with CSS `steps()` and held on the first frame for reduced motion.
 
 ## Known limits
 
