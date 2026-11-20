@@ -1,115 +1,100 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { makeBaseline, type Baseline, type FaceSample } from '@/lib/signals';
-import { startVision } from '@/lib/vision';
+
+export type Camera =
+  | { state: 'off' | 'starting' }
+  | { state: 'on'; video: HTMLVideoElement }
+  | { state: 'error'; error: string };
 
 const CALIBRATE_MS = 4000;
-const MIN_CALIBRATION_FRAMES = 20;
 
-function describe(e: unknown) {
-  const name = e instanceof DOMException ? e.name : '';
-  if (name === 'NotAllowedError') return 'Camera access was blocked. Allow it from the address bar, or keep using Simulation.';
-  if (name === 'NotFoundError') return 'No camera was found on this device. Simulation still works.';
-  if (name === 'NotReadableError') return 'The camera is in use by another app. Close it and switch back to Camera.';
-  return `The vision module could not start: ${e instanceof Error ? e.message : String(e)}`;
-}
-
-export default function CameraPanel({ calibrated, onSample, onBaseline }: {
+export default function CameraPanel({ camera, onStart, onStop, calibrated, calibrate, previewElsewhere }: {
+  camera: Camera;
+  onStart: () => void;
+  onStop: () => void;
   calibrated: boolean;
-  onSample: (s: FaceSample | null, t: number) => void;
-  onBaseline: (b: Baseline) => void;
+  calibrate: (ms: number) => Promise<boolean>;
+  /** True while the preview lives in the mini monitor window. */
+  previewElsewhere: boolean;
 }) {
-  const video = useRef<HTMLVideoElement>(null);
-  const collected = useRef<FaceSample[] | null>(null);
-  const timer = useRef<ReturnType<typeof setInterval>>(undefined);
-  const [status, setStatus] = useState<'starting' | 'running' | 'error'>('starting');
-  const [error, setError] = useState('');
+  const slot = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [calError, setCalError] = useState('');
+  const video = camera.state === 'on' ? camera.video : null;
 
   useEffect(() => {
-    let stop: (() => void) | undefined;
-    let cancelled = false;
-    startVision(video.current!, (s, t) => {
-      if (s) collected.current?.push(s);
-      onSample(s, t);
-    }).then(
-      (fn) => {
-        if (cancelled) return fn();
-        stop = fn;
-        setStatus('running');
-      },
-      (e) => {
-        if (cancelled) return;
-        setError(describe(e));
-        setStatus('error');
-      },
-    );
-    return () => {
-      cancelled = true;
-      clearInterval(timer.current);
-      stop?.();
-    };
-  }, [onSample]);
+    if (!video || previewElsewhere || !slot.current) return;
+    slot.current.append(video);
+  }, [video, previewElsewhere]);
 
-  function calibrate() {
-    collected.current = [];
+  async function runCalibration() {
     setCalError('');
     setProgress(0);
     const start = performance.now();
-    timer.current = setInterval(() => {
-      const p = (performance.now() - start) / CALIBRATE_MS;
-      if (p < 1) return setProgress(p);
-      clearInterval(timer.current);
-      const got = collected.current ?? [];
-      collected.current = null;
-      setProgress(null);
-      if (got.length < MIN_CALIBRATION_FRAMES) {
-        setCalError('Your face was not in view long enough. Face the screen with light in front of you, then try again.');
-      } else {
-        onBaseline(makeBaseline(got));
-      }
-    }, 100);
+    const id = setInterval(() => setProgress(Math.min(1, (performance.now() - start) / CALIBRATE_MS)), 100);
+    const ok = await calibrate(CALIBRATE_MS);
+    clearInterval(id);
+    setProgress(null);
+    if (!ok) setCalError('Your face was not in view long enough. Face the screen with light in front of you, then try again.');
+  }
+
+  if (camera.state === 'off' || camera.state === 'error') {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-muted">
+          Frames are analysed inside this tab. Only head angle, face size and blink timing are kept, as numbers in memory.
+        </p>
+        {camera.state === 'error' && <p className="text-sm text-alert-ink">{camera.error}</p>}
+        <button type="button" className="btn btn-primary" onClick={onStart}>
+          {camera.state === 'error' ? 'Try again' : 'Start camera'}
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4">
-        <video
-          ref={video}
-          muted
-          playsInline
-          width={160}
-          height={120}
-          className="aspect-[4/3] w-32 shrink-0 -scale-x-100 rounded-md bg-rule object-cover sm:w-40"
-          aria-label="Your camera preview, shown only on this screen"
-        />
-        <p className="text-sm text-muted">
-          {status === 'starting' && 'Starting the camera and loading the face model (about 4 MB, first time only)…'}
-          {status === 'running' &&
-            'Frames are analysed in this tab. Only head angle, face size and blink timing are kept, as numbers in memory.'}
-          {status === 'error' && <span className="text-ink">{error}</span>}
-        </p>
+      <div className="flex items-start gap-4">
+        <div
+          ref={slot}
+          className="grid aspect-[4/3] w-32 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface text-center text-xs text-muted sm:w-36 [&>video]:h-full [&>video]:w-full [&>video]:-scale-x-100 [&>video]:object-cover"
+        >
+          {camera.state === 'starting' && <span className="px-2">Starting…</span>}
+          {previewElsewhere && <span className="px-2">Preview is in the mini monitor</span>}
+        </div>
+        <div className="space-y-2 text-sm">
+          {camera.state === 'starting' ? (
+            <p className="text-muted">Loading the face model (about 4 MB, first time only).</p>
+          ) : (
+            <p>
+              {calibrated
+                ? 'Calibrated. Recalibrate if you move the camera or change chairs.'
+                : 'Sit upright at your usual distance, look at the screen, then calibrate.'}
+            </p>
+          )}
+        </div>
       </div>
-
-      {status === 'running' && (
-        <div className="space-y-2">
-          <p className="text-sm">
-            {calibrated
-              ? 'Calibrated. Recalibrate if you move the camera or change chairs.'
-              : 'Sit upright at your usual distance and look at the screen, then calibrate.'}
-          </p>
-          <button type="button" className="btn" onClick={calibrate} disabled={progress !== null}>
+      {camera.state === 'on' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className={calibrated ? 'btn' : 'btn btn-primary'}
+            onClick={runCalibration}
+            disabled={progress !== null}
+          >
             {progress === null
               ? calibrated
                 ? 'Recalibrate (4 s)'
                 : 'Calibrate (4 s)'
-              : `Hold still… ${Math.ceil((1 - progress) * 4)}`}
+              : `Hold still… ${Math.ceil((1 - progress) * (CALIBRATE_MS / 1000))}`}
           </button>
-          {calError && <p className="text-sm text-alert-ink">{calError}</p>}
+          <button type="button" className="btn-quiet ml-1" onClick={onStop}>
+            Stop camera
+          </button>
         </div>
       )}
+      {calError && <p className="text-sm text-alert-ink">{calError}</p>}
     </div>
   );
 }

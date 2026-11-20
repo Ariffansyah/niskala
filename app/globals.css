@@ -1,39 +1,35 @@
 @import "tailwindcss";
 
-/* Palette comes from the figure: slate-teal of the hoodie as the one accent,
-   ochre reserved for strain (edge glow, warnings), warm paper neutrals. */
+/* Palette from batik sogan dyes, matched to the figure:
+   lontar palm-leaf cream (paper), soga brown (ink and line art),
+   nila indigo (the one accent, also the hoodie), kunyit turmeric (strain only).
+   Dark mode is "malam": night, and the wax used to draw batik. */
 :root {
   color-scheme: light dark;
-  --paper: #f3f1ec;
-  --surface: #e9e6df;
-  --ink: #1c1e21;
-  --muted: #595e5b;
-  --rule: #d6d1c6;
-  --edge: #86898a;
-  --accent: #2f5d6e;
-  --on-accent: #f7f5f0;
-  --alert: #c26a1d;
-  --alert-ink: #8f4a0f;
+  --paper: light-dark(#f4eee3, #13141d);
+  --surface: light-dark(#ebe2d2, #1c1f2d);
+  --raised: light-dark(#fbf8f2, #232737);
+  --ink: light-dark(#2a1f19, #efe7d9);
+  --muted: light-dark(#6b5c50, #aba193);
+  --rule: light-dark(#ddd2c1, #2b2f43);
+  --edge: light-dark(#8c7e71, #6e7086);
+  --accent: light-dark(#2c3f6b, #a7b8e6);
+  --on-accent: light-dark(#f6f1e8, #13141d);
+  --alert: light-dark(#c98a1e, #e2a13a);
+  --alert-ink: light-dark(#8a5a10, #ecb75f);
+  --cue: light-dark(#3a5085, #7f95d1);
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #131517;
-    --surface: #24282c;
-    --ink: #e8e5de;
-    --muted: #a0a5a1;
-    --rule: #33383d;
-    --edge: #686e72;
-    --accent: #8db8c8;
-    --on-accent: #10181c;
-    --alert: #e39443;
-    --alert-ink: #f0ad69;
-  }
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-paper: var(--paper);
   --color-surface: var(--surface);
+  --color-raised: var(--raised);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-rule: var(--rule);
@@ -42,34 +38,95 @@
   --color-on-accent: var(--on-accent);
   --color-alert: var(--alert);
   --color-alert-ink: var(--alert-ink);
-  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  --color-cue: var(--cue);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper font-sans text-[15px] leading-relaxed text-ink;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-semibold tracking-tight text-balance;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 25%, transparent);
+  }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex min-h-10 items-center rounded-md border border-edge px-4 text-sm font-medium transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:opacity-60;
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-edge bg-transparent px-4 text-sm font-semibold whitespace-nowrap transition-colors hover:border-ink disabled:cursor-default disabled:opacity-50;
   }
   .btn-primary {
-    @apply border-accent bg-accent text-on-accent hover:border-ink;
+    @apply border-accent bg-accent text-on-accent hover:border-accent hover:bg-[color-mix(in_oklab,var(--accent)_88%,var(--ink))];
+  }
+  .btn-sm {
+    @apply min-h-8 px-3 text-[13px];
   }
   .btn-quiet {
-    @apply min-h-10 text-sm text-muted underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+    @apply inline-flex min-h-10 cursor-pointer items-center text-sm text-muted underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-ink;
   }
-  .choice {
-    @apply cursor-pointer rounded px-3 py-1.5 text-sm text-muted transition-colors hover:text-ink has-checked:bg-ink has-checked:text-paper has-focus-visible:outline-2 has-focus-visible:outline-accent;
+  .link {
+    @apply underline decoration-edge underline-offset-4 hover:decoration-ink;
+  }
+  .seg {
+    @apply inline-flex flex-wrap gap-0.5 rounded-lg bg-surface p-0.5;
+  }
+  .seg-item {
+    @apply cursor-pointer rounded-md px-3 py-1.5 text-sm text-muted transition-colors hover:text-ink has-checked:bg-raised has-checked:font-semibold has-checked:text-ink has-checked:shadow-[0_1px_0_var(--rule)] has-focus-visible:outline-2 has-focus-visible:outline-accent;
+  }
+  .field {
+    @apply rounded-lg border border-edge bg-raised px-3 py-1.5 tabular-nums;
+  }
+  .label {
+    @apply text-[13px] text-muted;
+  }
+  .range {
+    @apply h-6 w-full cursor-pointer appearance-none bg-transparent;
+  }
+  .range::-webkit-slider-runnable-track {
+    @apply h-1.5 rounded-full bg-rule;
+  }
+  .range::-moz-range-track {
+    @apply h-1.5 rounded-full bg-rule;
+  }
+  .range::-webkit-slider-thumb {
+    @apply -mt-[5px] size-4 appearance-none rounded-full border-2 border-raised bg-accent shadow-[0_0_0_1px_var(--accent)];
+  }
+  .range::-moz-range-thumb {
+    @apply size-4 rounded-full border-2 border-raised bg-accent;
+  }
+  .check {
+    @apply size-4 shrink-0 cursor-pointer accent-accent;
   }
 }
 
 /* Both overlays are fixed, paint once, and only animate opacity, so changes stay on the compositor. */
-.edge-glow {
+.edge-glow,
+.edge-cue {
   position: fixed;
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  box-shadow: inset 0 0 140px 24px color-mix(in oklab, var(--alert) 75%, transparent);
   opacity: 0;
-  transition: opacity 1.6s ease;
   will-change: opacity;
+}
+.edge-glow {
+  box-shadow: inset 0 0 140px 24px color-mix(in oklab, var(--alert) 75%, transparent);
+  transition: opacity 1.6s ease;
+}
+.edge-cue {
+  box-shadow: inset 0 0 110px 14px color-mix(in oklab, var(--cue) 60%, transparent);
+  transition: opacity 1.2s ease;
 }
 
 .warm-shift {
@@ -83,14 +140,38 @@
   transition: opacity 2s ease;
 }
 
+/* Keeps the camera video rendered (so frames keep arriving) without showing it. */
+.offscreen-video {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .figure .joint {
   transition: transform 300ms linear;
+}
+
+.enter {
+  transition:
+    opacity 0.3s ease,
+    translate 0.3s ease;
+  @starting-style {
+    opacity: 0;
+    translate: 0 6px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .figure .joint,
   .edge-glow,
-  .warm-shift {
+  .edge-cue,
+  .warm-shift,
+  .enter {
     transition: none;
   }
 }
