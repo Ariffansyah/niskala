@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BlinkCounter, driftOf, glowFrom, makeBaseline, nightState, postureFrom, stepStrain } from './signals.ts';
+import {
+  BlinkCounter,
+  driftOf,
+  glowFrom,
+  makeBaseline,
+  nightState,
+  postureFrom,
+  postureFromProfile,
+  profileAngles,
+  stepStrain,
+} from './signals.ts';
 
 const base = { pitch: 2, roll: 0, iod: 100, cx: 320, noseY: 300 };
 const face = (o: Partial<typeof base> = {}) => ({ ...base, blink: 0, ...o });
@@ -65,4 +75,26 @@ test('night stages follow bedtime and wrap past midnight', () => {
   assert.equal(nightState(60, bed).stage, 'late'); // 01:00, 2 h past bedtime
   assert.equal(nightState(9 * 60, bed).stage, 'day'); // next morning
   assert.equal(nightState(9 * 60, bed).level, 0);
+});
+
+test('side camera angles are zero when upright and positive when forward, on either side', () => {
+  const upright = profileAngles({ x: 300, y: 100 }, { x: 300, y: 250 }, { x: 300, y: 450 }, { x: 340, y: 110 });
+  assert.equal(Math.round(upright.neck), 0);
+  assert.equal(Math.round(upright.trunk), 0);
+  // Facing right: ear 60 px ahead of the shoulder over 150 px of height is about 22 degrees.
+  const right = profileAngles({ x: 360, y: 100 }, { x: 300, y: 250 }, { x: 300, y: 450 }, { x: 400, y: 110 });
+  assert.equal(Math.round(right.neck), 22);
+  // The same pose seen from the other side (mirrored) reads the same.
+  const left = profileAngles({ x: 240, y: 100 }, { x: 300, y: 250 }, { x: 300, y: 450 }, { x: 200, y: 110 });
+  assert.equal(Math.round(left.neck), 22);
+  const slouch = profileAngles({ x: 380, y: 120 }, { x: 350, y: 260 }, { x: 300, y: 450 }, { x: 420, y: 130 });
+  assert.ok(slouch.trunk > 10, `trunk ${slouch.trunk}`);
+});
+
+test('side camera posture is relative to calibration and leaves sideways axes at zero', () => {
+  const base = { neck: 12, trunk: 4 };
+  assert.deepEqual(postureFromProfile({ neck: 14, trunk: 5 }, base), { head: 0, torso: 0, side: 0, tilt: 0 });
+  const p = postureFromProfile({ neck: 36, trunk: 24 }, base);
+  assert.equal(p.head, 1);
+  assert.equal(p.torso, 1);
 });

@@ -41,6 +41,40 @@ export function makeBaseline(samples: FaceSample[]): Baseline {
   return { pitch: m((s) => s.pitch), roll: m((s) => s.roll), iod: m((s) => s.iod), cx: m((s) => s.cx), noseY: m((s) => s.noseY) };
 }
 
+/** Side-camera sample, in degrees: 0 = vertical, positive = toward the screen the user faces. */
+export type ProfileSample = {
+  neck: number; // shoulder-to-ear line against vertical (forward head posture)
+  trunk: number; // hip-to-shoulder line against vertical (slouch or lean)
+};
+export type ProfileBaseline = ProfileSample;
+type Point = { x: number; y: number };
+
+/** Neck and trunk angles from the body side facing the camera, pixel coordinates with y down. */
+export function profileAngles(ear: Point, shoulder: Point, hip: Point, nose: Point): ProfileSample {
+  // Works for a camera on either side: forward is whichever way the nose points from the ear.
+  const facing = nose.x >= ear.x ? 1 : -1;
+  const deg = (dx: number, dy: number) => (Math.atan2(dx, dy) * 180) / Math.PI;
+  return {
+    neck: deg(facing * (ear.x - shoulder.x), shoulder.y - ear.y),
+    trunk: deg(facing * (shoulder.x - hip.x), hip.y - shoulder.y),
+  };
+}
+
+export const makeProfileBaseline = (samples: ProfileSample[]): ProfileBaseline => ({
+  neck: median(samples.map((s) => s.neck)),
+  trunk: median(samples.map((s) => s.trunk)),
+});
+
+/** Side view sees forward lean directly but not sideways lean, so side and tilt stay 0. */
+export function postureFromProfile(s: ProfileSample, b: ProfileBaseline): Posture {
+  return {
+    head: clamp01((s.neck - b.neck - 3) / 21),
+    torso: clamp01((s.trunk - b.trunk - 2) / 18),
+    side: 0,
+    tilt: 0,
+  };
+}
+
 /** Largest deviation of any axis, 0..1. */
 export const driftOf = (p: Posture) => Math.max(p.head, p.torso, Math.abs(p.side), Math.abs(p.tilt));
 
