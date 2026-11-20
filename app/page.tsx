@@ -12,38 +12,38 @@ const SMALL_SIGNALS: { img: string; hue: string; name: string; how: string; answ
   {
     img: 'eye',
     hue: 'hue-daun',
-    name: 'Laju kedip',
-    how: 'Normalnya 15 sampai 20 kali per menit, dan jauh lebih jarang saat menatap layar.',
-    answer: 'Pendar saat kedipan bertahan di bawah sekitar sepuluh per menit, plus istirahat mata 20 detik.',
+    name: 'Kedipan',
+    how: 'Normalnya 15 sampai 20 kali per menit. Pas natap layar, bisa anjlok jauh.',
+    answer: 'Kalau kelamaan di bawah sepuluh per menit, pinggir layar nyala, plus ada istirahat mata 20 detik.',
   },
   {
     img: 'hourglass',
     hue: 'hue-kunyit',
     name: 'Lama di depan layar',
-    how: 'Menit selama halaman ini atau monitor mininya terlihat. Tanpa kamera pun jalan.',
-    answer: 'Istirahat mata 20-20-20 dan peregangan 60 detik sesuai jadwalmu.',
+    how: 'Dihitung selama halaman ini atau jendela kecilnya kelihatan. Tanpa kamera juga jalan.',
+    answer: 'Istirahat mata 20-20-20 dan stretching 60 detik, sesuai jadwalmu.',
   },
   {
     img: 'mug',
     hue: 'hue-mengkudu',
-    name: 'Saat kamu menjauh',
-    how: 'Kamera melihat kursimu kosong lebih dari satu menit.',
-    answer: 'Waktu itu dihitung sebagai jeda, bukan waktu layar, dan pengingat ikut menyesuaikan.',
+    name: 'Pas kamu pergi',
+    how: 'Kamera lihat kursimu kosong lebih dari semenit.',
+    answer: 'Waktu itu dihitung jeda, bukan waktu layar. Jadwal pengingatnya ikut nyesuain.',
   },
   {
     img: 'moon',
     hue: 'hue-ungu',
     name: 'Jam malam',
-    how: 'Jam tidurmu, diatur sekali.',
-    answer: 'Layar menghangat sejak dua jam sebelumnya, dengan saran jujur untuk mulai menutup pekerjaan.',
+    how: 'Jam tidurmu, cukup diatur sekali.',
+    answer: 'Dua jam sebelumnya layar mulai hangat, dan kamu diingetin buat mulai beres-beres.',
   },
 ];
 
 const CAMERAS = [
   {
     title: 'Kamera depan',
-    where: 'Webcam laptop, di atas layar',
-    reads: ['Condong ke depan', 'Miring ke samping', 'Kepala miring', 'Laju kedip'],
+    where: 'Webcam laptop di atas layar udah cukup.',
+    reads: ['Bungkuk ke depan', 'Miring ke samping', 'Kepala miring', 'Kedipan'],
     misses: [] as string[],
     front: true,
     who: 'ayu' as const,
@@ -51,9 +51,9 @@ const CAMERAS = [
   },
   {
     title: 'Kamera samping',
-    where: 'Webcam USB atau ponsel, setinggi bahu di sisi meja',
+    where: 'Webcam USB atau HP, setinggi bahu di samping meja. Dari situ leher dan punggung kebaca langsung, kayak fisioterapis ngecek postur.',
     reads: ['Sudut leher, lebih akurat', 'Sudut punggung, lebih akurat'],
-    misses: ['Miring ke samping', 'Laju kedip'],
+    misses: ['Miring ke samping', 'Kedipan'],
     front: false,
     who: 'raka' as const,
     hue: 'hue-nila',
@@ -61,15 +61,16 @@ const CAMERAS = [
 ];
 
 const STAYS = [
-  'Frame kamera, yang dianalisis di tab lalu dibuang',
-  'Titik wajah, titik tubuh, dan waktu kedip',
-  'Kalibrasi posisi tegakmu',
-  'Semua setelan dan ringkasan sesi, kecuali kamu menyalakan pencadangan',
+  'Gambar dari kamera, dicek di tab lalu langsung dibuang',
+  'Titik wajah, titik badan, dan waktu kedip',
+  'Posisi tegakmu waktu kalibrasi',
+  'Semua setelan dan ringkasan sesi, kecuali kamu nyalain cadangan',
+  'Bahkan modelnya diambil dari situs ini, bukan CDN',
 ];
 const CAN_LEAVE = [
-  'Ringkasan sesi yang dibulatkan: menit aktif, menit condong, jeda, rata-rata kedip',
+  'Ringkasan sesi yang dibulatkan: menit aktif, menit bungkuk, jeda, rata-rata kedip',
   'Setelan: jam tidur, layar hangat, jadwal jeda, kepekaan',
-  'Hanya setelah kamu menyalakan “Cadangkan ringkasan”, dengan ID anonim',
+  'Cuma setelah kamu nyalain “Cadangkan ringkasan”, pakai ID anonim',
 ];
 
 export default function Home() {
@@ -81,21 +82,21 @@ export default function Home() {
 
         <section id="cara-kerja" className="band motif-kawung">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
-            <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Enam hal yang diperhatikan, dan cara menanggapinya.</h2>
+            <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Enam hal yang dicek, dan cara Niskala ngingetin kamu.</h2>
             <div className="mt-12 grid gap-5 lg:grid-cols-2">
               <article className="band-card hue-mengkudu overflow-hidden">
                 <div className="h-60 bg-hue/20 p-3">
                   <PostureFigure posture={{ ...UPRIGHT, torso: 0.75, head: 0.85 }} who="sekar" className="drop-shadow-xl" />
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl">Condong ke depan</h3>
+                  <h3 className="text-xl">Bungkuk ke depan</h3>
                   <p className="mt-2 text-on-band-muted text-pretty">
-                    Dari kamera depan: tinggi, ukuran, dan anggukan wajah. Dari kamera samping: sudut leher dan punggung secara
-                    langsung. Semuanya dibandingkan dengan kalibrasi tegak 4 detik.
+                    Kamera depan ngukur tinggi, ukuran, dan anggukan wajahmu. Kamera samping langsung ngukur sudut leher dan punggung.
+                    Semuanya dibandingin sama posisi tegakmu waktu kalibrasi 4 detik.
                   </p>
                   <p className="mt-4 flex gap-2 text-pretty">
                     <IconArrowRight className="mt-1 size-4 shrink-0 text-band-accent" />
-                    Pendar kunyit di tepi layar, baru muncul setelah posisi itu bertahan sekitar sepuluh detik.
+                    Pinggir layar nyala kuning, tapi baru kalau posisi itu bertahan sekitar sepuluh detik.
                   </p>
                 </div>
               </article>
@@ -106,12 +107,11 @@ export default function Home() {
                 <div className="p-6">
                   <h3 className="text-xl">Miring ke samping</h3>
                   <p className="mt-2 text-on-band-muted text-pretty">
-                    Pergeseran wajah ke kiri atau kanan dan kemiringan garis kedua mata. Menoleh ke monitor kedua tidak dihitung
-                    sebagai miring.
+                    Wajah geser ke kiri atau kanan, atau garis matamu miring. Noleh ke monitor kedua nggak dihitung miring.
                   </p>
                   <p className="mt-4 flex gap-2 text-pretty">
                     <IconArrowRight className="mt-1 size-4 shrink-0 text-band-accent" />
-                    Pendar yang sama, dengan arah yang jelas: badan miring ke kanan, atau kepala miring ke kiri.
+                    Pinggir layar nyala juga, dan kamu dikasih tahu arahnya: badan miring ke kanan, atau kepala miring ke kiri.
                   </p>
                 </div>
               </article>
@@ -134,13 +134,7 @@ export default function Home() {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Kamera di depan atau di samping, dua-duanya bisa.</h2>
-            <p className="mt-4 text-muted text-pretty">
-              Webcam laptop sudah cukup. Punya kamera kedua? Taruh di samping meja: dari situ sudut leher dan punggung terbaca
-              langsung, seperti saat fisioterapis menilai postur.
-            </p>
-          </div>
+          <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Kamera depan atau samping, dua-duanya bisa.</h2>
           <div className="mt-10 grid gap-5 md:grid-cols-2">
             {CAMERAS.map((c) => (
               <article key={c.title} className={`card ${c.hue} grid overflow-hidden sm:grid-cols-[11rem_1fr]`}>
@@ -172,7 +166,7 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-4 border-t border-rule pt-4 text-muted">{c.where}.</p>
+                  <p className="mt-4 border-t border-rule pt-4 text-pretty">{c.where}</p>
                 </div>
               </article>
             ))}
@@ -182,13 +176,9 @@ export default function Home() {
         <section className="hue-daun border-y border-rule bg-hue-soft">
           <div className="mx-auto grid max-w-6xl gap-x-16 gap-y-10 px-4 py-20 sm:px-8 sm:py-24 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <div>
-              <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Satu menit untuk menebus satu jam.</h2>
-              <p className="mt-5 max-w-md text-muted text-pretty">
-                Dipandu dan diberi waktu, langkah demi langkah. Dengan kamera menyala, Niskala memeriksa apakah kepalamu benar-benar
-                kembali sejajar bahu, mengukur miringnya leher saat peregangan samping, dan menghitung kedipanmu.
-              </p>
+              <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Semenit buat nebus sejam duduk.</h2>
               <Link href="/app" className="btn mt-8">
-                Coba peregangannya
+                Coba stretching-nya
                 <IconArrowRight className="size-4" />
               </Link>
             </div>
@@ -199,8 +189,14 @@ export default function Home() {
                     {i + 1}
                   </span>
                   <div className="card flex-1 p-5">
-                    <div className="flex items-baseline justify-between gap-4">
-                      <h3 className="text-lg">{s.title}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="mr-auto text-lg">{s.title}</h3>
+                      {s.check && (
+                        <span className="badge bg-hue-soft text-hue-ink">
+                          <IconCamera className="size-3.5" />
+                          dicek kamera
+                        </span>
+                      )}
                       <span className="badge badge-neutral">{s.seconds} dtk</span>
                     </div>
                     <p className="mt-1 text-muted text-pretty">{s.how}</p>
@@ -214,12 +210,9 @@ export default function Home() {
         <section id="privasi" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
           <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <div>
-              <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Rekaman kameramu tidak pernah keluar dari tab.</h2>
-              <p className="mt-5 text-muted text-pretty">
-                Model wajah dan tubuh beserta runtime-nya disajikan dari situs ini sendiri, jadi CDN pun tidak tahu kamu memakainya.
-              </p>
+              <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Video kameramu nggak pernah keluar dari tab.</h2>
               <Link href="/privasi" className="btn mt-8">
-                Baca catatan privasi
+                Baca soal privasi
               </Link>
               <Image src="/3d/padlock.webp" alt="" width={316} height={460} unoptimized className="mt-12 hidden h-44 w-auto -rotate-6 drop-shadow-xl lg:block" />
             </div>
@@ -229,7 +222,7 @@ export default function Home() {
                   <IconLock className="size-5 text-hue" />
                   Tetap di perangkatmu
                 </h3>
-                <ul className="mt-4 space-y-3 text-muted">
+                <ul className="mt-4 space-y-3">
                   {STAYS.map((x) => (
                     <li key={x} className="flex gap-3">
                       <IconCheck className="mt-0.5 size-4 shrink-0 text-hue" />
@@ -241,9 +234,9 @@ export default function Home() {
               <div className="card hue-kunyit p-6">
                 <h3 className="flex items-center gap-2 text-lg">
                   <IconShield className="size-5 text-hue-ink" />
-                  Keluar hanya jika kamu izinkan
+                  Keluar cuma kalau kamu izinkan
                 </h3>
-                <ul className="mt-4 space-y-3 text-muted">
+                <ul className="mt-4 space-y-3">
                   {CAN_LEAVE.map((x) => (
                     <li key={x} className="flex gap-3">
                       <span className="mt-2 size-1.5 shrink-0 rounded-full bg-hue" aria-hidden />
@@ -256,9 +249,9 @@ export default function Home() {
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-hue-soft text-hue-ink">
                   <IconPip />
                 </span>
-                <p className="text-muted text-pretty">
-                  Punya dua monitor? <span className="font-semibold text-ink">Jendela mengambang</span> bisa diseret ke layar tempat kamu
-                  bekerja, dan notifikasi desktop jadi cadangannya. Semuanya tetap tanpa mengirim apa pun.
+                <p className="text-pretty">
+                  Punya dua monitor? <span className="font-semibold">Jendela kecil</span> Niskala bisa kamu seret ke layar tempat kamu kerja,
+                  dan notifikasi desktop jadi cadangannya. Tetap nggak ada yang dikirim.
                 </p>
               </div>
             </div>
@@ -277,12 +270,12 @@ export default function Home() {
             </div>
             <div className="space-y-4 text-lg text-pretty">
               <p>
-                Dalam pandangan Bali, <em>sekala</em> adalah dunia yang terlihat dan teraba, sedangkan <em>niskala</em> adalah yang tak
-                kasat mata, namun tetap membentuk segalanya.
+                Di Bali, <em>sekala</em> itu dunia yang kelihatan dan bisa disentuh. <em>Niskala</em> yang nggak kelihatan, tapi tetap
+                ngebentuk semuanya.
               </p>
               <p className="text-on-band-muted">
-                Kerja di depan layar juga punya sisi tak terlihat: punggung yang membungkuk sedikit demi sedikit, mata yang lupa
-                berkedip, satu jam yang menjadi tiga. Niskala menjaga sisi itu tetap terlihat, lalu menyingkir.
+                Kerja di depan layar juga punya sisi yang nggak kelihatan: punggung yang pelan-pelan bungkuk, mata yang lupa ngedip,
+                sejam yang tahu-tahu jadi tiga jam. Niskala bikin sisi itu kelihatan, terus minggir.
               </p>
               <Link href="/app" className="btn btn-lg mt-4 border-band-accent bg-band-accent text-[#1c2643] hover:border-on-band hover:bg-on-band">
                 Mulai sekarang, gratis
