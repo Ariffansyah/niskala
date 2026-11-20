@@ -11,7 +11,7 @@ const MODES: { value: Mode; title: string; body: string; icon: ComponentType<SVG
   {
     value: 'camera',
     title: 'Kamera',
-    body: 'Membaca postur (depan, belakang, dan samping) serta kedipan. Video dianalisis di tab ini dan tidak pernah diunggah.',
+    body: 'Membaca postur dan kedipan. Kamera boleh di depan atau di samping meja. Video dianalisis di tab ini dan tidak pernah diunggah.',
     icon: IconCamera,
     tag: 'Disarankan',
   },
