@@ -512,11 +512,12 @@ export default function Workspace() {
                   />
                   <Stat
                     icon={IconEye}
+                    hue="hue-daun"
                     label="Kedip"
                     value={sideOnly ? 'Tidak terukur' : snap.blinkRate === null ? (tracked ? 'Mengukur' : 'Tidak dilacak') : `${Math.round(snap.blinkRate)}/mnt`}
                     tone={snap.blinkRate !== null && snap.blinkRate < S.lowBlink ? 'alert' : undefined}
                   />
-                  <Stat icon={IconTimer} label="Condong sesi ini" value={minutes(session?.slouch_s ?? 0)} />
+                  <Stat icon={IconTimer} hue="hue-kunyit" label="Condong sesi ini" value={minutes(session?.slouch_s ?? 0)} />
                 </div>
               </>
             )}

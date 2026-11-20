@@ -137,11 +137,11 @@ export default function HistoryView() {
       ) : (
         <>
           <div className="card grid gap-x-8 px-5 py-1 md:grid-cols-2 [&>*]:border-b [&>*]:border-rule md:[&>*:nth-last-child(-n+2)]:border-b-0 [&>*:last-child]:border-b-0">
-            <Stat icon={IconTimer} label="Waktu di layar" value={minutes(t.active_s)} detail={`dalam ${t.activeDays} hari`} />
+            <Stat icon={IconTimer} hue="hue-kunyit" label="Waktu di layar" value={minutes(t.active_s)} detail={`dalam ${t.activeDays} hari`} />
             <Stat icon={IconPosture} label="Condong atau miring" value={`${Math.round(t.leanShare * 100)}%`} detail={minutes(t.slouch_s)} tone={t.leanShare > 0.25 ? 'alert' : undefined} />
-            <Stat icon={IconStretch} label="Jeda diambil" value={String(t.resets + t.eye_breaks)} detail={`${t.resets} peregangan, ${t.eye_breaks} mata`} />
-            <Stat icon={IconEye} label="Rata-rata kedip" value={t.blink === null ? 'Belum ada' : `${Math.round(t.blink)}/mnt`} />
-            <Stat icon={IconMoon} label="Lewat jam tidur" value={minutes(t.late_s)} />
+            <Stat icon={IconStretch} hue="hue-mengkudu" label="Jeda diambil" value={String(t.resets + t.eye_breaks)} detail={`${t.resets} peregangan, ${t.eye_breaks} mata`} />
+            <Stat icon={IconEye} hue="hue-daun" label="Rata-rata kedip" value={t.blink === null ? 'Belum ada' : `${Math.round(t.blink)}/mnt`} />
+            <Stat icon={IconMoon} hue="hue-ungu" label="Lewat jam tidur" value={minutes(t.late_s)} />
             <Stat icon={IconHistory} label="Disimpan di" value="browser ini" detail="tidak dikirim" />
           </div>
 

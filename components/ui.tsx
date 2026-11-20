@@ -70,16 +70,18 @@ export function ProgressRing({ value, children, size = 120 }: { value: number; c
 }
 
 /** One-line readout: label on the left, value on the right, detail inline rather than stacked. */
-export function Stat({ icon: Icon, label, value, detail, tone }: {
+export function Stat({ icon: Icon, label, value, detail, tone, hue = 'hue-nila' }: {
   icon: IconType;
   label: string;
   value: string;
   detail?: string;
   tone?: 'alert';
+  /** The topic's dye (see .hue-* in globals.css); strain overrides it. */
+  hue?: string;
 }) {
   return (
     <div className="flex items-center gap-3 py-3">
-      <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${tone === 'alert' ? 'bg-alert/15 text-alert-ink' : 'bg-surface text-accent'}`}>
+      <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${tone === 'alert' ? 'bg-alert/15 text-alert-ink' : `${hue} bg-hue-soft text-hue-ink`}`}>
         <Icon className="size-4" />
       </span>
       <span className="text-muted">{label}</span>
