@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { IconArrowRight, IconCamera, IconCheck, IconLock, IconPip, IconShield } from '@/components/icons';
-import LandingDemo from '@/components/landing-demo';
+import Hero from '@/components/hero';
 import PostureFigure, { FrontFigure } from '@/components/posture-figure';
 import SiteFooter from '@/components/site-footer';
 import { ROUTINES } from '@/lib/routines';
@@ -77,27 +77,7 @@ export default function Home() {
   return (
     <>
       <main className="overflow-x-clip">
-        <section className="mx-auto grid max-w-6xl items-center gap-x-16 gap-y-12 px-4 pt-14 pb-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:pt-20">
-          <div>
-            <h1 className="text-[2.6rem] leading-[1.05] font-extrabold sm:text-6xl lg:text-[3.7rem]">
-              Lihat <span className="marker">pegal</span> sebelum terasa.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg text-muted text-pretty">
-              Niskala membaca cara kamu duduk dan berkedip lewat webcam, sepenuhnya di dalam browser. Saat badan condong, miring, atau
-              mata lupa berkedip terlalu lama, tepi layar berpendar hangat. Tanpa pop-up, tanpa unggahan, tanpa akun.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/app" className="btn btn-primary btn-lg">
-                Buka ruang kerja
-                <IconArrowRight className="size-4" />
-              </Link>
-              <Link href="#cara-kerja" className="btn btn-lg">
-                Cara kerjanya
-              </Link>
-            </div>
-          </div>
-          <LandingDemo />
-        </section>
+        <Hero />
 
         <section id="cara-kerja" className="band motif-kawung">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">

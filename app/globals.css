@@ -196,6 +196,18 @@
   .range::-moz-range-thumb {
     @apply size-4 rounded-full border-2 border-raised bg-accent;
   }
+  .range-lg::-webkit-slider-runnable-track {
+    @apply h-2.5;
+  }
+  .range-lg::-moz-range-track {
+    @apply h-2.5;
+  }
+  .range-lg::-webkit-slider-thumb {
+    @apply -mt-[7px] size-6 border-[3px];
+  }
+  .range-lg::-moz-range-thumb {
+    @apply size-6 border-[3px];
+  }
   .check {
     @apply size-4 shrink-0 cursor-pointer accent-accent;
   }
@@ -237,8 +249,10 @@
       radial-gradient(60% 18% at 50% 92%, color-mix(in oklab, var(--ink) 9%, transparent), transparent 70%),
       radial-gradient(110% 85% at 50% 30%, var(--raised) 0%, var(--hue-soft) 75%);
   }
+  /* --mark sets how much of the word is highlighted, so a headline can fill up as something gets worse. */
   .marker {
-    background: linear-gradient(transparent 62%, color-mix(in oklab, var(--alert) 45%, transparent) 62%);
+    background: linear-gradient(transparent 62%, color-mix(in oklab, var(--alert) 45%, transparent) 62%) no-repeat 0 0 / var(--mark, 100%) 100%;
+    transition: background-size 300ms ease-out;
     @apply px-1;
   }
 }
