@@ -46,6 +46,8 @@ const CAMERAS = [
     reads: ['Condong ke depan', 'Miring ke samping', 'Kepala miring', 'Laju kedip'],
     misses: [] as string[],
     front: true,
+    who: 'ayu' as const,
+    hue: 'hue-daun',
   },
   {
     title: 'Kamera samping',
@@ -53,6 +55,8 @@ const CAMERAS = [
     reads: ['Sudut leher, lebih akurat', 'Sudut punggung, lebih akurat'],
     misses: ['Miring ke samping', 'Laju kedip'],
     front: false,
+    who: 'raka' as const,
+    hue: 'hue-nila',
   },
 ];
 
@@ -159,21 +163,21 @@ export default function Home() {
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-2">
             {CAMERAS.map((c) => (
-              <article key={c.title} className="card grid overflow-hidden sm:grid-cols-[11rem_1fr]">
-                <div className="stage grid place-items-center border-b border-rule p-3 sm:border-r sm:border-b-0">
+              <article key={c.title} className={`card ${c.hue} grid overflow-hidden sm:grid-cols-[11rem_1fr]`}>
+                <div className="stage stage-hue grid place-items-center border-b border-rule p-3 sm:border-r sm:border-b-0">
                   <div className={c.front ? 'h-44 sm:h-full' : 'h-44 w-full sm:h-auto'}>
-                    {c.front ? <FrontFigure posture={null} /> : <PostureFigure posture={{ ...UPRIGHT, torso: 0.35, head: 0.5 }} />}
+                    {c.front ? <FrontFigure posture={null} who={c.who} /> : <PostureFigure posture={{ ...UPRIGHT, torso: 0.35, head: 0.5 }} who={c.who} />}
                   </div>
                 </div>
                 <div className="p-6">
                   <h3 className="flex items-center gap-2 text-xl">
-                    <IconCamera className="size-5 text-accent" />
+                    <IconCamera className="size-5 text-hue" />
                     {c.title}
                   </h3>
                   <ul className="mt-4 space-y-2">
                     {c.reads.map((r) => (
                       <li key={r} className="flex items-center gap-2">
-                        <span className="grid size-5 place-items-center rounded-full bg-accent-soft text-accent">
+                        <span className="grid size-5 place-items-center rounded-full bg-daun-soft text-daun-ink">
                           <IconCheck className="size-3" />
                         </span>
                         {r}
@@ -195,7 +199,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="border-y border-rule bg-surface/60">
+        <section className="hue-daun border-y border-rule bg-hue-soft">
           <div className="mx-auto grid max-w-6xl gap-x-16 gap-y-10 px-4 py-20 sm:px-8 sm:py-24 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <div>
               <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Satu menit untuk menebus satu jam.</h2>
@@ -208,10 +212,10 @@ export default function Home() {
                 <IconArrowRight className="size-4" />
               </Link>
             </div>
-            <ol className="relative space-y-3 before:absolute before:top-6 before:bottom-6 before:left-[1.4rem] before:w-px before:bg-rule">
+            <ol className="relative space-y-3 before:absolute before:top-6 before:bottom-6 before:left-[1.4rem] before:w-px before:bg-hue/30">
               {reset.steps.map((s, i) => (
                 <li key={s.title} className="relative flex gap-5">
-                  <span className="relative z-10 grid size-11 shrink-0 place-items-center rounded-full bg-accent text-base font-extrabold text-on-accent ring-4 ring-surface">
+                  <span className="relative z-10 grid size-11 shrink-0 place-items-center rounded-full bg-hue text-base font-extrabold text-on-accent ring-4 ring-hue-soft">
                     {i + 1}
                   </span>
                   <div className="card flex-1 p-5">
@@ -237,38 +241,39 @@ export default function Home() {
               <Link href="/privasi" className="btn mt-8">
                 Baca catatan privasi
               </Link>
+              <Image src="/3d/padlock.webp" alt="" width={316} height={460} unoptimized className="mt-12 hidden h-44 w-auto -rotate-6 drop-shadow-xl lg:block" />
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
-              <div className="card p-6">
+              <div className="card hue-daun p-6">
                 <h3 className="flex items-center gap-2 text-lg">
-                  <IconLock className="size-5 text-accent" />
+                  <IconLock className="size-5 text-hue" />
                   Tetap di perangkatmu
                 </h3>
                 <ul className="mt-4 space-y-3 text-muted">
                   {STAYS.map((x) => (
                     <li key={x} className="flex gap-3">
-                      <IconCheck className="mt-0.5 size-4 shrink-0 text-accent" />
+                      <IconCheck className="mt-0.5 size-4 shrink-0 text-hue" />
                       {x}
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="card p-6">
+              <div className="card hue-kunyit p-6">
                 <h3 className="flex items-center gap-2 text-lg">
-                  <IconShield className="size-5 text-muted" />
+                  <IconShield className="size-5 text-hue-ink" />
                   Keluar hanya jika kamu izinkan
                 </h3>
                 <ul className="mt-4 space-y-3 text-muted">
                   {CAN_LEAVE.map((x) => (
                     <li key={x} className="flex gap-3">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-edge" aria-hidden />
+                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-hue" aria-hidden />
                       {x}
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="card flex gap-4 p-6 sm:col-span-2">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-accent">
+              <div className="card hue-ungu flex gap-4 p-6 sm:col-span-2">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-hue-soft text-hue-ink">
                   <IconPip />
                 </span>
                 <p className="text-muted text-pretty">

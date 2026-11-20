@@ -231,6 +231,12 @@
       radial-gradient(60% 18% at 50% 92%, color-mix(in oklab, var(--ink) 9%, transparent), transparent 70%),
       radial-gradient(110% 85% at 50% 30%, var(--raised) 0%, var(--surface) 70%);
   }
+  /* The same floor, lit in the dye of the card it sits in. */
+  .stage-hue {
+    background:
+      radial-gradient(60% 18% at 50% 92%, color-mix(in oklab, var(--ink) 9%, transparent), transparent 70%),
+      radial-gradient(110% 85% at 50% 30%, var(--raised) 0%, var(--hue-soft) 75%);
+  }
   .marker {
     background: linear-gradient(transparent 62%, color-mix(in oklab, var(--alert) 45%, transparent) 62%);
     @apply px-1;
