@@ -1,46 +1,38 @@
+import Image from 'next/image';
 import Link from 'next/link';
-import type { ComponentType, SVGProps } from 'react';
-import {
-  IconArrowRight,
-  IconCamera,
-  IconCheck,
-  IconEye,
-  IconLock,
-  IconMoon,
-  IconPip,
-  IconPosture,
-  IconShield,
-  IconTimer,
-} from '@/components/icons';
+import { IconArrowRight, IconCamera, IconCheck, IconLock, IconPip, IconShield } from '@/components/icons';
 import LandingDemo from '@/components/landing-demo';
 import PostureFigure, { FrontFigure } from '@/components/posture-figure';
 import SiteFooter from '@/components/site-footer';
 import { ROUTINES } from '@/lib/routines';
 import { UPRIGHT } from '@/lib/signals';
 
-type Icon = ComponentType<SVGProps<SVGSVGElement>>;
-
-const SMALL_SIGNALS: { icon: Icon; name: string; how: string; answer: string }[] = [
+// Each signal has its own dye and a 3D object from assets/objects/objects.blend.
+const SMALL_SIGNALS: { img: string; hue: string; name: string; how: string; answer: string }[] = [
   {
-    icon: IconEye,
+    img: 'eye',
+    hue: 'hue-daun',
     name: 'Laju kedip',
     how: 'Normalnya 15 sampai 20 kali per menit, dan jauh lebih jarang saat menatap layar.',
     answer: 'Pendar saat kedipan bertahan di bawah sekitar sepuluh per menit, plus istirahat mata 20 detik.',
   },
   {
-    icon: IconTimer,
+    img: 'hourglass',
+    hue: 'hue-kunyit',
     name: 'Lama di depan layar',
     how: 'Menit selama halaman ini atau monitor mininya terlihat. Tanpa kamera pun jalan.',
     answer: 'Istirahat mata 20-20-20 dan peregangan 60 detik sesuai jadwalmu.',
   },
   {
-    icon: IconPosture,
+    img: 'mug',
+    hue: 'hue-mengkudu',
     name: 'Saat kamu menjauh',
     how: 'Kamera melihat kursimu kosong lebih dari satu menit.',
     answer: 'Waktu itu dihitung sebagai jeda, bukan waktu layar, dan pengingat ikut menyesuaikan.',
   },
   {
-    icon: IconMoon,
+    img: 'moon',
+    hue: 'hue-ungu',
     name: 'Jam malam',
     how: 'Jam tidurmu, diatur sekali.',
     answer: 'Layar menghangat sejak dua jam sebelumnya, dengan saran jujur untuk mulai menutup pekerjaan.',
@@ -80,8 +72,8 @@ export default function Home() {
   const reset = ROUTINES.reset;
   return (
     <>
-      <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-x-16 gap-y-12 px-4 pt-10 pb-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:pt-16">
+      <main className="overflow-x-clip">
+        <section className="mx-auto grid max-w-6xl items-center gap-x-16 gap-y-12 px-4 pt-14 pb-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:pt-20">
           <div>
             <h1 className="text-[2.6rem] leading-[1.05] font-extrabold sm:text-6xl lg:text-[3.7rem]">
               Lihat <span className="marker">pegal</span> sebelum terasa.
@@ -107,9 +99,9 @@ export default function Home() {
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
             <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Enam hal yang diperhatikan, dan cara menanggapinya.</h2>
             <div className="mt-12 grid gap-5 lg:grid-cols-2">
-              <article className="band-card overflow-hidden">
-                <div className="h-60 bg-white/[0.04] p-3">
-                  <PostureFigure posture={{ ...UPRIGHT, torso: 0.75, head: 0.85 }} className="drop-shadow-xl" />
+              <article className="band-card hue-mengkudu overflow-hidden">
+                <div className="h-60 bg-hue/20 p-3">
+                  <PostureFigure posture={{ ...UPRIGHT, torso: 0.75, head: 0.85 }} who="sekar" className="drop-shadow-xl" />
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl">Condong ke depan</h3>
@@ -123,9 +115,9 @@ export default function Home() {
                   </p>
                 </div>
               </article>
-              <article className="band-card overflow-hidden">
-                <div className="h-60 bg-white/[0.04] p-3">
-                  <FrontFigure posture={{ ...UPRIGHT, side: 0.85, tilt: -0.35 }} className="drop-shadow-xl" />
+              <article className="band-card hue-ungu overflow-hidden">
+                <div className="h-60 bg-hue/20 p-3">
+                  <FrontFigure posture={{ ...UPRIGHT, side: 0.85, tilt: -0.35 }} who="bima" className="drop-shadow-xl" />
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl">Miring ke samping</h3>
@@ -142,13 +134,15 @@ export default function Home() {
             </div>
             <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
               {SMALL_SIGNALS.map((s) => (
-                <article key={s.name} className="band-card p-6">
-                  <span className="grid size-10 place-items-center rounded-xl bg-white/10 text-band-accent">
-                    <s.icon />
-                  </span>
-                  <h3 className="mt-4 text-lg">{s.name}</h3>
-                  <p className="mt-2 text-on-band-muted text-pretty">{s.how}</p>
-                  <p className="mt-3 text-pretty">{s.answer}</p>
+                <article key={s.name} className={`band-card ${s.hue} overflow-hidden`}>
+                  <div className="grid h-36 place-items-center bg-hue/30">
+                    <Image src={`/3d/${s.img}.webp`} alt="" width={460} height={460} unoptimized className="h-24 w-auto drop-shadow-lg" />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-lg">{s.name}</h3>
+                    <p className="mt-2 text-on-band-muted text-pretty">{s.how}</p>
+                    <p className="mt-3 text-pretty">{s.answer}</p>
+                  </div>
                 </article>
               ))}
             </div>
