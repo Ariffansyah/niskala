@@ -1,7 +1,14 @@
 import { preload } from 'react-dom';
-import frontSheet from '@/lib/figure-front.json';
-import sideSheet from '@/lib/figure-sheet.json';
+import ayuFront from '@/lib/figure-ayu-front.json';
+import ayuSide from '@/lib/figure-ayu.json';
+import bimaFront from '@/lib/figure-bima-front.json';
+import bimaSide from '@/lib/figure-bima.json';
+import rakaFront from '@/lib/figure-front.json';
+import rakaSide from '@/lib/figure-sheet.json';
+import sekarFront from '@/lib/figure-sekar-front.json';
+import sekarSide from '@/lib/figure-sekar.json';
 import { UPRIGHT, type Posture } from '@/lib/signals';
+import type { FigureId } from '@/lib/store';
 
 // Rotation limits for the rendered figure, matched to what still reads as a human posture.
 export const TORSO_MAX_DEG = 20;
@@ -19,6 +26,18 @@ const pivotOf = (sheet: Sheet, name: string) => {
   return { x: b.x + p.x, y: b.y + p.y };
 };
 
+/** Everyone shares one rig in figure.blend, so only hair, clothes and skin differ between sheets. */
+// hue matches the dye of each figure's top, for rings and tints around them.
+export const FIGURES: { id: FigureId; name: string; hue: string; side: Sheet; front: Sheet }[] = [
+  { id: 'raka', name: 'Raka', hue: 'hue-nila', side: rakaSide, front: rakaFront },
+  { id: 'ayu', name: 'Ayu', hue: 'hue-daun', side: ayuSide, front: ayuFront },
+  { id: 'sekar', name: 'Sekar', hue: 'hue-mengkudu', side: sekarSide, front: sekarFront },
+  { id: 'bima', name: 'Bima', hue: 'hue-ungu', side: bimaSide, front: bimaFront },
+];
+export const byId = (id: FigureId) => FIGURES.find((f) => f.id === id) ?? FIGURES[0];
+const sideSrc = (id: FigureId) => (id === 'raka' ? '/figure/sheet.png' : `/figure/${id}.png`);
+const frontSrc = (id: FigureId) => (id === 'raka' ? '/figure/front.png' : `/figure/${id}-front.png`);
+
 function Layer({ sheet, src, name }: { sheet: Sheet; src: string; name: string }) {
   const { frame: f, spriteSourceSize: s } = sheet.frames[name];
   return (
@@ -33,15 +52,11 @@ const joint = (deg: number, at: { x: number; y: number }) => ({
   transformOrigin: `${at.x}px ${at.y}px`,
 });
 
-const SIDE_SRC = '/figure/sheet.png';
-const SIDE = sideSheet as Sheet;
-const HIP = pivotOf(SIDE, 'torso');
-const SHOULDER = pivotOf(SIDE, 'arms');
-const NECK = pivotOf(SIDE, 'head');
-
 /** Side view: forward lean of the back and head. */
-export default function PostureFigure({ posture, className = '' }: { posture: Posture | null; className?: string }) {
-  preload(SIDE_SRC, { as: 'image', fetchPriority: 'high' });
+export default function PostureFigure({ posture, who = 'raka', className = '' }: { posture: Posture | null; who?: FigureId; className?: string }) {
+  const sheet = byId(who).side;
+  const src = sideSrc(who);
+  preload(src, { as: 'image', fetchPriority: 'high' });
   const p = posture ?? UPRIGHT;
   const torso = p.torso * TORSO_MAX_DEG;
   const head = p.head * HEAD_MAX_DEG;
@@ -52,28 +67,25 @@ export default function PostureFigure({ posture, className = '' }: { posture: Po
       role="img"
       aria-label={`Tampak samping: punggung condong ${Math.round(torso)}° dan kepala ${Math.round(head)}° ke depan`}
     >
-      <Layer sheet={SIDE} src={SIDE_SRC} name="seat" />
-      <g className="joint" style={joint(torso, HIP)}>
-        <Layer sheet={SIDE} src={SIDE_SRC} name="torso" />
+      <Layer sheet={sheet} src={src} name="seat" />
+      <g className="joint" style={joint(torso, pivotOf(sheet, 'torso'))}>
+        <Layer sheet={sheet} src={src} name="torso" />
         {/* Counter-rotating the arms keeps the hands on the keyboard while the back rounds. */}
-        <g className="joint" style={joint(-torso, SHOULDER)}>
-          <Layer sheet={SIDE} src={SIDE_SRC} name="arms" />
+        <g className="joint" style={joint(-torso, pivotOf(sheet, 'arms'))}>
+          <Layer sheet={sheet} src={src} name="arms" />
         </g>
-        <g className="joint" style={joint(head, NECK)}>
-          <Layer sheet={SIDE} src={SIDE_SRC} name="head" />
+        <g className="joint" style={joint(head, pivotOf(sheet, 'head'))}>
+          <Layer sheet={sheet} src={src} name="head" />
         </g>
       </g>
     </svg>
   );
 }
 
-const FRONT_SRC = '/figure/front.png';
-const FRONT = frontSheet as Sheet;
-const F_HIP = pivotOf(FRONT, 'upper');
-const F_NECK = pivotOf(FRONT, 'head');
-
 /** Front view, as the webcam sees you but mirrored: sideways lean and head tilt. */
-export function FrontFigure({ posture, className = '' }: { posture: Posture | null; className?: string }) {
+export function FrontFigure({ posture, who = 'raka', className = '' }: { posture: Posture | null; who?: FigureId; className?: string }) {
+  const sheet = byId(who).front;
+  const src = frontSrc(who);
   const p = posture ?? UPRIGHT;
   const side = p.side * SIDE_MAX_DEG;
   const tilt = p.tilt * TILT_MAX_DEG;
@@ -84,14 +96,44 @@ export function FrontFigure({ posture, className = '' }: { posture: Posture | nu
       role="img"
       aria-label={`Tampak depan: badan miring ${Math.abs(Math.round(side))}° dan kepala miring ${Math.abs(Math.round(tilt))}°`}
     >
-      <Layer sheet={FRONT} src={FRONT_SRC} name="base" />
-      <g className="joint" style={joint(side, F_HIP)}>
-        <Layer sheet={FRONT} src={FRONT_SRC} name="upper" />
+      <Layer sheet={sheet} src={src} name="base" />
+      <g className="joint" style={joint(side, pivotOf(sheet, 'upper'))}>
+        <Layer sheet={sheet} src={src} name="upper" />
         {/* Tilt is measured against the room, so subtract the body's lean before nesting the head. */}
-        <g className="joint" style={joint(tilt - side, F_NECK)}>
-          <Layer sheet={FRONT} src={FRONT_SRC} name="head" />
+        <g className="joint" style={joint(tilt - side, pivotOf(sheet, 'head'))}>
+          <Layer sheet={sheet} src={src} name="head" />
         </g>
       </g>
     </svg>
+  );
+}
+
+/** Head and shoulders from the front sheet, for avatars. */
+export function FigureFace({ who }: { who: FigureId }) {
+  const sheet = byId(who).front;
+  const src = frontSrc(who);
+  return (
+    <svg viewBox="290 60 220 220" className="h-full w-full" aria-hidden>
+      <Layer sheet={sheet} src={src} name="upper" />
+      <Layer sheet={sheet} src={src} name="head" />
+    </svg>
+  );
+}
+
+/** Native radios, so arrow keys move between figures. Render inside a client component. */
+export function FigurePicker({ value, onChange, size = 'size-11' }: { value: FigureId; onChange: (id: FigureId) => void; size?: string }) {
+  return (
+    <div role="radiogroup" aria-label="Figur" className="flex gap-2">
+      {FIGURES.map((f) => (
+        <label
+          key={f.id}
+          title={f.name}
+          className={`${f.hue} ${size} relative cursor-pointer overflow-hidden rounded-full bg-hue-soft ring-2 ring-transparent ring-offset-2 ring-offset-raised transition-shadow hover:ring-hue/40 has-checked:ring-hue has-focus-visible:outline-2 has-focus-visible:outline-accent`}
+        >
+          <input type="radio" name="figure" className="sr-only" checked={value === f.id} onChange={() => onChange(f.id)} aria-label={f.name} />
+          <FigureFace who={f.id} />
+        </label>
+      ))}
+    </div>
   );
 }

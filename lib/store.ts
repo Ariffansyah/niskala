@@ -7,6 +7,7 @@ export type Warmth = 'auto' | 'on' | 'off';
 export type Mode = 'camera' | 'timer' | 'demo';
 export type Theme = 'auto' | 'light' | 'dark';
 export type CameraView = 'front' | 'side';
+export type FigureId = 'raka' | 'ayu' | 'sekar' | 'bima';
 
 export type Prefs = {
   mode: Mode;
@@ -19,6 +20,7 @@ export type Prefs = {
   resetMin: number; // 0 = off
   sound: boolean;
   notify: boolean; // system notifications while Niskala is not in focus
+  figure: FigureId; // who stands in for you on screen
   sync: boolean;
   onboarded: boolean;
 };
@@ -34,6 +36,7 @@ export const DEFAULT_PREFS: Prefs = {
   resetMin: 50,
   sound: false,
   notify: false,
+  figure: 'raka',
   sync: false,
   onboarded: false,
 };
