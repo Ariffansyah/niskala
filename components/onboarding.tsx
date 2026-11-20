@@ -4,7 +4,7 @@ import { useState, type ComponentType, type SVGProps } from 'react';
 import { hhmm, parseHhmm } from '@/lib/format';
 import { prefsStore, type Mode, type Prefs } from '@/lib/store';
 import { IconArrowRight, IconCamera, IconCheck, IconMoon, IconSliders, IconTimer } from './icons';
-import PostureFigure, { FrontFigure } from './posture-figure';
+import PostureFigure, { FigurePicker, FrontFigure } from './posture-figure';
 import { Segmented, Switch } from './ui-client';
 
 const MODES: { value: Mode; title: string; body: string; icon: ComponentType<SVGProps<SVGSVGElement>>; tag?: string }[] = [
@@ -32,11 +32,15 @@ export default function Onboarding({ prefs }: { prefs: Prefs }) {
     <section aria-labelledby="setup-title" className="grid items-start gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-12">
       <div className="card relative hidden overflow-hidden bg-surface lg:block">
         <div className="aspect-[1150/1180]">
-          <PostureFigure posture={null} />
+          <PostureFigure posture={null} who={draft.figure} />
+        </div>
+        <div className="card absolute bottom-4 left-4 flex items-center gap-4 py-2 pr-2 pl-4">
+          <span className="text-sm font-semibold">Pilih figurmu</span>
+          <FigurePicker value={draft.figure} onChange={(figure) => set({ figure })} size="size-10" />
         </div>
         <div className="card absolute top-4 right-4 w-[30%] p-1.5">
           <div className="relative aspect-[560/760] rounded-xl bg-surface">
-            <FrontFigure posture={null} />
+            <FrontFigure posture={null} who={draft.figure} />
             <span className="chip absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px]">Depan</span>
           </div>
         </div>
