@@ -1,4 +1,4 @@
-import type { Baseline, Sensitivity } from './signals';
+import type { Baseline, ProfileBaseline, Sensitivity } from './signals';
 
 // Everything here is local to the browser. Only `SessionSummary` and part of
 // `Prefs` are ever synced (see sync.ts); the calibration baseline never leaves the device.
@@ -6,9 +6,12 @@ import type { Baseline, Sensitivity } from './signals';
 export type Warmth = 'auto' | 'on' | 'off';
 export type Mode = 'camera' | 'timer' | 'demo';
 export type Theme = 'auto' | 'light' | 'dark';
+export type CameraView = 'front' | 'side';
 
 export type Prefs = {
   mode: Mode;
+  cameraView: CameraView;
+  cameraId: string | null; // null = the browser's default camera
   bedtime: number; // minutes after midnight
   warmth: Warmth;
   sensitivity: Sensitivity;
@@ -21,6 +24,8 @@ export type Prefs = {
 
 export const DEFAULT_PREFS: Prefs = {
   mode: 'demo',
+  cameraView: 'front',
+  cameraId: null,
   bedtime: 23 * 60,
   warmth: 'auto',
   sensitivity: 'balanced',
@@ -49,6 +54,7 @@ export type SessionSummary = {
 const KEY = {
   prefs: 'niskala:prefs',
   baseline: 'niskala:baseline',
+  baselineSide: 'niskala:baseline-side',
   sessions: 'niskala:sessions',
   syncedAt: 'niskala:synced-at',
   theme: 'niskala:theme',
@@ -104,6 +110,7 @@ function stored<T>(key: string, fallback: T, parse: (v: T | null) => T = (v) => 
 export const prefsStore = stored<Prefs>(KEY.prefs, DEFAULT_PREFS, (v) => ({ ...DEFAULT_PREFS, ...v }));
 // Baselines saved before sideways tracking lack roll and cx; asking for a fresh calibration is safer than guessing.
 export const baselineStore = stored<Baseline | null>(KEY.baseline, null, (v) => (v && 'roll' in v && 'cx' in v ? v : null));
+export const profileBaselineStore = stored<ProfileBaseline | null>(KEY.baselineSide, null, (v) => (v && 'neck' in v && 'trunk' in v ? v : null));
 export const themeStore = stored<Theme>(KEY.theme, 'auto');
 const NO_SESSIONS: SessionSummary[] = [];
 export const sessionsStore = stored<SessionSummary[]>(KEY.sessions, NO_SESSIONS, (v) =>

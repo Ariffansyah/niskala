@@ -9,16 +9,19 @@ import {
   ema,
   glowFrom,
   makeBaseline,
+  makeProfileBaseline,
   nightState,
   postureFrom,
+  postureFromProfile,
   stepStrain,
-  type FaceSample,
   type NightStage,
   type Posture,
 } from './signals';
 import { chime } from './sound';
+import type { Sample } from './vision';
 import {
   baselineStore,
+  profileBaselineStore,
   loadSyncedAt,
   saveSession,
   saveSyncedAt,
@@ -86,14 +89,16 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
   timerWindow: Window | null;
 }) {
   const [snap, setSnap] = useState(INITIAL);
-  const baseline = useSyncExternalStore(baselineStore.subscribe, baselineStore.get, baselineStore.server);
+  const frontBaseline = useSyncExternalStore(baselineStore.subscribe, baselineStore.get, baselineStore.server);
+  const sideBaseline = useSyncExternalStore(profileBaselineStore.subscribe, profileBaselineStore.get, profileBaselineStore.server);
+  const calibrated = (prefs.cameraView === 'front' ? frontBaseline : sideBaseline) !== null;
   const [syncResult, setSync] = useState<SyncResult | null>(null);
   const sync: SyncStatus = !syncConfigured || !prefs.sync ? { state: 'off' } : (syncResult ?? { state: 'idle' });
   const face = useRef({
-    sample: null as FaceSample | null,
+    sample: null as Sample | null,
     at: 0,
     blinks: null as BlinkCounter | null,
-    collect: null as FaceSample[] | null,
+    collect: null as Sample[] | null,
   });
   const model = useRef({
     posture: null as Posture | null,
@@ -159,10 +164,16 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
       target = { head: sim.head, torso: sim.torso, side: sim.side, tilt: sim.tilt };
       rate = sim.blink;
     } else if (mode === 'camera' && cameraOn) {
-      const b = baselineStore.get();
-      target = b && f.sample && now - f.at < 1000 ? postureFrom(f.sample, b) : null;
-      // Hidden tabs only get about one frame a second, too slow to see blinks.
-      rate = watched ? (f.blinks?.rate(now) ?? null) : null;
+      const s = f.sample && now - f.at < 1000 ? f.sample : null;
+      if (s?.view === 'front') {
+        const b = baselineStore.get();
+        target = b && postureFrom(s, b);
+      } else if (s?.view === 'side') {
+        const b = profileBaselineStore.get();
+        target = b && postureFromProfile(s, b);
+      }
+      // Blinks need the face; hidden tabs only get about one frame a second, too slow to see them.
+      rate = watched && prefs.cameraView === 'front' ? (f.blinks?.rate(now) ?? null) : null;
     }
     const prev = m.posture;
     m.posture =
@@ -287,19 +298,19 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     // A new camera run starts a fresh blink window.
     face.current.sample = null;
     face.current.blinks = null;
-  }, [mode, cameraOn]);
+  }, [mode, cameraOn, prefs.cameraView]);
 
-  const onSample = useCallback((s: FaceSample | null, t: number) => {
+  const onSample = useCallback((s: Sample | null, t: number) => {
     const f = face.current;
     f.blinks ??= new BlinkCounter(t);
     if (!s) return;
     f.sample = s;
     f.at = t;
-    f.blinks.push(t, s.blink);
+    if (s.view === 'front') f.blinks.push(t, s.blink);
     f.collect?.push(s);
   }, []);
 
-  /** Collects frames for `ms` and stores the median as the upright baseline. Resolves false if the face was rarely seen. */
+  /** Collects frames for `ms` and stores the median as the upright baseline for the current camera position. Resolves false if the user was rarely seen. */
   const calibrate = useCallback(
     (ms: number) =>
       new Promise<boolean>((resolve) => {
@@ -307,8 +318,11 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
         setTimeout(() => {
           const got = face.current.collect ?? [];
           face.current.collect = null;
-          if (got.length < MIN_CALIBRATION_FRAMES) return resolve(false);
-          baselineStore.set(makeBaseline(got));
+          const front = got.filter((s) => s.view === 'front');
+          const side = got.filter((s) => s.view === 'side');
+          if (Math.max(front.length, side.length) < MIN_CALIBRATION_FRAMES) return resolve(false);
+          if (front.length >= side.length) baselineStore.set(makeBaseline(front));
+          else profileBaselineStore.set(makeProfileBaseline(side));
           resolve(true);
         }, ms);
       }),
@@ -348,5 +362,5 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     model.current.session = null;
   }, []);
 
-  return { snap, baseline, sync, onSample, calibrate, completeRoutine, snooze, triggerCue, discardSession };
+  return { snap, calibrated, sync, onSample, calibrate, completeRoutine, snooze, triggerCue, discardSession };
 }
