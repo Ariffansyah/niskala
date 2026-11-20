@@ -18,6 +18,7 @@ export type Prefs = {
   eyeMin: number; // 0 = off
   resetMin: number; // 0 = off
   sound: boolean;
+  notify: boolean; // system notifications while Niskala is not in focus
   sync: boolean;
   onboarded: boolean;
 };
@@ -32,6 +33,7 @@ export const DEFAULT_PREFS: Prefs = {
   eyeMin: 20,
   resetMin: 50,
   sound: false,
+  notify: false,
   sync: false,
   onboarded: false,
 };
