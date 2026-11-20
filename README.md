@@ -18,7 +18,7 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 
 | Route | What it is |
 | --- | --- |
-| `/` | Landing page with a live slouch demo that drives the real edge glow |
+| `/` | Landing page whose hero is the live demo: the figures act out a slouch and a lean until you take the sliders, and the real edge glow answers |
 | `/app` | Workspace: first-run setup, tracking, breaks, evening, sensitivity, data |
 | `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks and late minutes |
 | `/privasi` | What is processed, stored, and optionally backed up |
@@ -26,13 +26,13 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 ## Workspace features
 
 - **Front or side camera:** a laptop webcam above the screen reads forward lean, sideways lean, head tilt and blinks (MediaPipe Face Landmarker). A camera at the side of the desk reads neck and trunk angles directly (MediaPipe Pose Landmarker), which is more accurate for forward-head posture but cannot see sideways lean or blinks. Each position has its own calibration, and any connected camera can be chosen.
-- **Two views of the figure:** side view (*tampak samping*) for forward lean, front view (*tampak depan*, mirrored like the webcam) for sideways lean and head tilt.
+- **Two views of the figure:** side view for forward lean, front view (mirrored like the webcam) for sideways lean and head tilt.
 - **Three modes:** Camera (posture and blinks), Timer only (no camera, scheduled breaks), and Demo (sliders).
 - **Edge glow:** turmeric for sustained leaning or low blinking, indigo when a scheduled break is due. Never a modal.
 - **Breaks:** a 20-second eye break (20-20-20 rule) and a 60-second desk reset. Both are timed and step-by-step, with live head-angle and blink feedback from the camera, and can be snoozed for 5 minutes.
 - **Floating window (two monitors):** an always-on-top Picture-in-Picture window in Chrome and Edge 116+, or a small popup elsewhere, that can be dragged to the monitor you work on. It shows the figure, posture state, strain, the edge glow and break cues, and runs the guided breaks. The camera video and the timers move into it, so tracking keeps its full rate while the main tab is in the background.
 - **Desktop notifications:** opt-in system notifications for break cues and sustained strain, sent only when no Niskala window has focus.
-- **Status in the tab title:** "Condong ke depan · Niskala", "Waktunya jeda · Niskala", readable from the taskbar or another screen.
+- **Status in the tab title:** "Bungkuk ke depan · Niskala", "Waktunya jeda · Niskala", readable from the taskbar or another screen.
 - **Away detection:** with the camera on, nobody in frame for a minute means you left the desk. That time is not counted as screen time; 2 minutes away counts as an eye break and 5 minutes as a desk reset.
 - **Evening:** bedtime-aware warm shift with wind-down and past-bedtime guidance.
 - **Sensitivity:** Gentle, Balanced or Strict thresholds. Optional soft chime.
