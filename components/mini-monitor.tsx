@@ -10,15 +10,30 @@ declare global {
   }
 }
 
+const SIZE = { width: 320, height: 460 };
 const noop = () => () => {};
-/** False during prerender and in browsers without Document Picture-in-Picture. */
+
+/** True when the floating window can stay on top of other apps (Chromium); elsewhere it is a normal popup. */
 export function usePipSupported() {
   return useSyncExternalStore(noop, () => 'documentPictureInPicture' in window, () => false);
 }
 
-/** Opens an always-on-top window that shares this page's styles and theme. */
+/**
+ * Opens a small window that shares this page's styles and theme: an always-on-top
+ * Picture-in-Picture window where supported, otherwise a popup that can be dragged
+ * to a second monitor. Both are same-origin, so React can render into them directly.
+ */
 export async function openMiniMonitor(): Promise<Window> {
-  const w = await window.documentPictureInPicture!.requestWindow({ width: 300, height: 420 });
+  let w: Window | null;
+  if (window.documentPictureInPicture) {
+    w = await window.documentPictureInPicture.requestWindow(SIZE);
+  } else {
+    w = window.open('', 'niskala-mini', `popup,width=${SIZE.width},height=${SIZE.height}`);
+    if (!w) throw new Error('Popup diblokir');
+    // Reusing an already open popup: start from an empty document.
+    w.document.head.replaceChildren();
+    w.document.body.replaceChildren();
+  }
   // The new window starts at about:blank; a base URL lets the copied stylesheet and figure paths resolve.
   const base = w.document.createElement('base');
   base.href = location.href;
