@@ -21,6 +21,11 @@
   --danger: light-dark(#a5402b, #e88a72);
   --cue: light-dark(#3a5085, #7f95d1);
   --shadow: light-dark(rgb(42 31 25 / 0.08), rgb(0 0 0 / 0.35));
+  /* Deep nila bands for contrast sections; same text colours in both themes. */
+  --band: light-dark(#1c2643, #0e111b);
+  --on-band: #f1ead9;
+  --on-band-muted: #b8b4c4;
+  --band-accent: #e9b04a;
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -44,6 +49,10 @@
   --color-alert-ink: var(--alert-ink);
   --color-danger: var(--danger);
   --color-cue: var(--cue);
+  --color-band: var(--band);
+  --color-on-band: var(--on-band);
+  --color-on-band-muted: var(--on-band-muted);
+  --color-band-accent: var(--band-accent);
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -175,6 +184,33 @@
   .dialog::backdrop {
     background: rgb(20 16 12 / 0.45);
   }
+
+  .band {
+    @apply bg-band text-on-band;
+  }
+  .band-card {
+    @apply rounded-2xl border border-white/10 bg-white/[0.05];
+  }
+  /* Floating readouts layered over the stage; the one place a strong shadow marks elevation. */
+  .float-card {
+    @apply rounded-2xl border border-rule bg-raised px-4 py-3 shadow-[0_12px_32px_-12px_var(--shadow),0_2px_6px_var(--shadow)];
+  }
+  /* Spotlit floor for the figure, so the 2.5D render reads as standing in a space. */
+  .stage {
+    background:
+      radial-gradient(60% 18% at 50% 92%, color-mix(in oklab, var(--ink) 9%, transparent), transparent 70%),
+      radial-gradient(110% 85% at 50% 30%, var(--raised) 0%, var(--surface) 70%);
+  }
+  .marker {
+    background: linear-gradient(transparent 62%, color-mix(in oklab, var(--alert) 45%, transparent) 62%);
+    @apply px-1;
+  }
+}
+
+/* Kawung, one of the oldest batik motifs: four petals around a point. Used only on dark bands, as identity. */
+.motif-kawung {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23f1ead9' stroke-opacity='0.07' stroke-width='1.2'%3E%3Cellipse cx='24' cy='11' rx='6.5' ry='11'/%3E%3Cellipse cx='24' cy='37' rx='6.5' ry='11'/%3E%3Cellipse cx='11' cy='24' rx='11' ry='6.5'/%3E%3Cellipse cx='37' cy='24' rx='11' ry='6.5'/%3E%3C/g%3E%3Ccircle cx='24' cy='24' r='1.6' fill='%23f1ead9' fill-opacity='0.12'/%3E%3C/svg%3E");
+  background-size: 48px 48px;
 }
 
 /* Both overlays are fixed, paint once, and only animate opacity, so changes stay on the compositor. */
