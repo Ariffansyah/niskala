@@ -1,33 +1,62 @@
-import type { FaceLandmarker, FaceLandmarkerResult } from '@mediapipe/tasks-vision';
-import type { FaceSample } from './signals';
+import type { FaceLandmarker, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult } from '@mediapipe/tasks-vision';
+import { profileAngles, type FaceSample, type ProfileSample } from './signals';
+import type { CameraView } from './store';
 
-// Both are served from this origin (see the postinstall script), so no frame,
+// Everything is served from this origin (see the postinstall script), so no frame,
 // landmark or even model request ever leaves for a third party.
 const WASM_BASE = '/mediapipe';
-const MODEL = '/models/face_landmarker.task';
+const FACE_MODEL = '/models/face_landmarker.task';
+const POSE_MODEL = '/models/pose_landmarker_lite.task';
 
 const LEFT_EYE_OUTER = 33;
 const RIGHT_EYE_OUTER = 263;
 const NOSE_TIP = 1;
+// BlazePose indices: nose, then left/right ear, shoulder and hip.
+const POSE = { nose: 0, ear: [7, 8], shoulder: [11, 12], hip: [23, 24] } as const;
+const MIN_VISIBILITY = 0.5;
 
-async function createLandmarker(): Promise<FaceLandmarker> {
-  const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
-  const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
-  const options = (delegate: 'GPU' | 'CPU') => ({
-    baseOptions: { modelAssetPath: MODEL, delegate },
-    runningMode: 'VIDEO' as const,
-    numFaces: 1,
-    outputFaceBlendshapes: true,
-    outputFacialTransformationMatrixes: true,
-  });
+export type { CameraView };
+export type Sample = ({ view: 'front' } & FaceSample) | ({ view: 'side' } & ProfileSample);
+
+async function fileset() {
+  const { FilesetResolver } = await import('@mediapipe/tasks-vision');
+  return FilesetResolver.forVisionTasks(WASM_BASE);
+}
+
+// GPU is much faster but not available everywhere; fall back to CPU rather than fail.
+async function withDelegate<T>(create: (delegate: 'GPU' | 'CPU') => Promise<T>) {
   try {
-    return await FaceLandmarker.createFromOptions(fileset, options('GPU'));
+    return await create('GPU');
   } catch {
-    return FaceLandmarker.createFromOptions(fileset, options('CPU'));
+    return create('CPU');
   }
 }
 
-function toSample(r: FaceLandmarkerResult, w: number, h: number): FaceSample | null {
+async function createFace(): Promise<FaceLandmarker> {
+  const [{ FaceLandmarker }, files] = await Promise.all([import('@mediapipe/tasks-vision'), fileset()]);
+  return withDelegate((delegate) =>
+    FaceLandmarker.createFromOptions(files, {
+      baseOptions: { modelAssetPath: FACE_MODEL, delegate },
+      runningMode: 'VIDEO',
+      numFaces: 1,
+      outputFaceBlendshapes: true,
+      outputFacialTransformationMatrixes: true,
+    }),
+  );
+}
+
+async function createPose(): Promise<PoseLandmarker> {
+  const [{ PoseLandmarker }, files] = await Promise.all([import('@mediapipe/tasks-vision'), fileset()]);
+  return withDelegate((delegate) =>
+    PoseLandmarker.createFromOptions(files, {
+      baseOptions: { modelAssetPath: POSE_MODEL, delegate },
+      runningMode: 'VIDEO',
+      numPoses: 1,
+    }),
+  );
+}
+
+function faceSample(r: FaceLandmarkerResult, w: number, h: number): Sample | null {
   const p = r.faceLandmarks[0];
   const m = r.facialTransformationMatrixes[0]?.data;
   const shapes = r.faceBlendshapes[0]?.categories;
@@ -38,6 +67,7 @@ function toSample(r: FaceLandmarkerResult, w: number, h: number): FaceSample | n
   // Ordered by position in the frame, so the eye line stays near 0° whichever eye each index names.
   const [a, b] = l.x < rt.x ? [l, rt] : [rt, l];
   return {
+    view: 'front',
     pitch: (Math.atan2(m[6], m[10]) * 180) / Math.PI,
     roll: (Math.atan2((b.y - a.y) * h, (b.x - a.x) * w) * 180) / Math.PI,
     iod: Math.hypot((l.x - rt.x) * w, (l.y - rt.y) * h),
@@ -47,24 +77,50 @@ function toSample(r: FaceLandmarkerResult, w: number, h: number): FaceSample | n
   };
 }
 
+function poseSample(r: PoseLandmarkerResult, w: number, h: number): Sample | null {
+  const p = r.landmarks[0];
+  if (!p) return null;
+  // Use the body side nearer the camera: its ear, shoulder and hip are the most visible.
+  const sideVis = (i: 0 | 1) => Math.min(p[POSE.ear[i]].visibility, p[POSE.shoulder[i]].visibility, p[POSE.hip[i]].visibility);
+  const i = sideVis(0) >= sideVis(1) ? 0 : 1;
+  if (sideVis(i) < MIN_VISIBILITY) return null;
+  const px = (k: number) => ({ x: p[k].x * w, y: p[k].y * h });
+  return { view: 'side', ...profileAngles(px(POSE.ear[i]), px(POSE.shoulder[i]), px(POSE.hip[i]), px(POSE.nose)) };
+}
+
 export function describeCameraError(e: unknown) {
   const name = e instanceof DOMException ? e.name : '';
   if (name === 'NotAllowedError') return 'Akses kamera diblokir. Izinkan dari bilah alamat, atau pakai mode Timer.';
-  if (name === 'NotFoundError') return 'Kamera tidak ditemukan di perangkat ini. Mode Timer tetap bisa dipakai.';
+  if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'Kamera tidak ditemukan. Pilih kamera lain, atau pakai mode Timer.';
   if (name === 'NotReadableError') return 'Kamera sedang dipakai aplikasi lain. Tutup aplikasinya, lalu coba lagi.';
   return `Modul penglihatan gagal dimulai: ${e instanceof Error ? e.message : String(e)}`;
 }
 
-export type Vision = { video: HTMLVideoElement; stop: () => void };
+/** Video inputs; labels are only filled in after camera permission was granted once. */
+export async function listCameras() {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices
+    .filter((d) => d.kind === 'videoinput')
+    .map((d, i) => ({ id: d.deviceId, label: d.label || `Kamera ${i + 1}` }));
+}
+
+export type Vision = { video: HTMLVideoElement; deviceId: string | null; stop: () => void };
 
 /**
  * Opens the camera and calls `onSample` once per new video frame (null when no
- * face is found). The returned video element may be moved between documents
- * (e.g. into the mini monitor); the loop follows it.
+ * face or body is found). The returned video element may be moved between
+ * documents (e.g. into the mini monitor); the loop follows it.
  */
-export async function startVision(onSample: (s: FaceSample | null, t: number) => void): Promise<Vision> {
+export async function startVision(
+  onSample: (s: Sample | null, t: number) => void,
+  { view, deviceId }: { view: CameraView; deviceId: string | null },
+): Promise<Vision> {
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+    video: {
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }),
+    },
     audio: false,
   });
   const release = () => stream.getTracks().forEach((t) => t.stop());
@@ -72,11 +128,20 @@ export async function startVision(onSample: (s: FaceSample | null, t: number) =>
   video.muted = true;
   video.playsInline = true;
   video.setAttribute('aria-label', 'Pratinjau kamera, hanya tampil di layar ini');
-  let landmarker: FaceLandmarker;
+  let detect: (t: number) => Sample | null;
+  let close: () => void;
   try {
     video.srcObject = stream;
     await video.play();
-    landmarker = await createLandmarker();
+    if (view === 'front') {
+      const face = await createFace();
+      detect = (t) => faceSample(face.detectForVideo(video, t), video.videoWidth, video.videoHeight);
+      close = () => face.close();
+    } else {
+      const pose = await createPose();
+      detect = (t) => poseSample(pose.detectForVideo(video, t), video.videoWidth, video.videoHeight);
+      close = () => pose.close();
+    }
   } catch (e) {
     release();
     throw e;
@@ -92,7 +157,7 @@ export async function startVision(onSample: (s: FaceSample | null, t: number) =>
     lastRun = performance.now();
     if (video.readyState >= 2 && video.currentTime !== lastFrame) {
       lastFrame = video.currentTime;
-      onSample(toSample(landmarker.detectForVideo(video, lastRun), video.videoWidth, video.videoHeight), lastRun);
+      onSample(detect(lastRun), lastRun);
     }
     try {
       rafWin?.cancelAnimationFrame(raf);
@@ -109,13 +174,14 @@ export async function startVision(onSample: (s: FaceSample | null, t: number) =>
 
   return {
     video,
+    deviceId: stream.getVideoTracks()[0]?.getSettings().deviceId ?? null,
     stop() {
       alive = false;
       clearInterval(watchdog);
       try {
         rafWin?.cancelAnimationFrame(raf);
       } catch {}
-      landmarker.close();
+      close();
       release();
       video.srcObject = null;
       video.remove();
