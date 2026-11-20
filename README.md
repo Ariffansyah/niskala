@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Niskala
 
-## Getting Started
+Techcomfest 2027, Sub-theme 3: Smart Lifestyle & Digital Wellbeing (SDG 3).
 
-First, run the development server:
+A browser workspace that watches posture and blink rate through the webcam, entirely on-device. It responds with a soft edge glow instead of pop-ups, offers a guided 60-second desk reset, and warms the screen as bedtime approaches.
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install   # also copies the MediaPipe wasm into public/mediapipe
+pnpm dev       # http://localhost:3000
+pnpm test      # signal math (node:test, no build step)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The page opens in **Simulation** mode, so it works with no camera, in bad lighting, or for judges. Sliders drive the same pipeline the camera does.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How it works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Module | Role |
+| --- | --- |
+| `lib/vision.ts` | MediaPipe Face Landmarker on each video frame. Emits head pitch, eye distance, nose height and blink score. Loaded on demand. |
+| `lib/signals.ts` | Pure math: calibration baseline, posture drift, blink counter, strain accumulators, bedtime stages. Tested in `signals.test.ts`. |
+| `lib/use-monitor.ts` | 4 Hz loop that turns camera or simulation input into strain, glow level and session totals. |
+| `lib/store.ts` | localStorage: preferences, baseline, session summaries. |
+| `lib/sync.ts` | Optional Supabase backup (anonymous auth, RLS). The SDK loads only after opt-in. |
+| `components/posture-figure.tsx` | 2.5D figure: three cel-shaded layers rotated around the hip and neck pivots. |
 
-## Learn More
+**Debouncing.** Drift must exceed 35% of the range. Strain builds over about 10 s, and the glow stays dark for the first 30%, so a glance at your phone never lights the edge.
 
-To learn more about Next.js, take a look at the following resources:
+**Privacy.** Video frames and landmarks never leave the tab. The model and wasm are served from this origin, so not even a CDN sees the page. Only rounded session totals and preferences can sync, and only after the user ticks the box.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Supabase (optional)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Run `supabase/schema.sql` in the SQL editor.
+2. Enable **Authentication → Anonymous sign-ins**.
+3. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Set the same variables in Vercel.
 
-## Deploy on Vercel
+Without these variables the backup option is hidden and everything stays local.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Figure assets
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`assets/figure/figure.blend` holds the scene: primitive figurine, toon emission shader with a rim term, inverted-hull outlines, orthographic camera, and `pivot_hip` / `pivot_neck` empties. Each body group is rendered alone, with the groups in front of it set as holdouts (`assets/figure/render/`). `figure.aseprite` stacks the layers, with pivot slices, and exports `public/figure/sheet.png` plus `lib/figure-sheet.json`, which the component reads for frame rects and pivots.
+
+## Known limits
+
+- Tracking and the glow only run while this tab is visible. Browsers pause frame callbacks in background tabs.
+- Head pitch is compared to the calibration as an absolute change, so looking up for a long time also counts as drift.
+- The warm shift tints this tab only.
