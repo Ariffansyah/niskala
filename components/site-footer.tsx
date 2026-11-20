@@ -1,22 +1,11 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 
-const GROUPS = [
-  {
-    title: 'Produk',
-    links: [
-      { href: '/app', label: 'Ruang Kerja' },
-      { href: '/riwayat', label: 'Riwayat' },
-      { href: '/#cara-kerja', label: 'Cara kerja' },
-    ],
-  },
-  {
-    title: 'Kepercayaan',
-    links: [
-      { href: '/privasi', label: 'Privasi' },
-      { href: '/#privasi', label: 'Yang tidak pernah dikirim' },
-    ],
-  },
+const LINKS = [
+  { href: '/app', label: 'Ruang Kerja' },
+  { href: '/riwayat', label: 'Riwayat' },
+  { href: '/#cara-kerja', label: 'Cara kerja' },
+  { href: '/privasi', label: 'Privasi' },
 ];
 
 export default function SiteFooter() {
@@ -30,28 +19,18 @@ export default function SiteFooter() {
         <span className="flex-1 bg-mengkudu" />
         <span className="flex-1 bg-ungu" />
       </div>
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div className="max-w-sm">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-10 gap-y-5 px-4 py-10 sm:px-8">
+        <Link href="/" aria-label="Beranda Niskala" className="rounded-lg">
           <Logo />
-          <p className="mt-3 text-sm text-muted text-pretty">
-            Pengingat postur, kedip, dan jam tidur untuk sesi layar yang panjang. Kamera diproses di browser kamu dan tidak
-            pernah diunggah. Dibuat untuk Techcomfest 2027, SDG 3: Kehidupan Sehat dan Sejahtera.
-          </p>
-        </div>
-        {GROUPS.map((g) => (
-          <nav key={g.title} aria-label={g.title}>
-            <h2 className="text-sm">{g.title}</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted">
-              {g.links.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href} className="hover:text-ink">
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ))}
+        </Link>
+        <nav aria-label="Tautan bawah" className="flex flex-wrap gap-x-6 gap-y-2 font-medium">
+          {LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className="text-muted hover:text-ink">
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+        <p className="md:ml-auto">Dibuat buat Techcomfest 2027, SDG 3: hidup sehat dan sejahtera.</p>
       </div>
     </footer>
   );
