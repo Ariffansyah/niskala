@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Palette from batik sogan dyes, matched to the figure:
+/* Palette from batik dyes, matched to the figures:
    lontar palm-leaf cream (paper), soga brown (ink and line art),
-   nila indigo (the one accent, also the hoodie), kunyit turmeric (strain only).
+   nila indigo (the brand and every primary action), kunyit turmeric (strain, and the lit petal of the logo).
    Dark mode is "malam": night, and the wax used to draw batik. */
 :root {
   color-scheme: light dark;
@@ -25,7 +25,22 @@
   --band: light-dark(#1c2643, #1a2140);
   --on-band: #f1ead9;
   --on-band-muted: #b8b4c4;
-  --band-accent: #e9b04a;
+  --band-accent: var(--kunyit);
+
+  /* More dyes from the same vats, one per topic so sections, readouts and figures are told apart by hue:
+     daun leaf green for the eyes and for what went well, mengkudu morinda red for time away from the desk,
+     ungu terong eggplant for the evening. Each has a soft tint for surfaces and an ink for text on that tint. */
+  --kunyit: #e9b04a;
+  --kunyit-soft: light-dark(#f7e6c1, #3a2e17);
+  --daun: light-dark(#2a765c, #6cc39c);
+  --daun-soft: light-dark(#dcebe2, #1b3a2f);
+  --daun-ink: light-dark(#1f5a45, #a3dfc3);
+  --mengkudu: light-dark(#c8553d, #ee8d74);
+  --mengkudu-soft: light-dark(#f6ded5, #45241c);
+  --mengkudu-ink: light-dark(#953724, #f6b6a5);
+  --ungu: light-dark(#6b4f9a, #b9a2e6);
+  --ungu-soft: light-dark(#e9e1f4, #2e2547);
+  --ungu-ink: light-dark(#523b7e, #d2c3f2);
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -53,6 +68,21 @@
   --color-on-band: var(--on-band);
   --color-on-band-muted: var(--on-band-muted);
   --color-band-accent: var(--band-accent);
+  --color-kunyit: var(--kunyit);
+  --color-kunyit-soft: var(--kunyit-soft);
+  --color-daun: var(--daun);
+  --color-daun-soft: var(--daun-soft);
+  --color-daun-ink: var(--daun-ink);
+  --color-mengkudu: var(--mengkudu);
+  --color-mengkudu-soft: var(--mengkudu-soft);
+  --color-mengkudu-ink: var(--mengkudu-ink);
+  --color-ungu: var(--ungu);
+  --color-ungu-soft: var(--ungu-soft);
+  --color-ungu-ink: var(--ungu-ink);
+  /* Set by a .hue-* scope, so one card or section picks its dye and everything inside follows. */
+  --color-hue: var(--hue);
+  --color-hue-soft: var(--hue-soft);
+  --color-hue-ink: var(--hue-ink);
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -205,6 +235,32 @@
     background: linear-gradient(transparent 62%, color-mix(in oklab, var(--alert) 45%, transparent) 62%);
     @apply px-1;
   }
+}
+
+.hue-nila {
+  --hue: var(--accent);
+  --hue-soft: var(--accent-soft);
+  --hue-ink: var(--accent);
+}
+.hue-daun {
+  --hue: var(--daun);
+  --hue-soft: var(--daun-soft);
+  --hue-ink: var(--daun-ink);
+}
+.hue-mengkudu {
+  --hue: var(--mengkudu);
+  --hue-soft: var(--mengkudu-soft);
+  --hue-ink: var(--mengkudu-ink);
+}
+.hue-ungu {
+  --hue: var(--ungu);
+  --hue-soft: var(--ungu-soft);
+  --hue-ink: var(--ungu-ink);
+}
+.hue-kunyit {
+  --hue: var(--kunyit);
+  --hue-soft: var(--kunyit-soft);
+  --hue-ink: var(--alert-ink);
 }
 
 /* Kawung, one of the oldest batik motifs: four petals around a point. Used only on dark bands, as identity. */
