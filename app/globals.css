@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
+/* Palette comes from the figure: slate-teal of the hoodie as the one accent,
+   ochre reserved for strain (edge glow, warnings), warm paper neutrals. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  color-scheme: light dark;
+  --paper: #f3f1ec;
+  --surface: #e9e6df;
+  --ink: #1c1e21;
+  --muted: #595e5b;
+  --rule: #d6d1c6;
+  --edge: #86898a;
+  --accent: #2f5d6e;
+  --on-accent: #f7f5f0;
+  --alert: #c26a1d;
+  --alert-ink: #8f4a0f;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #131517;
+    --surface: #24282c;
+    --ink: #e8e5de;
+    --muted: #a0a5a1;
+    --rule: #33383d;
+    --edge: #686e72;
+    --accent: #8db8c8;
+    --on-accent: #10181c;
+    --alert: #e39443;
+    --alert-ink: #f0ad69;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-edge: var(--edge);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-alert: var(--alert);
+  --color-alert-ink: var(--alert-ink);
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-10 items-center rounded-md border border-edge px-4 text-sm font-medium transition-colors hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply border-accent bg-accent text-on-accent hover:border-ink;
+  }
+  .btn-quiet {
+    @apply min-h-10 text-sm text-muted underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+  }
+  .choice {
+    @apply cursor-pointer rounded px-3 py-1.5 text-sm text-muted transition-colors hover:text-ink has-checked:bg-ink has-checked:text-paper has-focus-visible:outline-2 has-focus-visible:outline-accent;
+  }
+}
+
+/* Both overlays are fixed, paint once, and only animate opacity, so changes stay on the compositor. */
+.edge-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: inset 0 0 140px 24px color-mix(in oklab, var(--alert) 75%, transparent);
+  opacity: 0;
+  transition: opacity 1.6s ease;
+  will-change: opacity;
+}
+
+.warm-shift {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: #ff8f3a;
+  mix-blend-mode: multiply;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+
+.figure .joint {
+  transition: transform 300ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figure .joint,
+  .edge-glow,
+  .warm-shift {
+    transition: none;
+  }
 }
