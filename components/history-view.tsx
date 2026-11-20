@@ -7,7 +7,7 @@ import { byDay, totals, type Day } from '@/lib/insights';
 import { exportData, sessionsStore } from '@/lib/store';
 import { toast } from '@/lib/toast';
 import { IconArrowRight, IconDownload, IconEye, IconHistory, IconMoon, IconPosture, IconStretch, IconTimer } from './icons';
-import { Badge, StatCard } from './ui';
+import { Stat } from './ui';
 import { Segmented } from './ui-client';
 
 const noop = () => () => {};
@@ -32,10 +32,7 @@ function Chart({ days }: { days: Day[] }) {
   return (
     <figure className="card p-5 sm:p-6">
       <figcaption className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div>
-          <p className="font-bold">Waktu di layar per hari</p>
-          <p className="text-sm text-muted">dan berapa lama di antaranya kamu condong atau miring</p>
-        </div>
+        <p className="font-bold">Waktu di layar per hari, dan berapa lama di antaranya kamu condong atau miring</p>
         <div className="flex gap-4 text-[13px] text-muted">
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-sm bg-accent" /> tegak
@@ -115,11 +112,7 @@ export default function HistoryView() {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Badge icon={IconHistory}>Riwayat</Badge>
-          <h1 className="mt-3 text-3xl sm:text-4xl">{range} hari terakhir</h1>
-          <p className="mt-2 text-muted">Dari sesi yang tersimpan di browser ini. Tidak ada yang dikirim ke mana pun.</p>
-        </div>
+        <h1 className="text-3xl sm:text-4xl">Riwayat {range} hari terakhir</h1>
         <Segmented
           label="Rentang"
           value={range}
@@ -133,9 +126,8 @@ export default function HistoryView() {
           <span className="grid size-14 place-items-center rounded-2xl bg-surface text-accent">
             <IconHistory className="size-7" />
           </span>
-          <h2 className="mt-5 text-xl">Belum ada sesi di rentang ini</h2>
-          <p className="mt-2 max-w-md text-muted">
-            Sesi lebih dari 30 detik di ruang kerja tersimpan otomatis di sini, dalam mode apa pun.
+          <p className="mt-5 max-w-md text-lg text-pretty">
+            Belum ada sesi di rentang ini. Sesi lebih dari 30 detik di ruang kerja tersimpan otomatis di sini, dalam mode apa pun.
           </p>
           <Link href="/app" className="btn btn-primary mt-6">
             Buka ruang kerja
@@ -144,12 +136,13 @@ export default function HistoryView() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-            <StatCard icon={IconTimer} label="Waktu di layar" value={minutes(t.active_s)} detail={`dalam ${t.activeDays} hari`} />
-            <StatCard icon={IconPosture} label="Condong / miring" value={`${Math.round(t.leanShare * 100)}%`} detail={`${minutes(t.slouch_s)} total`} tone={t.leanShare > 0.25 ? 'alert' : undefined} />
-            <StatCard icon={IconStretch} label="Jeda diambil" value={String(t.resets + t.eye_breaks)} detail={`${t.resets} peregangan · ${t.eye_breaks} mata`} />
-            <StatCard icon={IconEye} label="Rata-rata kedip" value={t.blink === null ? 'Belum ada' : `${Math.round(t.blink)}/mnt`} detail="saat diukur" />
-            <StatCard icon={IconMoon} label="Lewat jam tidur" value={minutes(t.late_s)} detail="termasuk masa santai" />
+          <div className="card grid gap-x-8 px-5 py-1 md:grid-cols-2 [&>*]:border-b [&>*]:border-rule md:[&>*:nth-last-child(-n+2)]:border-b-0 [&>*:last-child]:border-b-0">
+            <Stat icon={IconTimer} label="Waktu di layar" value={minutes(t.active_s)} detail={`dalam ${t.activeDays} hari`} />
+            <Stat icon={IconPosture} label="Condong atau miring" value={`${Math.round(t.leanShare * 100)}%`} detail={minutes(t.slouch_s)} tone={t.leanShare > 0.25 ? 'alert' : undefined} />
+            <Stat icon={IconStretch} label="Jeda diambil" value={String(t.resets + t.eye_breaks)} detail={`${t.resets} peregangan, ${t.eye_breaks} mata`} />
+            <Stat icon={IconEye} label="Rata-rata kedip" value={t.blink === null ? 'Belum ada' : `${Math.round(t.blink)}/mnt`} />
+            <Stat icon={IconMoon} label="Lewat jam tidur" value={minutes(t.late_s)} />
+            <Stat icon={IconHistory} label="Disimpan di" value="browser ini" detail="tidak dikirim" />
           </div>
 
           <Chart days={days} />

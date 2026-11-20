@@ -69,7 +69,8 @@ export function ProgressRing({ value, children, size = 120 }: { value: number; c
   );
 }
 
-export function StatCard({ icon: Icon, label, value, detail, tone }: {
+/** One-line readout: label on the left, value on the right, detail inline rather than stacked. */
+export function Stat({ icon: Icon, label, value, detail, tone }: {
   icon: IconType;
   label: string;
   value: string;
@@ -77,15 +78,15 @@ export function StatCard({ icon: Icon, label, value, detail, tone }: {
   tone?: 'alert';
 }) {
   return (
-    <div className="card p-4">
-      <div className="flex items-center gap-2 text-[13px] text-muted">
-        <span className={`grid size-7 place-items-center rounded-lg ${tone === 'alert' ? 'bg-alert/15 text-alert-ink' : 'bg-surface text-accent'}`}>
-          <Icon className="size-4" />
-        </span>
-        {label}
-      </div>
-      <p className="mt-3 text-xl font-bold tracking-tight tabular-nums">{value}</p>
-      {detail && <p className="mt-0.5 text-[13px] text-muted tabular-nums">{detail}</p>}
+    <div className="flex items-center gap-3 py-3">
+      <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${tone === 'alert' ? 'bg-alert/15 text-alert-ink' : 'bg-surface text-accent'}`}>
+        <Icon className="size-4" />
+      </span>
+      <span className="text-muted">{label}</span>
+      <span className="ml-auto text-right">
+        <span className={`font-bold tabular-nums ${tone === 'alert' ? 'text-alert-ink' : ''}`}>{value}</span>
+        {detail && <span className="ml-2 text-muted tabular-nums">{detail}</span>}
+      </span>
     </div>
   );
 }
