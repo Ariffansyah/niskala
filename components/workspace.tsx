@@ -7,11 +7,11 @@ import { duration, hhmm, minutes, parseHhmm, sideWord } from '@/lib/format';
 import { ROUTINES } from '@/lib/routines';
 import { SENSITIVITY, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
 import { chime } from '@/lib/sound';
-import { clearAll, exportData, prefsStore, type Mode, type Prefs, type Warmth } from '@/lib/store';
+import { clearAll, exportData, prefsStore, type CameraView, type Mode, type Prefs, type Warmth } from '@/lib/store';
 import { syncConfigured } from '@/lib/sync';
 import { toast } from '@/lib/toast';
 import { useMonitor, type Routine, type Sim, type Snapshot } from '@/lib/use-monitor';
-import { describeCameraError, startVision } from '@/lib/vision';
+import { describeCameraError, listCameras, startVision } from '@/lib/vision';
 import CameraPanel, { type Camera } from './camera-panel';
 import {
   IconBell,
@@ -70,12 +70,15 @@ function postureWord(p: Posture, threshold: number) {
   return d.kind === 'forward' ? 'Condong ke depan' : d.kind === 'side' ? `Miring ke ${d.dir}` : `Kepala miring ke ${d.dir}`;
 }
 
-function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: boolean, routine: Routine | null) {
+function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: boolean, routine: Routine | null, view: CameraView) {
   if (routine) return 'Jeda sedang berjalan. Pendar tepi berhenti sampai selesai.';
   if (mode === 'timer') return 'Mode timer: jeda datang sesuai jadwal. Postur dan kedipan tidak dilacak.';
   if (mode === 'camera' && !cameraOn) return 'Kamera mati. Nyalakan di tab Pelacakan, atau pakai mode timer.';
   if (mode === 'camera' && !calibrated) return 'Kalibrasi sekali agar Niskala tahu posisi tegakmu.';
-  if (mode === 'camera' && !snap.posture) return 'Wajah tidak terlihat. Pelacakan lanjut saat kamu kembali.';
+  if (mode === 'camera' && !snap.posture)
+    return view === 'front'
+      ? 'Wajah tidak terlihat. Pelacakan lanjut saat kamu kembali.'
+      : 'Telinga, bahu, atau pinggul tidak terlihat. Pelacakan lanjut saat badanmu kembali masuk bingkai.';
   if (snap.glow > 0 && snap.driftFor === 0 && snap.lowBlinkFor === 0) return 'Sudah kembali baik. Pendar memudar dalam beberapa detik.';
   if (snap.glow > 0 && snap.postureStrain >= snap.eyeStrain && snap.posture) {
     const d = dominant(snap.posture);
@@ -182,23 +185,27 @@ export default function Workspace() {
   const [pip, setPip] = useState<Window | null>(null);
   const [tab, setTab] = useState<Tab>('track');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const cameraRun = useRef<{ token: number; stop?: () => void }>({ token: 0 });
 
   const mode = prefs.mode;
   const cameraOn = camera.state === 'on';
   const mon = useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow: pip });
   const { snap } = mon;
-  const calibrated = mon.baseline !== null;
+  const calibrated = mon.calibrated;
+  const view = prefs.cameraView;
   const update = (p: Partial<Prefs>) => prefsStore.set({ ...prefs, ...p });
 
-  async function startCamera() {
+  async function startCamera(opts: { view: CameraView; deviceId: string | null } = { view, deviceId: prefs.cameraId }) {
     const token = ++cameraRun.current.token;
     setCamera({ state: 'starting' });
     try {
-      const v = await startVision(mon.onSample);
+      const v = await startVision(mon.onSample, opts);
       if (token !== cameraRun.current.token) return v.stop();
       cameraRun.current.stop = v.stop;
       setCamera({ state: 'on', video: v.video });
+      // Device names are only readable once permission is granted.
+      listCameras().then(setCameras, () => {});
     } catch (e) {
       if (token === cameraRun.current.token) setCamera({ state: 'error', error: describeCameraError(e) });
     }
@@ -209,6 +216,16 @@ export default function Workspace() {
     cameraRun.current.stop?.();
     cameraRun.current.stop = undefined;
     setCamera({ state: 'off' });
+  }
+
+  // A different camera position needs a different model, so a running camera restarts.
+  function changeCamera(p: { cameraView?: CameraView; cameraId?: string | null }) {
+    const next = { ...prefs, ...p };
+    prefsStore.set(next);
+    if (camera.state === 'on' || camera.state === 'starting') {
+      stopCamera();
+      startCamera({ view: next.cameraView, deviceId: next.cameraId });
+    }
   }
 
   function setMode(m: Mode) {
@@ -247,7 +264,12 @@ export default function Workspace() {
 
   useEffect(() => {
     const run = cameraRun.current;
-    return () => run.stop?.();
+    const refresh = () => listCameras().then(setCameras, () => {});
+    navigator.mediaDevices?.addEventListener('devicechange', refresh);
+    return () => {
+      navigator.mediaDevices?.removeEventListener('devicechange', refresh);
+      run.stop?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -282,7 +304,9 @@ export default function Workspace() {
   const posture = tracked ? snap.posture : null;
   const session = snap.session;
   const next = nextBreak(snap);
-  const status = statusLine(snap, mode, cameraOn, calibrated, routine);
+  const status = statusLine(snap, mode, cameraOn, calibrated, routine, view);
+  // A side camera sees the profile: forward lean only, no sideways lean or blinks.
+  const sideOnly = mode === 'camera' && view === 'side';
   const deg = posture && {
     torso: Math.round(posture.torso * TORSO_MAX_DEG),
     head: Math.round(posture.head * HEAD_MAX_DEG),
@@ -357,14 +381,32 @@ export default function Workspace() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-8">
           <section aria-label="Postur langsung" className="min-w-0 space-y-4">
-            <div className="card relative overflow-hidden bg-surface">
+            <div className="stage card relative overflow-hidden">
               <div className="mx-auto aspect-[1150/1180] max-h-[52vh] w-full lg:max-h-[60vh]">
                 <PostureFigure posture={posture} />
               </div>
-              <span className="chip absolute top-3 left-3">Tampak samping</span>
+              <div className="absolute top-3 left-3 flex flex-col items-start gap-2">
+                <span className="chip">Tampak samping</span>
+                {posture && (
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-bold shadow-[0_1px_2px_var(--shadow)] ${
+                      driftOf(posture) >= S.drift ? 'bg-alert text-[#2a1f19]' : 'bg-accent text-on-accent'
+                    }`}
+                    aria-live="polite"
+                  >
+                    <span className="live-dot" aria-hidden />
+                    {postureWord(posture, S.drift)}
+                  </span>
+                )}
+              </div>
               <figure className="card absolute top-3 right-3 w-[30%] max-w-48 min-w-24 p-1.5">
-                <div className="aspect-[560/760] rounded-xl bg-surface">
-                  <FrontFigure posture={posture} />
+                <div className="relative aspect-[560/760] rounded-xl bg-surface">
+                  <FrontFigure posture={sideOnly ? null : posture} />
+                  {sideOnly && (
+                    <p className="absolute inset-0 grid place-items-center rounded-xl bg-raised/85 p-2 text-center text-[11px] leading-snug font-semibold text-muted">
+                      Tidak terukur dari kamera samping
+                    </p>
+                  )}
                 </div>
                 <figcaption className="mt-1 text-center text-[11px] font-semibold text-muted">Tampak depan</figcaption>
               </figure>
@@ -404,7 +446,7 @@ export default function Workspace() {
                       label="Kelelahan mata"
                       value={snap.eyeStrain}
                       threshold={0.3}
-                      hint={snap.blinkRate === null ? 'mengukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
+                      hint={sideOnly ? 'tidak terukur dari samping' : snap.blinkRate === null ? 'mengukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
                     />
                   </div>
                 )}
@@ -420,7 +462,9 @@ export default function Workspace() {
                     icon={IconLean}
                     label="Miring"
                     value={
-                      !deg
+                      sideOnly && cameraOn
+                        ? 'Tidak terukur'
+                        : !deg
                         ? 'Tidak dilacak'
                         : Math.abs(deg.side) < 2 && Math.abs(deg.tilt) < 3
                           ? 'Seimbang'
@@ -428,13 +472,13 @@ export default function Workspace() {
                             ? `Badan ${sideWord(deg.side)}`
                             : `Kepala ${sideWord(deg.tilt)}`
                     }
-                    detail={deg ? `badan ${Math.abs(deg.side)}° · kepala ${Math.abs(deg.tilt)}°` : undefined}
+                    detail={sideOnly ? 'butuh kamera depan' : deg ? `badan ${Math.abs(deg.side)}° · kepala ${Math.abs(deg.tilt)}°` : undefined}
                   />
                   <StatCard
                     icon={IconEye}
                     label="Kedip"
-                    value={snap.blinkRate === null ? (tracked ? 'Mengukur' : 'Tidak dilacak') : `${Math.round(snap.blinkRate)}/mnt`}
-                    detail={`rendah di bawah ${S.lowBlink}`}
+                    value={sideOnly ? 'Tidak terukur' : snap.blinkRate === null ? (tracked ? 'Mengukur' : 'Tidak dilacak') : `${Math.round(snap.blinkRate)}/mnt`}
+                    detail={sideOnly ? 'butuh kamera depan' : `rendah di bawah ${S.lowBlink}`}
                     tone={snap.blinkRate !== null && snap.blinkRate < S.lowBlink ? 'alert' : undefined}
                   />
                   <StatCard
@@ -476,11 +520,16 @@ export default function Workspace() {
                   {mode === 'camera' && (
                     <CameraPanel
                       camera={camera}
-                      onStart={startCamera}
+                      onStart={() => startCamera()}
                       onStop={stopCamera}
                       calibrated={calibrated}
                       calibrate={mon.calibrate}
                       previewElsewhere={pip !== null}
+                      view={view}
+                      onViewChange={(cameraView) => changeCamera({ cameraView })}
+                      cameras={cameras}
+                      cameraId={prefs.cameraId}
+                      onCameraChange={(cameraId) => changeCamera({ cameraId })}
                     />
                   )}
                   {mode === 'timer' && (
