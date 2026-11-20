@@ -22,7 +22,7 @@
   --cue: light-dark(#3a5085, #7f95d1);
   --shadow: light-dark(rgb(42 31 25 / 0.08), rgb(0 0 0 / 0.35));
   /* Deep nila bands for contrast sections; same text colours in both themes. */
-  --band: light-dark(#1c2643, #0e111b);
+  --band: light-dark(#1c2643, #1a2140);
   --on-band: #f1ead9;
   --on-band-muted: #b8b4c4;
   --band-accent: #e9b04a;
