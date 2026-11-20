@@ -1,27 +1,42 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BlinkCounter, glowFrom, makeBaseline, nightState, postureFrom, stepStrain } from './signals.ts';
+import { BlinkCounter, driftOf, glowFrom, makeBaseline, nightState, postureFrom, stepStrain } from './signals.ts';
 
-const base = { pitch: 2, iod: 100, noseY: 300 };
+const base = { pitch: 2, roll: 0, iod: 100, cx: 320, noseY: 300 };
+const face = (o: Partial<typeof base> = {}) => ({ ...base, blink: 0, ...o });
 
 test('baseline is the median, so one bad frame does not skew it', () => {
-  const s = (pitch: number) => ({ pitch, iod: 100, noseY: 300, blink: 0 });
+  const s = (pitch: number) => face({ pitch });
   assert.equal(makeBaseline([s(1), s(2), s(90)]).pitch, 2);
 });
 
 test('upright pose reads as zero drift', () => {
-  assert.deepEqual(postureFrom({ ...base, blink: 0 }, base), { head: 0, torso: 0 });
+  const p = postureFrom(face(), base);
+  assert.equal(p.head + p.torso + Math.abs(p.side) + Math.abs(p.tilt), 0);
 });
 
 test('small head wobble stays inside the dead zone', () => {
-  assert.equal(postureFrom({ ...base, pitch: 5, blink: 0 }, base).head, 0);
+  const p = postureFrom(face({ pitch: 5, roll: 2, cx: 330 }), base);
+  assert.equal(p.head + Math.abs(p.side) + Math.abs(p.tilt), 0);
 });
 
 test('slouch and lean-in map to bounded drift', () => {
-  const p = postureFrom({ pitch: 2, iod: 120, noseY: 360, blink: 0 }, base);
+  const p = postureFrom(face({ iod: 120, noseY: 360 }), base);
   assert.ok(p.head > 0.7 && p.head <= 1, `head ${p.head}`);
   assert.ok(Math.abs(p.torso - 0.6) < 1e-9, `torso ${p.torso}`);
-  assert.equal(postureFrom({ pitch: 60, iod: 300, noseY: 900, blink: 0 }, base).head, 1);
+  assert.equal(postureFrom(face({ pitch: 60, iod: 300, noseY: 900 }), base).head, 1);
+});
+
+test('sideways lean and head tilt are signed toward the user', () => {
+  // Leaning to the user's right moves the face toward the left of the raw camera frame.
+  const right = postureFrom(face({ cx: 260 }), base);
+  assert.ok(right.side > 0.5, `side ${right.side}`);
+  assert.ok(postureFrom(face({ cx: 380 }), base).side < -0.5);
+  // Head tipped toward the right shoulder turns the eye line anticlockwise in the raw frame.
+  const tilt = postureFrom(face({ roll: -15 }), base).tilt;
+  assert.ok(Math.abs(tilt - 0.6) < 1e-9, `tilt ${tilt}`);
+  assert.equal(postureFrom(face({ roll: 90, cx: 0 }), base).tilt, -1);
+  assert.equal(driftOf(postureFrom(face({ roll: 90 }), base)), 1);
 });
 
 test('strain needs a sustained condition before any glow', () => {

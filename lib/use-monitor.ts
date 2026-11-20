@@ -4,6 +4,8 @@ import { useCallback, useEffect, useEffectEvent, useRef, useState, useSyncExtern
 import {
   BlinkCounter,
   SENSITIVITY,
+  UPRIGHT,
+  driftOf,
   ema,
   glowFrom,
   makeBaseline,
@@ -29,7 +31,7 @@ import { pushToSupabase, syncConfigured } from './sync';
 
 export type { RoutineKind as Routine } from './routines';
 import type { RoutineKind as Routine } from './routines';
-export type Sim = { head: number; torso: number; blink: number; late: boolean };
+export type Sim = { head: number; torso: number; side: number; tilt: number; blink: number; late: boolean };
 type SyncResult = { state: 'ok'; at: string } | { state: 'error'; message: string };
 export type SyncStatus = { state: 'off' | 'idle' } | SyncResult;
 
@@ -57,7 +59,7 @@ const SNOOZE_S = 5 * 60;
 const MIN_CALIBRATION_FRAMES = 20;
 
 const INITIAL: Snapshot = {
-  posture: { head: 0, torso: 0 },
+  posture: UPRIGHT,
   blinkRate: null,
   postureStrain: 0,
   eyeStrain: 0,
@@ -154,7 +156,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     let target: Posture | null = null;
     let rate: number | null = null;
     if (mode === 'demo') {
-      target = { head: sim.head, torso: sim.torso };
+      target = { head: sim.head, torso: sim.torso, side: sim.side, tilt: sim.tilt };
       rate = sim.blink;
     } else if (mode === 'camera' && cameraOn) {
       const b = baselineStore.get();
@@ -162,12 +164,18 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
       // Hidden tabs only get about one frame a second, too slow to see blinks.
       rate = watched ? (f.blinks?.rate(now) ?? null) : null;
     }
+    const prev = m.posture;
     m.posture =
-      target && m.posture
-        ? { head: ema(m.posture.head, target.head, dt, 0.8), torso: ema(m.posture.torso, target.torso, dt, 0.8) }
+      target && prev
+        ? {
+            head: ema(prev.head, target.head, dt, 0.8),
+            torso: ema(prev.torso, target.torso, dt, 0.8),
+            side: ema(prev.side, target.side, dt, 0.8),
+            tilt: ema(prev.tilt, target.tilt, dt, 0.8),
+          }
         : target;
 
-    const drift = m.posture ? Math.max(m.posture.head, m.posture.torso) : 0;
+    const drift = m.posture ? driftOf(m.posture) : 0;
     const drifting = !routine && drift > S.drift;
     const lowBlink = !routine && rate !== null && rate < S.lowBlink;
     m.postureStrain = stepStrain(m.postureStrain, drifting, dt, S.riseS, 4);
@@ -319,12 +327,16 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     if (m.session) m.session[kind === 'reset' ? 'resets' : 'eye_breaks']++;
   }, []);
 
-  const snooze = useCallback((kind: Routine) => {
-    const m = model.current;
-    m.forced = null;
-    if (kind === 'eye') m.sinceEye -= SNOOZE_S;
-    else m.sinceReset -= SNOOZE_S;
-  }, []);
+  // Due again in exactly SNOOZE_S, whatever the schedule.
+  const snooze = useCallback(
+    (kind: Routine) => {
+      const m = model.current;
+      m.forced = null;
+      if (kind === 'eye') m.sinceEye = prefs.eyeMin * 60 - SNOOZE_S;
+      else m.sinceReset = prefs.resetMin * 60 - SNOOZE_S;
+    },
+    [prefs.eyeMin, prefs.resetMin],
+  );
 
   /** Makes a cue due now, so the break flow can be tried without waiting for the schedule. */
   const triggerCue = useCallback((kind: Routine) => {

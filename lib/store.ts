@@ -76,10 +76,20 @@ function write(key: string, value: unknown) {
 function stored<T>(key: string, fallback: T, parse: (v: T | null) => T = (v) => v ?? fallback) {
   const listeners = new Set<() => void>();
   let cache: { v: T } | null = null;
+  // Another tab wrote this key: drop the cached copy so every tab sees the same data.
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== key && e.key !== null) return;
+    cache = null;
+    listeners.forEach((l) => l());
+  };
   return {
     subscribe(cb: () => void) {
+      if (!listeners.size) window.addEventListener('storage', onStorage);
       listeners.add(cb);
-      return () => void listeners.delete(cb);
+      return () => {
+        listeners.delete(cb);
+        if (!listeners.size) window.removeEventListener('storage', onStorage);
+      };
     },
     get: () => (cache ??= { v: parse(read<T>(key)) }).v,
     server: () => fallback,
@@ -92,7 +102,8 @@ function stored<T>(key: string, fallback: T, parse: (v: T | null) => T = (v) => 
 }
 
 export const prefsStore = stored<Prefs>(KEY.prefs, DEFAULT_PREFS, (v) => ({ ...DEFAULT_PREFS, ...v }));
-export const baselineStore = stored<Baseline | null>(KEY.baseline, null);
+// Baselines saved before sideways tracking lack roll and cx; asking for a fresh calibration is safer than guessing.
+export const baselineStore = stored<Baseline | null>(KEY.baseline, null, (v) => (v && 'roll' in v && 'cx' in v ? v : null));
 export const themeStore = stored<Theme>(KEY.theme, 'auto');
 const NO_SESSIONS: SessionSummary[] = [];
 export const sessionsStore = stored<SessionSummary[]>(KEY.sessions, NO_SESSIONS, (v) =>
@@ -101,7 +112,8 @@ export const sessionsStore = stored<SessionSummary[]>(KEY.sessions, NO_SESSIONS,
 );
 
 export function saveSession(s: SessionSummary) {
-  const rest = sessionsStore.get().filter((x) => x.id !== s.id);
+  // Read storage directly: another tab may have saved its own session since this tab cached the list.
+  const rest = (read<SessionSummary[]>(KEY.sessions) ?? []).filter((x) => x.id !== s.id);
   sessionsStore.set([s, ...rest].slice(0, MAX_SESSIONS));
 }
 

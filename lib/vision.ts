@@ -35,9 +35,13 @@ function toSample(r: FaceLandmarkerResult, w: number, h: number): FaceSample | n
   const l = p[LEFT_EYE_OUTER];
   const rt = p[RIGHT_EYE_OUTER];
   const score = (name: string) => shapes.find((c) => c.categoryName === name)?.score ?? 0;
+  // Ordered by position in the frame, so the eye line stays near 0° whichever eye each index names.
+  const [a, b] = l.x < rt.x ? [l, rt] : [rt, l];
   return {
     pitch: (Math.atan2(m[6], m[10]) * 180) / Math.PI,
+    roll: (Math.atan2((b.y - a.y) * h, (b.x - a.x) * w) * 180) / Math.PI,
     iod: Math.hypot((l.x - rt.x) * w, (l.y - rt.y) * h),
+    cx: ((l.x + rt.x) / 2) * w,
     noseY: p[NOSE_TIP].y * h,
     blink: (score('eyeBlinkLeft') + score('eyeBlinkRight')) / 2,
   };
@@ -45,10 +49,10 @@ function toSample(r: FaceLandmarkerResult, w: number, h: number): FaceSample | n
 
 export function describeCameraError(e: unknown) {
   const name = e instanceof DOMException ? e.name : '';
-  if (name === 'NotAllowedError') return 'Camera access was blocked. Allow it from the address bar, or use timer mode.';
-  if (name === 'NotFoundError') return 'No camera was found on this device. Timer mode still works.';
-  if (name === 'NotReadableError') return 'Another app is using the camera. Close it, then start again.';
-  return `The vision module could not start: ${e instanceof Error ? e.message : String(e)}`;
+  if (name === 'NotAllowedError') return 'Akses kamera diblokir. Izinkan dari bilah alamat, atau pakai mode Timer.';
+  if (name === 'NotFoundError') return 'Kamera tidak ditemukan di perangkat ini. Mode Timer tetap bisa dipakai.';
+  if (name === 'NotReadableError') return 'Kamera sedang dipakai aplikasi lain. Tutup aplikasinya, lalu coba lagi.';
+  return `Modul penglihatan gagal dimulai: ${e instanceof Error ? e.message : String(e)}`;
 }
 
 export type Vision = { video: HTMLVideoElement; stop: () => void };
@@ -67,7 +71,7 @@ export async function startVision(onSample: (s: FaceSample | null, t: number) =>
   const video = document.createElement('video');
   video.muted = true;
   video.playsInline = true;
-  video.setAttribute('aria-label', 'Your camera preview, shown only on this screen');
+  video.setAttribute('aria-label', 'Pratinjau kamera, hanya tampil di layar ini');
   let landmarker: FaceLandmarker;
   try {
     video.srcObject = stream;

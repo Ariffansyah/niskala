@@ -2,15 +2,19 @@
 
 export type FaceSample = {
   pitch: number; // head pitch, degrees
+  roll: number; // angle of the eye line in the raw camera image, degrees
   iod: number; // inter-ocular distance, px
+  cx: number; // midpoint between the eyes, px from the left of the raw frame
   noseY: number; // nose tip, px from top of frame
   blink: number; // 0..1, mean of both eyeBlink blendshapes
 };
 
-export type Baseline = { pitch: number; iod: number; noseY: number };
+export type Baseline = { pitch: number; roll: number; iod: number; cx: number; noseY: number };
 
-// 0 = matches the calibrated upright pose, 1 = at the figure's anatomical limit
-export type Posture = { head: number; torso: number };
+// head/torso: 0 = calibrated upright pose, 1 = the figure's forward limit.
+// side/tilt: -1..1, positive toward the user's right (the right of a mirror image).
+export type Posture = { head: number; torso: number; side: number; tilt: number };
+export const UPRIGHT: Posture = { head: 0, torso: 0, side: 0, tilt: 0 };
 
 export type Sensitivity = 'gentle' | 'balanced' | 'strict';
 // drift: share of the range that counts as leaning; riseS: seconds of sustained lean to full glow;
@@ -22,6 +26,9 @@ export const SENSITIVITY: Record<Sensitivity, { drift: number; riseS: number; lo
 };
 
 export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const clamp1 = (x: number) => Math.min(1, Math.max(-1, x));
+// Shrinks |x| by `dead` so small wobble reads as zero, keeping the sign.
+const deadZone = (x: number, dead: number) => Math.sign(x) * Math.max(0, Math.abs(x) - dead);
 
 export function median(xs: number[]): number {
   const s = [...xs].sort((a, b) => a - b);
@@ -30,12 +37,12 @@ export function median(xs: number[]): number {
 }
 
 export function makeBaseline(samples: FaceSample[]): Baseline {
-  return {
-    pitch: median(samples.map((s) => s.pitch)),
-    iod: median(samples.map((s) => s.iod)),
-    noseY: median(samples.map((s) => s.noseY)),
-  };
+  const m = (f: (s: FaceSample) => number) => median(samples.map(f));
+  return { pitch: m((s) => s.pitch), roll: m((s) => s.roll), iod: m((s) => s.iod), cx: m((s) => s.cx), noseY: m((s) => s.noseY) };
 }
+
+/** Largest deviation of any axis, 0..1. */
+export const driftOf = (p: Posture) => Math.max(p.head, p.torso, Math.abs(p.side), Math.abs(p.tilt));
 
 export function postureFrom(s: FaceSample, b: Baseline): Posture {
   // Pitch sign depends on camera mounting, so any sustained pitch change counts.
@@ -44,7 +51,15 @@ export function postureFrom(s: FaceSample, b: Baseline): Posture {
   const lean = (s.iod / b.iod - 1) / 0.25;
   // Slouching lowers the face; measured in eye-widths so it is distance independent.
   const drop = (s.noseY - b.noseY) / b.iod;
-  return { head: clamp01(pitch + Math.max(0, lean)), torso: clamp01(drop) };
+  // The camera sees the user un-mirrored: leaning to their right moves the face left in the frame,
+  // and tipping the head toward the right shoulder turns the eye line anticlockwise (negative).
+  const shift = (s.cx - b.cx) / b.iod;
+  return {
+    head: clamp01(pitch + Math.max(0, lean)),
+    torso: clamp01(drop),
+    side: clamp1(-deadZone(shift, 0.12) / 0.8),
+    tilt: clamp1(-deadZone(s.roll - b.roll, 3) / 20),
+  };
 }
 
 // Exponential smoothing with a time constant, so the result does not depend on frame rate.
