@@ -1,11 +1,35 @@
-import type { Baseline } from './signals';
+import type { Baseline, Sensitivity } from './signals';
 
-// Everything here is local to the browser. Only `SessionSummary` and `Prefs`
-// are ever synced (see sync.ts); the calibration baseline never leaves the device.
+// Everything here is local to the browser. Only `SessionSummary` and part of
+// `Prefs` are ever synced (see sync.ts); the calibration baseline never leaves the device.
 
 export type Warmth = 'auto' | 'on' | 'off';
-export type Prefs = { bedtime: number; warmth: Warmth; sync: boolean };
-export const DEFAULT_PREFS: Prefs = { bedtime: 23 * 60, warmth: 'auto', sync: false };
+export type Mode = 'camera' | 'timer' | 'demo';
+export type Theme = 'auto' | 'light' | 'dark';
+
+export type Prefs = {
+  mode: Mode;
+  bedtime: number; // minutes after midnight
+  warmth: Warmth;
+  sensitivity: Sensitivity;
+  eyeMin: number; // 0 = off
+  resetMin: number; // 0 = off
+  sound: boolean;
+  sync: boolean;
+  onboarded: boolean;
+};
+
+export const DEFAULT_PREFS: Prefs = {
+  mode: 'demo',
+  bedtime: 23 * 60,
+  warmth: 'auto',
+  sensitivity: 'balanced',
+  eyeMin: 20,
+  resetMin: 50,
+  sound: false,
+  sync: false,
+  onboarded: false,
+};
 
 // snake_case so rows go to Supabase unchanged
 export type SessionSummary = {
@@ -14,11 +38,12 @@ export type SessionSummary = {
   updated_at: string;
   active_s: number;
   resets: number;
+  eye_breaks: number;
   slouch_s: number;
   low_blink_s: number;
   late_s: number;
   avg_blink: number | null;
-  source: 'camera' | 'simulation';
+  source: 'camera' | 'timer' | 'simulation';
 };
 
 const KEY = {
@@ -26,8 +51,9 @@ const KEY = {
   baseline: 'niskala:baseline',
   sessions: 'niskala:sessions',
   syncedAt: 'niskala:synced-at',
+  theme: 'niskala:theme',
 };
-const MAX_SESSIONS = 50;
+const MAX_SESSIONS = 200;
 
 // Storage can throw (private mode, quota, blocked cookies); the app must keep working without it.
 function read<T>(key: string): T | null {
@@ -67,19 +93,35 @@ function stored<T>(key: string, fallback: T, parse: (v: T | null) => T = (v) => 
 
 export const prefsStore = stored<Prefs>(KEY.prefs, DEFAULT_PREFS, (v) => ({ ...DEFAULT_PREFS, ...v }));
 export const baselineStore = stored<Baseline | null>(KEY.baseline, null);
-
-export const loadSessions = () => read<SessionSummary[]>(KEY.sessions) ?? [];
+export const themeStore = stored<Theme>(KEY.theme, 'auto');
+const NO_SESSIONS: SessionSummary[] = [];
+export const sessionsStore = stored<SessionSummary[]>(KEY.sessions, NO_SESSIONS, (v) =>
+  // Rows saved before eye breaks existed lack the field.
+  (v ?? NO_SESSIONS).map((s) => ({ ...s, eye_breaks: s.eye_breaks ?? 0 })),
+);
 
 export function saveSession(s: SessionSummary) {
-  const rest = loadSessions().filter((x) => x.id !== s.id);
-  write(KEY.sessions, [s, ...rest].slice(0, MAX_SESSIONS));
+  const rest = sessionsStore.get().filter((x) => x.id !== s.id);
+  sessionsStore.set([s, ...rest].slice(0, MAX_SESSIONS));
 }
 
 export const loadSyncedAt = () => read<string>(KEY.syncedAt);
 export const saveSyncedAt = (iso: string) => write(KEY.syncedAt, iso);
+
+/** Everything this browser holds, for the user's own download. */
+export function exportData() {
+  return JSON.stringify(
+    { exported_at: new Date().toISOString(), prefs: prefsStore.get(), sessions: sessionsStore.get() },
+    null,
+    2,
+  );
+}
 
 export function clearAll() {
   try {
     Object.values(KEY).forEach((k) => localStorage.removeItem(k));
   } catch {}
 }
+
+// Runs before first paint (see app/layout.tsx), so it must stay dependency-free.
+export const THEME_SCRIPT = `try{var t=JSON.parse(localStorage.getItem(${JSON.stringify(KEY.theme)}));if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;

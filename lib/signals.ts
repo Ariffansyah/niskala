@@ -12,8 +12,14 @@ export type Baseline = { pitch: number; iod: number; noseY: number };
 // 0 = matches the calibrated upright pose, 1 = at the figure's anatomical limit
 export type Posture = { head: number; torso: number };
 
-export const DRIFT_THRESHOLD = 0.35;
-export const LOW_BLINK_PER_MIN = 10;
+export type Sensitivity = 'gentle' | 'balanced' | 'strict';
+// drift: share of the range that counts as leaning; riseS: seconds of sustained lean to full glow;
+// lowBlink: blinks per minute below which eye strain builds.
+export const SENSITIVITY: Record<Sensitivity, { drift: number; riseS: number; lowBlink: number }> = {
+  gentle: { drift: 0.45, riseS: 16, lowBlink: 8 },
+  balanced: { drift: 0.35, riseS: 10, lowBlink: 10 },
+  strict: { drift: 0.25, riseS: 6, lowBlink: 12 },
+};
 
 export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 

@@ -44,6 +44,9 @@ export async function pushToSupabase(sessions: SessionSummary[], prefs: Prefs) {
       user_id,
       bedtime_min: prefs.bedtime,
       warmth: prefs.warmth,
+      sensitivity: prefs.sensitivity,
+      eye_min: prefs.eyeMin,
+      reset_min: prefs.resetMin,
       updated_at: new Date().toISOString(),
     }),
   ]);

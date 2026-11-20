@@ -43,20 +43,31 @@ function toSample(r: FaceLandmarkerResult, w: number, h: number): FaceSample | n
   };
 }
 
+export function describeCameraError(e: unknown) {
+  const name = e instanceof DOMException ? e.name : '';
+  if (name === 'NotAllowedError') return 'Camera access was blocked. Allow it from the address bar, or use timer mode.';
+  if (name === 'NotFoundError') return 'No camera was found on this device. Timer mode still works.';
+  if (name === 'NotReadableError') return 'Another app is using the camera. Close it, then start again.';
+  return `The vision module could not start: ${e instanceof Error ? e.message : String(e)}`;
+}
+
+export type Vision = { video: HTMLVideoElement; stop: () => void };
+
 /**
- * Opens the camera into `video` and calls `onSample` once per new video frame
- * (null when no face is found). Resolves to a stop function that releases the
- * camera and the model.
+ * Opens the camera and calls `onSample` once per new video frame (null when no
+ * face is found). The returned video element may be moved between documents
+ * (e.g. into the mini monitor); the loop follows it.
  */
-export async function startVision(
-  video: HTMLVideoElement,
-  onSample: (s: FaceSample | null, t: number) => void,
-): Promise<() => void> {
+export async function startVision(onSample: (s: FaceSample | null, t: number) => void): Promise<Vision> {
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
     audio: false,
   });
   const release = () => stream.getTracks().forEach((t) => t.stop());
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.setAttribute('aria-label', 'Your camera preview, shown only on this screen');
   let landmarker: FaceLandmarker;
   try {
     video.srcObject = stream;
@@ -67,22 +78,43 @@ export async function startVision(
     throw e;
   }
 
+  let alive = true;
   let raf = 0;
+  let rafWin: Window | null = null;
+  let lastRun = 0;
   let lastFrame = -1;
   const loop = () => {
+    if (!alive) return;
+    lastRun = performance.now();
     if (video.readyState >= 2 && video.currentTime !== lastFrame) {
       lastFrame = video.currentTime;
-      const t = performance.now();
-      onSample(toSample(landmarker.detectForVideo(video, t), video.videoWidth, video.videoHeight), t);
+      onSample(toSample(landmarker.detectForVideo(video, lastRun), video.videoWidth, video.videoHeight), lastRun);
     }
-    raf = requestAnimationFrame(loop);
+    try {
+      rafWin?.cancelAnimationFrame(raf);
+    } catch {}
+    // Frames are paced by whichever window shows the video, so a visible mini
+    // monitor keeps tracking at full rate while this tab is in the background.
+    rafWin = video.ownerDocument.defaultView ?? window;
+    raf = rafWin.requestAnimationFrame(loop);
   };
-  raf = requestAnimationFrame(loop);
+  // A frame request queued on a window that just closed never fires, and hidden
+  // tabs pause them; this restarts the loop (at about 1 Hz while hidden).
+  const watchdog = setInterval(() => performance.now() - lastRun > 1000 && loop(), 1000);
+  loop();
 
-  return () => {
-    cancelAnimationFrame(raf);
-    landmarker.close();
-    release();
-    video.srcObject = null;
+  return {
+    video,
+    stop() {
+      alive = false;
+      clearInterval(watchdog);
+      try {
+        rafWin?.cancelAnimationFrame(raf);
+      } catch {}
+      landmarker.close();
+      release();
+      video.srcObject = null;
+      video.remove();
+    },
   };
 }

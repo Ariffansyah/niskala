@@ -9,17 +9,21 @@ create table if not exists public.session_summaries (
   updated_at timestamptz not null,
   active_s integer not null check (active_s >= 0),
   resets integer not null check (resets >= 0),
+  eye_breaks integer not null default 0 check (eye_breaks >= 0),
   slouch_s integer not null check (slouch_s >= 0),
   low_blink_s integer not null check (low_blink_s >= 0),
   late_s integer not null check (late_s >= 0),
   avg_blink real check (avg_blink is null or avg_blink between 0 and 120),
-  source text not null check (source in ('camera', 'simulation'))
+  source text not null check (source in ('camera', 'timer', 'simulation'))
 );
 
 create table if not exists public.preferences (
   user_id uuid primary key default auth.uid() references auth.users on delete cascade,
   bedtime_min smallint not null check (bedtime_min between 0 and 1439),
   warmth text not null check (warmth in ('auto', 'on', 'off')),
+  sensitivity text not null default 'balanced' check (sensitivity in ('gentle', 'balanced', 'strict')),
+  eye_min smallint not null default 20 check (eye_min between 0 and 240),
+  reset_min smallint not null default 50 check (reset_min between 0 and 240),
   updated_at timestamptz not null default now()
 );
 
