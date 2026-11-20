@@ -65,7 +65,7 @@ export default function PostureFigure({ posture, who = 'raka', className = '' }:
       viewBox="20 10 1150 1180"
       className={`figure h-full w-full ${className}`}
       role="img"
-      aria-label={`Tampak samping: punggung condong ${Math.round(torso)}° dan kepala ${Math.round(head)}° ke depan`}
+      aria-label={`Dari samping: punggung bungkuk ${Math.round(torso)}° dan kepala ${Math.round(head)}° ke depan`}
     >
       <Layer sheet={sheet} src={src} name="seat" />
       <g className="joint" style={joint(torso, pivotOf(sheet, 'torso'))}>
@@ -94,7 +94,7 @@ export function FrontFigure({ posture, who = 'raka', className = '' }: { posture
       viewBox="120 40 560 760"
       className={`figure h-full w-full ${className}`}
       role="img"
-      aria-label={`Tampak depan: badan miring ${Math.abs(Math.round(side))}° dan kepala miring ${Math.abs(Math.round(tilt))}°`}
+      aria-label={`Dari depan: badan miring ${Math.abs(Math.round(side))}° dan kepala miring ${Math.abs(Math.round(tilt))}°`}
     >
       <Layer sheet={sheet} src={src} name="base" />
       <g className="joint" style={joint(side, pivotOf(sheet, 'upper'))}>

@@ -6,7 +6,7 @@ import SiteFooter from '@/components/site-footer';
 
 export const metadata: Metadata = {
   title: 'Privasi',
-  description: 'Apa yang diproses Niskala, apa yang disimpan, dan apa yang bisa keluar dari perangkatmu.',
+  description: 'Apa yang dicek Niskala, apa yang disimpan, dan apa yang bisa keluar dari perangkatmu.',
 };
 
 function Block({ icon: Icon, title, children }: { icon: ComponentType<SVGProps<SVGSVGElement>>; title: string; children: ReactNode }) {
@@ -28,55 +28,55 @@ export default function PrivacyPage() {
     <>
       <header className="band motif-kawung">
         <div className="mx-auto max-w-3xl px-4 py-16 sm:px-8 sm:py-20">
-          <h1 className="text-3xl sm:text-5xl sm:leading-tight">Kamera membantu, tanpa ada yang ikut melihat.</h1>
+          <h1 className="text-3xl sm:text-5xl sm:leading-tight">Kameranya bantu, tapi nggak ada yang ikut nonton.</h1>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 pb-20 sm:px-8">
         <div className="-mt-8 space-y-4">
           <Block icon={IconCamera} title="Kamera">
             <p>
-              Kamera hanya menyala saat kamu menekan <strong>Nyalakan kamera</strong>, dan mati saat kamu menekan Matikan, berganti
-              mode, atau menutup tab. Setiap frame dianalisis model wajah atau tubuh yang berjalan di browsermu, lalu dibuang.{' '}
-              <strong>Tidak ada gambar, video, atau titik wajah yang diunggah atau disimpan.</strong>
+              Kamera cuma nyala pas kamu tekan <strong>Nyalain kamera</strong>, dan mati pas kamu tekan Matikan, ganti mode, atau
+              nutup tab. Tiap gambar dicek model wajah atau badan yang jalan di browsermu, terus dibuang.{' '}
+              <strong>Nggak ada gambar, video, atau titik wajah yang diunggah atau disimpan.</strong>
             </p>
-            <p>Model dan runtime-nya disajikan dari situs ini sendiri, jadi tidak ada server pihak ketiga yang dihubungi.</p>
+            <p>Model dan runtime-nya diambil dari situs ini sendiri, jadi nggak ada server pihak ketiga yang dihubungi.</p>
           </Block>
           <Block icon={IconEye} title="Yang ada di memori">
             <p>
-              Selama pelacakan berjalan, Niskala menyimpan beberapa angka per frame. Dari kamera depan: sudut kepala, kemiringan garis
-              mata, jarak antar mata di gambar, posisi wajah, dan apakah mata terpejam. Dari kamera samping: sudut leher dan sudut
-              punggung. Angka ini dipakai untuk tampilan langsung dan hilang saat kamu meninggalkan halaman.
+              Selama ngecek, Niskala nyimpen beberapa angka per gambar. Dari kamera depan: sudut kepala, miringnya garis mata, jarak
+              antar mata di gambar, posisi wajah, dan lagi merem atau nggak. Dari kamera samping: sudut leher dan sudut punggung.
+              Angka ini dipakai buat tampilan langsung dan hilang begitu kamu ninggalin halaman.
             </p>
           </Block>
-          <Block icon={IconHistory} title="Yang tersimpan di browsermu">
+          <Block icon={IconHistory} title="Yang kesimpan di browsermu">
             <p>
-              Di local storage browser ini: <strong>setelan</strong>, <strong>kalibrasi</strong> (beberapa angka yang menggambarkan
-              posisi tegakmu, untuk kamera depan dan samping), dan <strong>ringkasan sesi</strong> seperti menit aktif, menit condong, jeda yang diambil, dan rata-rata kedip.
-              Semua itu menjadi bahan halaman Riwayat.
+              Di local storage browser ini: <strong>setelan</strong>, <strong>kalibrasi</strong> (beberapa angka soal posisi tegakmu,
+              buat kamera depan dan samping), dan <strong>ringkasan sesi</strong> kayak menit aktif, menit bungkuk, jeda yang diambil,
+              dan rata-rata kedip. Semua itu jadi bahan halaman Riwayat.
             </p>
             <p>
-              Kamu bisa mengunduh atau menghapus semuanya dari tab Setelan di{' '}
+              Kamu bisa unduh atau hapus semuanya dari tab Setelan di{' '}
               <Link href="/app" className="link text-ink">
                 ruang kerja
               </Link>
               .
             </p>
           </Block>
-          <Block icon={IconLock} title="Pencadangan opsional">
+          <Block icon={IconLock} title="Cadangan, kalau kamu mau">
             <p>
-              Jika situs ini dikonfigurasi dengan layanan pencadangan, ruang kerja menampilkan sakelar <strong>Cadangkan ringkasan</strong>.
-              Bawaannya mati. Saat dinyalakan, ringkasan sesi dan setelan (jam tidur, layar hangat, jadwal jeda, kepekaan) dikirim ke
-              basis data Supabase dengan ID anonim, dengan aturan yang hanya mengizinkan ID itu membaca barisnya. Kalibrasimu tidak
+              Kalau situs ini disambungin ke layanan cadangan, ruang kerja nampilin sakelar <strong>Cadangkan ringkasan</strong>.
+              Awalnya mati. Kalau dinyalain, ringkasan sesi dan setelan (jam tidur, layar hangat, jadwal jeda, kepekaan) dikirim ke
+              database Supabase pakai ID anonim, dengan aturan yang cuma ngizinin ID itu baca datanya sendiri. Kalibrasimu nggak
               pernah dikirim.
             </p>
           </Block>
-          <Block icon={IconShield} title="Tanpa pelacakan dirimu">
-            <p>Tidak ada analitik, skrip iklan, cookie, atau akun di situs ini.</p>
+          <Block icon={IconShield} title="Kamu nggak dilacak">
+            <p>Nggak ada analitik, skrip iklan, cookie, atau akun di situs ini.</p>
           </Block>
-          <Block icon={IconInfo} title="Bukan nasihat medis">
+          <Block icon={IconInfo} title="Bukan saran medis">
             <p>
-              Niskala memberi pengingat ergonomi dan kebersihan tidur yang umum. Ini bukan alat medis. Jika nyeri leher, punggung, atau
-              mata terus berlanjut, temui tenaga kesehatan.
+              Niskala cuma ngasih pengingat ergonomi dan kebiasaan tidur yang umum. Ini bukan alat medis. Kalau leher, punggung, atau
+              matamu terus sakit, periksa ke tenaga kesehatan.
             </p>
           </Block>
         </div>

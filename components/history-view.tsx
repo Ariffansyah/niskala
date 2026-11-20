@@ -23,7 +23,7 @@ function download() {
   a.download = 'niskala-data.json';
   a.click();
   URL.revokeObjectURL(a.href);
-  toast('Data diunduh sebagai niskala-data.json.');
+  toast('Data kesimpan sebagai niskala-data.json.');
 }
 
 function Chart({ days }: { days: Day[] }) {
@@ -32,13 +32,13 @@ function Chart({ days }: { days: Day[] }) {
   return (
     <figure className="card p-5 sm:p-6">
       <figcaption className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <p className="font-bold">Waktu di layar per hari, dan berapa lama di antaranya kamu condong atau miring</p>
+        <p className="font-bold">Waktu di layar per hari, dan berapa lama kamu bungkuk atau miring</p>
         <div className="flex gap-4 text-[13px] text-muted">
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-sm bg-accent" /> tegak
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-sm bg-alert" /> condong / miring
+            <span className="size-2.5 rounded-sm bg-alert" /> bungkuk / miring
           </span>
         </div>
       </figcaption>
@@ -56,7 +56,7 @@ function Chart({ days }: { days: Day[] }) {
               const h = (d.active_s / max) * 100;
               const lean = d.active_s ? (d.slouch_s / d.active_s) * 100 : 0;
               return (
-                <li key={d.key} className="group flex h-full flex-1 flex-col justify-end" title={`${dayLabel(d.date)}: ${minutes(d.active_s)}, ${pct(d.slouch_s, d.active_s)}% condong`}>
+                <li key={d.key} className="group flex h-full flex-1 flex-col justify-end" title={`${dayLabel(d.date)}: ${minutes(d.active_s)}, ${pct(d.slouch_s, d.active_s)}% bungkuk`}>
                   <div className="flex flex-col overflow-hidden rounded-t-md transition-opacity group-hover:opacity-80" style={{ height: `${h}%` }}>
                     <div className="flex-1 bg-accent" />
                     <div className="bg-alert" style={{ height: `${lean}%` }} />
@@ -75,12 +75,12 @@ function Chart({ days }: { days: Day[] }) {
         </div>
       </div>
       <table className="sr-only">
-        <caption>Waktu di layar dan waktu condong per hari</caption>
+        <caption>Waktu di layar dan waktu bungkuk per hari</caption>
         <thead>
           <tr>
             <th>Hari</th>
             <th>Waktu di layar</th>
-            <th>Condong atau miring</th>
+            <th>Bungkuk atau miring</th>
           </tr>
         </thead>
         <tbody>
@@ -102,7 +102,7 @@ export default function HistoryView() {
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [range, setRange] = useState<(typeof RANGES)[number]>(14);
 
-  if (!hydrated) return <p className="py-10 text-muted">Membaca riwayat dari browser ini…</p>;
+  if (!hydrated) return <p className="py-10 text-muted">Ngambil riwayat dari browser ini…</p>;
 
   const days = byDay(sessions, range, new Date());
   const t = totals(days);
@@ -127,7 +127,7 @@ export default function HistoryView() {
             <IconHistory className="size-7" />
           </span>
           <p className="mt-5 max-w-md text-lg text-pretty">
-            Belum ada sesi di rentang ini. Sesi lebih dari 30 detik di ruang kerja tersimpan otomatis di sini, dalam mode apa pun.
+            Belum ada sesi di rentang ini. Sesi di ruang kerja yang lebih dari 30 detik otomatis kesimpan di sini, mode apa pun.
           </p>
           <Link href="/app" className="btn btn-primary mt-6">
             Buka ruang kerja
@@ -138,11 +138,11 @@ export default function HistoryView() {
         <>
           <div className="card grid gap-x-8 px-5 py-1 md:grid-cols-2 [&>*]:border-b [&>*]:border-rule md:[&>*:nth-last-child(-n+2)]:border-b-0 [&>*:last-child]:border-b-0">
             <Stat icon={IconTimer} hue="hue-kunyit" label="Waktu di layar" value={minutes(t.active_s)} detail={`dalam ${t.activeDays} hari`} />
-            <Stat icon={IconPosture} label="Condong atau miring" value={`${Math.round(t.leanShare * 100)}%`} detail={minutes(t.slouch_s)} tone={t.leanShare > 0.25 ? 'alert' : undefined} />
-            <Stat icon={IconStretch} hue="hue-mengkudu" label="Jeda diambil" value={String(t.resets + t.eye_breaks)} detail={`${t.resets} peregangan, ${t.eye_breaks} mata`} />
+            <Stat icon={IconPosture} label="Bungkuk atau miring" value={`${Math.round(t.leanShare * 100)}%`} detail={minutes(t.slouch_s)} tone={t.leanShare > 0.25 ? 'alert' : undefined} />
+            <Stat icon={IconStretch} hue="hue-mengkudu" label="Jeda diambil" value={String(t.resets + t.eye_breaks)} detail={`${t.resets} stretching, ${t.eye_breaks} mata`} />
             <Stat icon={IconEye} hue="hue-daun" label="Rata-rata kedip" value={t.blink === null ? 'Belum ada' : `${Math.round(t.blink)}/mnt`} />
             <Stat icon={IconMoon} hue="hue-ungu" label="Lewat jam tidur" value={minutes(t.late_s)} />
-            <Stat icon={IconHistory} label="Disimpan di" value="browser ini" detail="tidak dikirim" />
+            <Stat icon={IconHistory} label="Disimpan di" value="browser ini" detail="nggak dikirim" />
           </div>
 
           <Chart days={days} />
@@ -153,7 +153,7 @@ export default function HistoryView() {
                 <IconPosture />
               </span>
               <p className="text-pretty">
-                Hari paling tegakmu adalah <strong>{dayLabel(best.date)}</strong>: condong hanya {pct(best.slouch_s, best.active_s)}% dari{' '}
+                Hari paling tegakmu: <strong>{dayLabel(best.date)}</strong>, bungkuk cuma {pct(best.slouch_s, best.active_s)}% dari{' '}
                 {minutes(best.active_s)}.
               </p>
             </div>
@@ -167,7 +167,7 @@ export default function HistoryView() {
                   <tr>
                     <th className="px-5 py-2.5 font-medium">Mulai</th>
                     <th className="py-2.5 pr-4 font-medium">Durasi</th>
-                    <th className="py-2.5 pr-4 font-medium">Condong</th>
+                    <th className="py-2.5 pr-4 font-medium">Bungkuk</th>
                     <th className="py-2.5 pr-4 font-medium">Jeda</th>
                     <th className="py-2.5 pr-5 font-medium">Mode</th>
                   </tr>
