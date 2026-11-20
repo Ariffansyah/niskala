@@ -14,10 +14,13 @@
   --rule: light-dark(#ddd2c1, #2b2f43);
   --edge: light-dark(#8c7e71, #6e7086);
   --accent: light-dark(#2c3f6b, #a7b8e6);
+  --accent-soft: light-dark(#dfe3ec, #2a3350);
   --on-accent: light-dark(#f6f1e8, #13141d);
   --alert: light-dark(#c98a1e, #e2a13a);
   --alert-ink: light-dark(#8a5a10, #ecb75f);
+  --danger: light-dark(#a5402b, #e88a72);
   --cue: light-dark(#3a5085, #7f95d1);
+  --shadow: light-dark(rgb(42 31 25 / 0.08), rgb(0 0 0 / 0.35));
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -35,9 +38,11 @@
   --color-rule: var(--rule);
   --color-edge: var(--edge);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-on-accent: var(--on-accent);
   --color-alert: var(--alert);
   --color-alert-ink: var(--alert-ink);
+  --color-danger: var(--danger);
   --color-cue: var(--cue);
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
@@ -45,6 +50,7 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 5rem;
   }
   body {
     @apply bg-paper font-sans text-[15px] leading-relaxed text-ink;
@@ -52,7 +58,7 @@
   h1,
   h2,
   h3 {
-    @apply font-semibold tracking-tight text-balance;
+    @apply font-bold tracking-tight text-balance;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-accent;
@@ -63,29 +69,75 @@
 }
 
 @layer components {
+  /* Buttons: primary for the one main action per view, outline by default, ghost for low emphasis. */
   .btn {
-    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-edge bg-transparent px-4 text-sm font-semibold whitespace-nowrap transition-colors hover:border-ink disabled:cursor-default disabled:opacity-50;
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-edge bg-raised px-4 text-sm font-semibold whitespace-nowrap transition-colors hover:border-ink disabled:cursor-default disabled:opacity-50;
   }
   .btn-primary {
-    @apply border-accent bg-accent text-on-accent hover:border-accent hover:bg-[color-mix(in_oklab,var(--accent)_88%,var(--ink))];
+    @apply border-accent bg-accent text-on-accent hover:border-accent hover:bg-[color-mix(in_oklab,var(--accent)_86%,var(--ink))];
+  }
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-muted hover:border-transparent hover:bg-surface hover:text-ink;
+  }
+  .btn-danger {
+    @apply border-danger bg-danger text-raised hover:border-danger hover:bg-[color-mix(in_oklab,var(--danger)_86%,var(--ink))];
   }
   .btn-sm {
-    @apply min-h-8 px-3 text-[13px];
+    @apply min-h-8 rounded-lg px-3 text-[13px];
   }
-  .btn-quiet {
-    @apply inline-flex min-h-10 cursor-pointer items-center text-sm text-muted underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-ink;
+  .btn-lg {
+    @apply min-h-12 px-6 text-base;
+  }
+  .btn-icon {
+    @apply size-10 min-h-0 px-0;
   }
   .link {
     @apply underline decoration-edge underline-offset-4 hover:decoration-ink;
   }
+
+  .card {
+    @apply rounded-2xl border border-rule bg-raised shadow-[0_1px_2px_var(--shadow)];
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-none font-semibold;
+  }
+  .badge-neutral {
+    @apply bg-surface text-muted;
+  }
+  .badge-accent {
+    @apply bg-accent-soft text-accent;
+  }
+  .badge-alert {
+    @apply bg-alert/15 text-alert-ink;
+  }
+  .live-dot {
+    @apply size-2 rounded-full bg-current;
+  }
+
   .seg {
-    @apply inline-flex flex-wrap gap-0.5 rounded-lg bg-surface p-0.5;
+    @apply inline-flex flex-wrap gap-0.5 rounded-xl bg-surface p-1;
   }
   .seg-item {
-    @apply cursor-pointer rounded-md px-3 py-1.5 text-sm text-muted transition-colors hover:text-ink has-checked:bg-raised has-checked:font-semibold has-checked:text-ink has-checked:shadow-[0_1px_0_var(--rule)] has-focus-visible:outline-2 has-focus-visible:outline-accent;
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:text-ink has-checked:bg-raised has-checked:font-semibold has-checked:text-ink has-checked:shadow-[0_1px_2px_var(--shadow)] has-focus-visible:outline-2 has-focus-visible:outline-accent;
   }
+
+  .tab {
+    @apply -mb-px inline-flex min-w-0 cursor-pointer items-center justify-center gap-1.5 border-b-2 border-transparent px-1 py-3 text-[13px] font-medium whitespace-nowrap text-muted transition-colors hover:text-ink aria-selected:border-accent aria-selected:font-semibold aria-selected:text-ink;
+  }
+
+  .switch {
+    @apply relative h-6 w-11 shrink-0 cursor-pointer rounded-full bg-edge transition-colors aria-checked:bg-accent;
+  }
+  .switch-knob {
+    @apply absolute top-0.5 left-0.5 size-5 rounded-full bg-raised shadow-[0_1px_2px_var(--shadow)] transition-transform;
+  }
+  .switch[aria-checked="true"] .switch-knob {
+    @apply translate-x-5;
+  }
+
   .field {
-    @apply rounded-lg border border-edge bg-raised px-3 py-1.5 tabular-nums;
+    @apply rounded-xl border border-edge bg-raised px-3 py-1.5 tabular-nums;
   }
   .label {
     @apply text-[13px] text-muted;
@@ -107,6 +159,21 @@
   }
   .check {
     @apply size-4 shrink-0 cursor-pointer accent-accent;
+  }
+  .kbd {
+    @apply inline-grid min-w-6 place-items-center rounded-md border border-rule bg-raised px-1.5 py-0.5 text-xs font-semibold shadow-[0_1px_0_var(--rule)];
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-rule bg-raised/90 px-2 py-1 text-xs font-semibold tabular-nums;
+  }
+  .toast {
+    @apply flex w-full max-w-sm items-center gap-3 rounded-xl border border-rule bg-raised px-4 py-3 text-sm shadow-[0_8px_24px_-8px_var(--shadow)];
+  }
+  .dialog {
+    @apply m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl border border-rule bg-raised p-6 text-ink shadow-[0_16px_48px_-12px_var(--shadow)];
+  }
+  .dialog::backdrop {
+    background: rgb(20 16 12 / 0.45);
   }
 }
 
