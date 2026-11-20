@@ -17,6 +17,7 @@ import {
   type NightStage,
   type Posture,
 } from './signals';
+import { notify } from './notify';
 import { chime } from './sound';
 import type { Sample } from './vision';
 import {
@@ -52,6 +53,9 @@ export type Snapshot = {
   nextResetS: number | null;
   night: { level: number; stage: NightStage; minutesToBed: number; clock: string };
   session: SessionSummary | null;
+  away: boolean;
+  /** Seconds the user was away, set only on the tick they come back. */
+  returnedAfter: number | null;
 };
 
 const TICK_MS = 250;
@@ -60,6 +64,17 @@ const SYNC_MS = 60_000;
 const MIN_SESSION_S = 30;
 const SNOOZE_S = 5 * 60;
 const MIN_CALIBRATION_FRAMES = 20;
+// Nobody in frame this long means the user left the desk, not a glance away.
+const AWAY_AFTER_S = 60;
+const AWAY_EYE_BREAK_S = 120;
+const AWAY_RESET_S = 300;
+
+const NOTE = {
+  posture: ['Postur bergeser cukup lama', 'Tegakkan badan, atau lakukan peregangan 60 detik.'],
+  eyes: ['Mata jarang berkedip', 'Kedipkan mata penuh beberapa kali, lalu lihat jauh sebentar.'],
+  eye: ['Waktunya istirahat mata', 'Lihat sejauh 6 meter selama 20 detik.'],
+  reset: ['Waktunya peregangan 60 detik', 'Leher, bahu, dan mata, dipandu langkah demi langkah.'],
+} as const;
 
 const INITIAL: Snapshot = {
   posture: UPRIGHT,
@@ -75,6 +90,8 @@ const INITIAL: Snapshot = {
   nextResetS: null,
   night: { level: 0, stage: 'day', minutesToBed: 0, clock: '' },
   session: null,
+  away: false,
+  returnedAfter: null,
 };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -97,6 +114,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
   const face = useRef({
     sample: null as Sample | null,
     at: 0,
+    seenAt: 0,
     blinks: null as BlinkCounter | null,
     collect: null as Sample[] | null,
   });
@@ -113,6 +131,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     forced: null as Routine | null,
     lastCue: null as Routine | null,
     chimed: false,
+    awayFor: 0,
     session: null as SessionSummary | null,
     last: 0,
     savedAt: 0,
@@ -155,8 +174,29 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     const f = face.current;
     const m = model.current;
     const S = SENSITIVITY[prefs.sensitivity];
-    // With the mini monitor open the user can still see the cues, so time counts.
+    // With the floating window open the user can still see the cues, so time counts.
     const watched = document.visibilityState === 'visible' || timerWindow !== null;
+    // Only worth a system notification when no Niskala surface has the user's attention.
+    const alert = (note: readonly [string, string]) => {
+      if (prefs.sound) chime();
+      if (prefs.notify && timerWindow === null && !document.hasFocus()) notify(note[0], note[1]);
+    };
+
+    const away = mode === 'camera' && cameraOn && (now - f.seenAt) / 1000 > AWAY_AFTER_S;
+    let returnedAfter: number | null = null;
+    if (away) m.awayFor += dt;
+    else if (m.awayFor > 0) {
+      // Time away from the desk is a real break: credit it instead of nagging right after.
+      const total = m.awayFor + AWAY_AFTER_S;
+      if (total >= AWAY_EYE_BREAK_S) m.sinceEye = 0;
+      if (total >= AWAY_RESET_S) {
+        m.sinceReset = 0;
+        m.postureStrain = 0;
+        m.eyeStrain = 0;
+      }
+      returnedAfter = total;
+      m.awayFor = 0;
+    }
 
     let target: Posture | null = null;
     let rate: number | null = null;
@@ -194,19 +234,19 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     m.driftFor = drifting ? m.driftFor + dt : 0;
     m.lowBlinkFor = lowBlink ? m.lowBlinkFor + dt : 0;
 
-    if (watched && !routine) {
+    if (watched && !routine && !away) {
       m.sinceEye += dt;
       m.sinceReset += dt;
     }
     const eyeDue = m.forced === 'eye' || (prefs.eyeMin > 0 && m.sinceEye >= prefs.eyeMin * 60);
     const resetDue = m.forced === 'reset' || (prefs.resetMin > 0 && m.sinceReset >= prefs.resetMin * 60);
     const cue: Routine | null = routine ? null : resetDue ? 'reset' : eyeDue ? 'eye' : null;
-    if (cue && cue !== m.lastCue && prefs.sound) chime();
+    if (cue && cue !== m.lastCue) alert(NOTE[cue]);
     m.lastCue = cue;
 
     const glow = routine ? 0 : 0.8 * Math.max(glowFrom(m.postureStrain), glowFrom(m.eyeStrain));
     if (glow > 0.5 && !m.chimed) {
-      if (prefs.sound) chime();
+      alert(m.postureStrain >= m.eyeStrain ? NOTE.posture : NOTE.eyes);
       m.chimed = true;
     } else if (glow === 0) m.chimed = false;
 
@@ -215,7 +255,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     const night = nightState(nowMin, prefs.bedtime);
 
     const s = m.session;
-    if (s && watched) {
+    if (s && watched && !away) {
       s.active_s += dt;
       s.source = mode === 'demo' ? 'simulation' : mode === 'camera' && cameraOn ? 'camera' : 'timer';
       if (drifting) s.slouch_s += dt;
@@ -249,6 +289,8 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
       nextResetS: prefs.resetMin > 0 ? Math.max(0, prefs.resetMin * 60 - m.sinceReset) : null,
       night: { ...night, clock: `${pad(Math.floor(nowMin / 60))}:${pad(nowMin % 60)}` },
       session: s && { ...s },
+      away,
+      returnedAfter,
     });
   });
 
@@ -298,6 +340,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     // A new camera run starts a fresh blink window.
     face.current.sample = null;
     face.current.blinks = null;
+    face.current.seenAt = performance.now();
   }, [mode, cameraOn, prefs.cameraView]);
 
   const onSample = useCallback((s: Sample | null, t: number) => {
@@ -306,6 +349,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     if (!s) return;
     f.sample = s;
     f.at = t;
+    f.seenAt = t;
     if (s.view === 'front') f.blinks.push(t, s.blink);
     f.collect?.push(s);
   }, []);
