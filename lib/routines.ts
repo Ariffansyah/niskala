@@ -1,48 +1,58 @@
 // Plain data so both server pages and client components can read it.
 export type RoutineKind = 'reset' | 'eye';
 
-export type Step = { title: string; how: string; seconds: number; cues: string[]; check?: 'head' | 'blinks' };
+export type Step = {
+  title: string;
+  how: string;
+  seconds: number;
+  cues: string[];
+  /** Live camera feedback shown during the step. */
+  check?: 'head' | 'tilt' | 'blinks';
+};
 
-export const ROUTINES: Record<RoutineKind, { title: string; steps: Step[] }> = {
+export const ROUTINES: Record<RoutineKind, { title: string; short: string; steps: Step[] }> = {
   reset: {
-    title: '60-second desk reset',
+    title: 'Peregangan 60 detik',
+    short: 'Peregangan',
     steps: [
       {
-        title: 'Chin tucks',
-        how: 'Keep your eyes level and glide your chin straight back, as if making a double chin.',
+        title: 'Tarik dagu',
+        how: 'Pandangan tetap lurus. Tarik dagu lurus ke belakang, seolah membuat dagu ganda.',
         seconds: 15,
-        cues: ['Chin back, hold', 'Release', 'Chin back, hold', 'Release', 'Chin back, hold', 'Release'],
+        cues: ['Tarik dagu, tahan', 'Lepaskan', 'Tarik dagu, tahan', 'Lepaskan', 'Tarik dagu, tahan', 'Lepaskan'],
         check: 'head',
       },
       {
-        title: 'Shoulder rolls',
-        how: 'Slow circles: lift toward your ears, squeeze back, drop down.',
+        title: 'Putar bahu',
+        how: 'Lingkaran pelan: angkat ke arah telinga, tarik ke belakang, lalu turunkan.',
         seconds: 15,
-        cues: ['Up', 'Back', 'Down', 'Up', 'Back', 'Down', 'Up', 'Back', 'Down'],
+        cues: ['Naik', 'Ke belakang', 'Turun', 'Naik', 'Ke belakang', 'Turun', 'Naik', 'Ke belakang', 'Turun'],
       },
       {
-        title: 'Side neck stretch',
-        how: 'Shoulders stay down. Let your head tip sideways under its own weight.',
+        title: 'Regang leher samping',
+        how: 'Bahu tetap turun. Biarkan kepala miring karena beratnya sendiri.',
         seconds: 15,
-        cues: ['Left ear toward left shoulder', 'Right ear toward right shoulder'],
+        cues: ['Telinga kiri ke bahu kiri', 'Telinga kanan ke bahu kanan'],
+        check: 'tilt',
       },
       {
-        title: 'Far focus and full blinks',
-        how: 'Look at the farthest thing you can see, ideally 6 m or more away. Close your eyes fully on each blink.',
+        title: 'Fokus jauh dan kedip penuh',
+        how: 'Lihat benda terjauh yang terlihat, idealnya 6 meter atau lebih. Pejamkan mata penuh setiap berkedip.',
         seconds: 15,
-        cues: ['Look far away', 'Blink fully, slowly', 'Look far away', 'Blink fully, slowly'],
+        cues: ['Lihat jauh', 'Kedip penuh, pelan', 'Lihat jauh', 'Kedip penuh, pelan'],
         check: 'blinks',
       },
     ],
   },
   eye: {
-    title: '20-second eye break',
+    title: 'Istirahat mata 20 detik',
+    short: 'Istirahat mata',
     steps: [
       {
-        title: 'Look 6 m away',
-        how: 'Out of a window if you can. Let your eyes soften and blink fully a few times.',
+        title: 'Lihat sejauh 6 meter',
+        how: 'Ke luar jendela kalau bisa. Lemaskan pandangan dan kedipkan mata penuh beberapa kali.',
         seconds: 20,
-        cues: ['Look far away', 'Keep your gaze far', 'Blink fully, slowly', 'Almost done'],
+        cues: ['Lihat jauh', 'Tetap lihat jauh', 'Kedip penuh, pelan', 'Hampir selesai'],
         check: 'blinks',
       },
     ],

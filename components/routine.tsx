@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useEffectEvent, useState } from 'react';
-import type { Posture } from '@/lib/signals';
+import { sideWord } from '@/lib/format';
 import { ROUTINES, type RoutineKind as Kind } from '@/lib/routines';
-import { HEAD_MAX_DEG } from './posture-figure';
+import type { Posture } from '@/lib/signals';
+import { IconCamera, IconCheck, IconNext, IconPause, IconPlay } from './icons';
+import { HEAD_MAX_DEG, TILT_MAX_DEG } from './posture-figure';
+import { ProgressRing } from './ui';
 
 export default function RoutineRunner({ kind, posture, blinkTotal, onDone, onExit, compact = false }: {
   kind: Kind;
@@ -50,54 +53,75 @@ export default function RoutineRunner({ kind, posture, blinkTotal, onDone, onExi
   let feedback: string | null = null;
   if (step.check === 'head' && posture) {
     const deg = Math.round(posture.head * HEAD_MAX_DEG);
-    feedback = deg <= 3 ? 'Head is back over your shoulders.' : `Head is ${deg}° forward. Draw it back a little more.`;
+    feedback = deg <= 3 ? 'Kepala sudah sejajar bahu.' : `Kepala masih ${deg}° ke depan. Tarik sedikit lagi.`;
+  } else if (step.check === 'tilt' && posture) {
+    const deg = Math.round(posture.tilt * TILT_MAX_DEG);
+    feedback = Math.abs(deg) < 4 ? 'Kepala masih tegak. Biarkan miring perlahan.' : `Kepala miring ${Math.abs(deg)}° ke ${sideWord(deg)}.`;
   } else if (step.check === 'blinks' && blinkTotal !== null && stepBlinks.start !== null) {
-    const n = blinkTotal - stepBlinks.start;
-    feedback = `${n} ${n === 1 ? 'blink' : 'blinks'} counted.`;
+    feedback = `${blinkTotal - stepBlinks.start} kedipan terhitung.`;
   }
 
   return (
-    <div className={compact ? 'space-y-3' : 'space-y-5'}>
-      <div className="flex items-baseline justify-between gap-4">
-        <p className="text-sm text-muted" aria-live="polite">
-          {steps.length > 1 ? `Step ${index + 1} of ${steps.length}: ` : `${title}: `}
-          <span className="font-semibold text-ink">{step.title}</span>
+    <div className={compact ? 'space-y-3' : 'card space-y-5 p-5 sm:p-6'}>
+      <div className="flex items-center gap-4 sm:gap-6">
+        <ProgressRing value={t / total} size={compact ? 76 : 112}>
+          <p className={`${compact ? 'text-lg' : 'text-3xl'} leading-none font-bold tabular-nums`}>{Math.ceil(total - t)}</p>
+          <p className="mt-1 text-[11px] text-muted">detik</p>
+        </ProgressRing>
+        <div className="min-w-0" aria-live="polite">
+          <p className="label">
+            {title}
+            {steps.length > 1 && ` · langkah ${index + 1} dari ${steps.length}`}
+          </p>
+          <p className={`${compact ? 'text-lg' : 'text-2xl sm:text-3xl'} mt-1 leading-tight font-bold tracking-tight text-balance`}>{cue}</p>
+          {!compact && <p className="mt-2 text-sm text-muted text-pretty">{step.how}</p>}
+        </div>
+      </div>
+
+      {steps.length > 1 && !compact && (
+        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Langkah">
+          {steps.map((s, i) => {
+            const done = t >= starts[i] + s.seconds;
+            const current = i === index && !done;
+            return (
+              <li
+                key={s.title}
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-[13px] ${
+                  current ? 'border-accent bg-accent-soft font-semibold text-ink' : done ? 'border-rule text-muted' : 'border-rule text-muted'
+                }`}
+              >
+                <span className={`grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${done ? 'bg-accent text-on-accent' : 'bg-surface'}`}>
+                  {done ? <IconCheck className="size-3" /> : i + 1}
+                </span>
+                <span className="leading-tight">{s.title}</span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      {feedback && (
+        <p className="flex items-center gap-2 text-sm">
+          <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent">
+            <IconCamera className="size-3.5" />
+          </span>
+          {feedback}
         </p>
-        <p className="text-sm tabular-nums text-muted">{Math.ceil(total - t)} s</p>
-      </div>
-
-      <ol className="flex gap-1.5" aria-label={`${title} progress`}>
-        {steps.map((s, i) => {
-          const fill = Math.min(1, Math.max(0, (t - starts[i]) / s.seconds));
-          return (
-            <li key={s.title} className="h-1.5 overflow-hidden rounded-full bg-rule" style={{ flexGrow: s.seconds }}>
-              <span className="sr-only">{`${s.title}: ${fill === 1 ? 'done' : i === index ? 'in progress' : 'up next'}`}</span>
-              <div
-                className="h-full origin-left bg-accent transition-transform duration-100 ease-linear"
-                style={{ transform: `scaleX(${fill})` }}
-              />
-            </li>
-          );
-        })}
-      </ol>
-
-      <div>
-        <p className={`${compact ? 'text-lg' : 'text-2xl sm:text-3xl'} font-semibold tracking-tight text-balance`}>{cue}</p>
-        {!compact && <p className="mt-2 text-sm text-muted">{step.how}</p>}
-        {feedback && <p className="mt-2 text-sm">{feedback}</p>}
-      </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={`btn ${compact ? 'btn-sm' : ''}`} onClick={() => setRunning((r) => !r)}>
-          {running ? 'Pause' : 'Resume'}
+          {running ? <IconPause className="size-4" /> : <IconPlay className="size-4" />}
+          {running ? 'Jeda' : 'Lanjut'}
         </button>
         {steps.length > 1 && (
           <button type="button" className={`btn ${compact ? 'btn-sm' : ''}`} onClick={() => goTo(starts[index] + step.seconds)}>
-            {index === steps.length - 1 ? 'Finish' : 'Next step'}
+            <IconNext className="size-4" />
+            {index === steps.length - 1 ? 'Selesai' : 'Langkah berikutnya'}
           </button>
         )}
-        <button type="button" className="btn-quiet ml-1" onClick={onExit}>
-          Stop
+        <button type="button" className={`btn btn-ghost ${compact ? 'btn-sm' : ''}`} onClick={onExit}>
+          Hentikan
         </button>
       </div>
     </div>

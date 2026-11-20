@@ -3,124 +3,134 @@
 import Link from 'next/link';
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { duration, hhmm, minutes, parseHhmm } from '@/lib/format';
-import { SENSITIVITY, type Sensitivity } from '@/lib/signals';
+import { duration, hhmm, minutes, parseHhmm, sideWord } from '@/lib/format';
+import { ROUTINES } from '@/lib/routines';
+import { SENSITIVITY, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
 import { chime } from '@/lib/sound';
 import { clearAll, exportData, prefsStore, type Mode, type Prefs, type Warmth } from '@/lib/store';
 import { syncConfigured } from '@/lib/sync';
+import { toast } from '@/lib/toast';
 import { useMonitor, type Routine, type Sim, type Snapshot } from '@/lib/use-monitor';
 import { describeCameraError, startVision } from '@/lib/vision';
 import CameraPanel, { type Camera } from './camera-panel';
+import {
+  IconBell,
+  IconCamera,
+  IconDownload,
+  IconEye,
+  IconGauge,
+  IconHistory,
+  IconInfo,
+  IconLean,
+  IconMoon,
+  IconPip,
+  IconPosture,
+  IconRefresh,
+  IconSliders,
+  IconStretch,
+  IconTimer,
+  IconTrash,
+  IconVolume,
+} from './icons';
 import { openMiniMonitor, usePipSupported } from './mini-monitor';
 import Onboarding from './onboarding';
-import PostureFigure, { HEAD_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
-import { ROUTINES } from '@/lib/routines';
+import PostureFigure, { FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TILT_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
 import RoutineRunner from './routine';
+import { Badge, Meter, StatCard } from './ui';
+import { ConfirmDialog, Segmented, Switch, Tabs } from './ui-client';
 
 const noop = () => () => {};
+type Tab = 'track' | 'breaks' | 'evening' | 'settings';
 
 const SENSITIVITY_NOTE: Record<Sensitivity, string> = {
-  gentle: 'Flags only a clear lean held for about 16 seconds.',
-  balanced: 'Flags a moderate lean held for about 10 seconds.',
-  strict: 'Flags a slight lean held for about 6 seconds.',
+  gentle: 'Hanya menandai condong atau miring yang jelas, setelah sekitar 16 detik.',
+  balanced: 'Menandai condong atau miring sedang, setelah sekitar 10 detik.',
+  strict: 'Menandai pergeseran kecil, setelah sekitar 6 detik.',
 };
 
 const CUE_TEXT: Record<Routine, [string, string]> = {
-  eye: ['Time for a 20-second eye break.', 'Look at something far away and blink fully.'],
-  reset: ['Time for the 60-second desk reset.', 'Neck, shoulders and eyes, guided step by step.'],
+  eye: ['Waktunya istirahat mata 20 detik.', 'Lihat benda yang jauh dan kedipkan mata penuh.'],
+  reset: ['Waktunya peregangan 60 detik.', 'Leher, bahu, dan mata, dipandu langkah demi langkah.'],
 };
 
-function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: boolean, routine: Routine | null) {
-  if (routine) return 'Break in progress. The edge glow is paused until you finish.';
-  if (mode === 'timer') return 'Timer mode: breaks arrive on schedule. Posture and blinking are not tracked.';
-  if (mode === 'camera' && !cameraOn) return 'The camera is off. Start it under Tracking, or switch to timer mode.';
-  if (mode === 'camera' && !calibrated) return 'Calibrate once so Niskala knows your upright pose.';
-  if (mode === 'camera' && !snap.posture) return 'No face in view. Tracking resumes when you are back.';
-  if (snap.glow > 0 && snap.driftFor === 0 && snap.lowBlinkFor === 0) return 'Back on track. The glow fades over a few seconds.';
-  if (snap.glow > 0 && snap.postureStrain >= snap.eyeStrain)
-    return `The edge is glowing because you have leaned forward for ${duration(snap.driftFor)}. Sit back, or take the 60-second reset.`;
-  if (snap.glow > 0)
-    return `The edge is glowing because you have blinked ${Math.round(snap.blinkRate ?? 0)} times a minute for ${duration(snap.lowBlinkFor)}. Blink fully a few times or look away.`;
-  if (snap.driftFor > 0) return 'Forward lean noticed. The edge only glows if it lasts.';
-  if (snap.lowBlinkFor > 0) return 'Blinking has slowed. The edge only glows if it stays low.';
-  return 'Upright and blinking normally. Nothing to flag.';
+/** Which way the posture has moved most: forward, sideways, or a head tilt. */
+function dominant(p: Posture) {
+  const forward = Math.max(p.head, p.torso);
+  const side = Math.abs(p.side);
+  const tilt = Math.abs(p.tilt);
+  if (forward >= side && forward >= tilt) return { kind: 'forward' as const };
+  return side >= tilt ? { kind: 'side' as const, dir: sideWord(p.side) } : { kind: 'tilt' as const, dir: sideWord(p.tilt) };
 }
 
-function postureWord(drift: number, threshold: number) {
-  if (drift < threshold * 0.45) return 'Upright';
-  if (drift < threshold) return 'Shifting';
-  return 'Leaning forward';
+function postureWord(p: Posture, threshold: number) {
+  const drift = driftOf(p);
+  if (drift < threshold * 0.45) return 'Tegak';
+  if (drift < threshold) return 'Mulai bergeser';
+  const d = dominant(p);
+  return d.kind === 'forward' ? 'Condong ke depan' : d.kind === 'side' ? `Miring ke ${d.dir}` : `Kepala miring ke ${d.dir}`;
+}
+
+function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: boolean, routine: Routine | null) {
+  if (routine) return 'Jeda sedang berjalan. Pendar tepi berhenti sampai selesai.';
+  if (mode === 'timer') return 'Mode timer: jeda datang sesuai jadwal. Postur dan kedipan tidak dilacak.';
+  if (mode === 'camera' && !cameraOn) return 'Kamera mati. Nyalakan di tab Pelacakan, atau pakai mode timer.';
+  if (mode === 'camera' && !calibrated) return 'Kalibrasi sekali agar Niskala tahu posisi tegakmu.';
+  if (mode === 'camera' && !snap.posture) return 'Wajah tidak terlihat. Pelacakan lanjut saat kamu kembali.';
+  if (snap.glow > 0 && snap.driftFor === 0 && snap.lowBlinkFor === 0) return 'Sudah kembali baik. Pendar memudar dalam beberapa detik.';
+  if (snap.glow > 0 && snap.postureStrain >= snap.eyeStrain && snap.posture) {
+    const d = dominant(snap.posture);
+    // Right after a break the timer restarts while the glow is still fading; skip a "0 dtk" duration.
+    const t = snap.driftFor >= 1 ? ` selama ${duration(snap.driftFor)}` : '';
+    if (d.kind === 'forward') return `Tepi layar berpendar karena kamu condong ke depan${t}. Duduk tegak, atau lakukan peregangan 60 detik.`;
+    if (d.kind === 'side') return `Tepi layar berpendar karena badanmu miring ke ${d.dir}${t}. Geser duduk ke tengah kursi.`;
+    return `Tepi layar berpendar karena kepalamu miring ke ${d.dir}${t}. Luruskan leher dan sejajarkan layar dengan mata.`;
+  }
+  if (snap.glow > 0)
+    return `Tepi layar berpendar karena kamu hanya berkedip ${Math.round(snap.blinkRate ?? 0)} kali per menit${snap.lowBlinkFor >= 1 ? ` selama ${duration(snap.lowBlinkFor)}` : ''}. Kedipkan mata penuh atau lihat jauh sebentar.`;
+  if (snap.driftFor > 0) return 'Postur mulai bergeser. Pendar hanya muncul kalau berlangsung lama.';
+  if (snap.lowBlinkFor > 0) return 'Kedipan melambat. Pendar hanya muncul kalau terus rendah.';
+  return 'Tegak dan berkedip normal. Tidak ada yang perlu diperhatikan.';
 }
 
 function nextBreak(snap: Snapshot) {
-  if (snap.cue) return { value: 'Due now', detail: snap.cue === 'eye' ? 'eye break' : 'desk reset' };
+  if (snap.cue) return { value: 'Sekarang', detail: ROUTINES[snap.cue].short.toLowerCase() };
   const opts = [
-    snap.nextEyeS !== null ? { s: snap.nextEyeS, what: 'eye break' } : null,
-    snap.nextResetS !== null ? { s: snap.nextResetS, what: 'desk reset' } : null,
+    snap.nextEyeS !== null ? { s: snap.nextEyeS, what: 'istirahat mata' } : null,
+    snap.nextResetS !== null ? { s: snap.nextResetS, what: 'peregangan' } : null,
   ].filter((o) => o !== null);
-  if (!opts.length) return { value: 'Off', detail: 'no schedule' };
+  if (!opts.length) return { value: 'Mati', detail: 'tanpa jadwal' };
   const n = opts.reduce((a, b) => (b.s < a.s ? b : a));
-  return { value: `In ${Math.max(1, Math.ceil(n.s / 60))} min`, detail: n.what };
+  return { value: `${Math.max(1, Math.ceil(n.s / 60))} mnt lagi`, detail: n.what };
 }
 
 function guidance(snap: Snapshot, bedtime: number) {
   const { stage, minutesToBed } = snap.night;
-  if (stage === 'day') return `Warm shift starts at ${hhmm((bedtime + 1440 - 120) % 1440)}, two hours before your ${hhmm(bedtime)} bedtime.`;
+  if (stage === 'day') return `Layar mulai menghangat pukul ${hhmm((bedtime + 1440 - 120) % 1440)}, dua jam sebelum jam tidurmu (${hhmm(bedtime)}).`;
   if (stage === 'wind-down')
-    return `${minutesToBed} min to bedtime. Finish the task in front of you and leave new ones for tomorrow. Note where you stopped so restarting is quick.`;
+    return `${minutesToBed} menit lagi menuju jam tidur. Selesaikan tugas yang sedang dikerjakan dan simpan tugas baru untuk besok. Catat di mana kamu berhenti agar besok mudah melanjutkan.`;
   const ran = snap.session ? minutes(snap.session.active_s) : '';
-  return `${-minutesToBed} min past your bedtime, ${ran} into this session. Bright screens this late push sleep back. Save your work and stop at the next clean break.`;
+  return `Sudah ${-minutesToBed} menit lewat jam tidurmu, dan sesi ini berjalan ${ran}. Layar terang selarut ini menunda kantuk. Simpan pekerjaan dan berhenti di jeda berikutnya.`;
 }
 
-function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
-  return (
-    <section className="py-7 first:pt-0" aria-label={title}>
-      <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2 className="text-base">{title}</h2>
-        {aside}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Seg<T extends string | number>({ name, value, options, onChange }: {
-  name: string;
-  value: T;
-  options: [T, string][];
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div role="radiogroup" aria-label={name} className="seg">
-      {options.map(([v, label]) => (
-        <label key={String(v)} className="seg-item">
-          <input type="radio" name={name} checked={value === v} onChange={() => onChange(v)} className="sr-only" />
-          {label}
-        </label>
-      ))}
-    </div>
-  );
-}
-
-function Slider({ label, value, max, unit, onChange }: {
+function Slider({ label, value, min = 0, max, unit, onChange }: {
   label: string;
   value: number;
+  min?: number;
   max: number;
   unit: string;
   onChange: (v: number) => void;
 }) {
+  const v = Math.round(value);
+  const shown = min < 0 ? (v === 0 ? `0${unit}` : `${Math.abs(v)}${unit} ${sideWord(v)}`) : `${v}${unit}`;
   return (
     <label className="block">
       <span className="flex justify-between text-sm">
-        {label}
-        <span className="tabular-nums text-muted">
-          {Math.round(value)}
-          {unit}
-        </span>
+        <span className="font-medium">{label}</span>
+        <span className="tabular-nums text-muted">{shown}</span>
       </span>
       <input
         type="range"
-        min={0}
+        min={min}
         max={max}
         step={1}
         value={value}
@@ -131,12 +141,11 @@ function Slider({ label, value, max, unit, onChange }: {
   );
 }
 
-function Readout({ label, value, detail }: { label: string; value: string; detail: string }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="py-3 pr-4 sm:border-l sm:border-rule sm:pl-4 sm:first:border-l-0 sm:first:pl-0">
-      <dt className="label">{label}</dt>
-      <dd className="mt-0.5 text-lg font-semibold tabular-nums">{value}</dd>
-      <dd className="text-[13px] text-muted tabular-nums">{detail}</dd>
+    <div>
+      <p className="label mb-2">{label}</p>
+      {children}
     </div>
   );
 }
@@ -144,16 +153,19 @@ function Readout({ label, value, detail }: { label: string; value: string; detai
 function CueBanner({ cue, onStart, onSnooze }: { cue: Routine; onStart: () => void; onSnooze: () => void }) {
   const [title, body] = CUE_TEXT[cue];
   return (
-    <div role="status" className="enter flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-cue bg-raised px-4 py-3">
+    <div role="status" className="enter card flex flex-wrap items-center gap-x-4 gap-y-3 border-cue px-4 py-3">
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+        <IconBell className="size-5" />
+      </span>
       <p className="min-w-48 flex-1 text-sm">
         <span className="font-semibold">{title}</span> <span className="text-muted">{body}</span>
       </p>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button type="button" className="btn btn-primary btn-sm" onClick={onStart}>
-          Start
+          Mulai
         </button>
-        <button type="button" className="btn-quiet" onClick={onSnooze}>
-          In 5 min
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onSnooze}>
+          Nanti 5 menit
         </button>
       </div>
     </div>
@@ -164,11 +176,12 @@ export default function Workspace() {
   const prefs = useSyncExternalStore(prefsStore.subscribe, prefsStore.get, prefsStore.server);
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const pipSupported = usePipSupported();
-  const [sim, setSim] = useState<Sim>({ head: 0, torso: 0, blink: 16, late: false });
+  const [sim, setSim] = useState<Sim>({ head: 0, torso: 0, side: 0, tilt: 0, blink: 16, late: false });
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [camera, setCamera] = useState<Camera>({ state: 'off' });
   const [pip, setPip] = useState<Window | null>(null);
-  const [lastBreak, setLastBreak] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('track');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const cameraRun = useRef<{ token: number; stop?: () => void }>({ token: 0 });
 
   const mode = prefs.mode;
@@ -213,9 +226,23 @@ export default function Workspace() {
   }
 
   function finishRoutine() {
-    if (routine) mon.completeRoutine(routine);
-    setLastBreak(snap.night.clock || null);
+    if (!routine) return;
+    mon.completeRoutine(routine);
+    toast(`${ROUTINES[routine].title} selesai.`);
     setRoutine(null);
+  }
+
+  // Stopping early is not the same as taking the break: bring the reminder back in 5 minutes.
+  function stopRoutine() {
+    if (!routine) return;
+    mon.snooze(routine);
+    toast('Jeda dihentikan. Diingatkan lagi 5 menit lagi.', 'info');
+    setRoutine(null);
+  }
+
+  function snooze(kind: Routine) {
+    mon.snooze(kind);
+    toast('Diingatkan lagi 5 menit lagi.', 'info');
   }
 
   useEffect(() => {
@@ -237,7 +264,7 @@ export default function Workspace() {
   const onKey = useEffectEvent((e: KeyboardEvent) => {
     const typing = e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"]');
     if (e.metaKey || e.ctrlKey || e.altKey || typing) return;
-    if (e.key === 'Escape' && routine) setRoutine(null);
+    if (e.key === 'Escape' && routine) stopRoutine();
     else if (routine || !prefs.onboarded) return;
     else if (e.key === 'r') setRoutine('reset');
     else if (e.key === 'e') setRoutine('eye');
@@ -251,11 +278,23 @@ export default function Workspace() {
 
   const S = SENSITIVITY[prefs.sensitivity];
   const warmth = prefs.warmth === 'on' ? 1 : prefs.warmth === 'off' ? 0 : snap.night.level;
-  const drift = snap.posture ? Math.max(snap.posture.head, snap.posture.torso) : 0;
   const tracked = mode === 'demo' || (mode === 'camera' && cameraOn);
+  const posture = tracked ? snap.posture : null;
   const session = snap.session;
   const next = nextBreak(snap);
   const status = statusLine(snap, mode, cameraOn, calibrated, routine);
+  const deg = posture && {
+    torso: Math.round(posture.torso * TORSO_MAX_DEG),
+    head: Math.round(posture.head * HEAD_MAX_DEG),
+    side: Math.round(posture.side * SIDE_MAX_DEG),
+    tilt: Math.round(posture.tilt * TILT_MAX_DEG),
+  };
+  const modeBadge =
+    mode === 'camera'
+      ? { text: cameraOn ? 'Kamera aktif · di perangkat' : 'Kamera mati', icon: IconCamera }
+      : mode === 'timer'
+        ? { text: 'Mode timer', icon: IconTimer }
+        : { text: 'Mode demo', icon: IconSliders };
 
   const runner = routine && (
     <RoutineRunner
@@ -264,7 +303,7 @@ export default function Workspace() {
       posture={snap.posture}
       blinkTotal={snap.blinkTotal}
       onDone={finishRoutine}
-      onExit={() => setRoutine(null)}
+      onExit={stopRoutine}
       compact={pip !== null}
     />
   );
@@ -287,325 +326,414 @@ export default function Workspace() {
   return (
     <>
       {overlays}
-      <main className="mx-auto grid max-w-6xl gap-x-12 gap-y-10 px-4 pb-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_23rem]">
-        <section aria-label="Live posture" className="min-w-0 self-start lg:sticky lg:top-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-sm font-medium text-muted">
-              {mode === 'camera' ? (cameraOn ? 'Camera, analysed on this device' : 'Camera off') : mode === 'timer' ? 'Timer mode' : 'Demo mode'}
-            </h1>
-            <div className="flex gap-2">
-              {!routine && (
-                <button type="button" className="btn btn-sm" onClick={() => setRoutine('reset')}>
-                  60-second reset
-                </button>
-              )}
-              {pipSupported && (
-                <button type="button" className="btn btn-sm" onClick={toggleMini} aria-pressed={pip !== null}>
-                  {pip ? 'Close mini monitor' : 'Mini monitor'}
-                </button>
-              )}
-            </div>
+      <main className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-8">
+        <h1 className="sr-only">Ruang kerja Niskala</h1>
+        <div className="card mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+          <Badge tone={cameraOn ? 'accent' : 'neutral'} live={cameraOn} icon={cameraOn ? undefined : modeBadge.icon}>
+            {modeBadge.text}
+          </Badge>
+          <p className="text-sm">
+            <span className="text-muted">Sesi </span>
+            <span className="font-semibold tabular-nums">{session ? minutes(session.active_s) : '0 dtk'}</span>
+          </p>
+          <p className="text-sm">
+            <span className="text-muted">Jeda berikutnya </span>
+            <span className="font-semibold tabular-nums">{next.value}</span>
+            <span className="text-muted"> · {next.detail}</span>
+          </p>
+          <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+            <button type="button" className="btn btn-sm flex-1 sm:flex-none" disabled={routine !== null} onClick={() => setRoutine('reset')}>
+              <IconStretch className="size-4" />
+              Peregangan 60 dtk
+            </button>
+            {pipSupported && (
+              <button type="button" className="btn btn-sm flex-1 sm:flex-none" onClick={toggleMini} aria-pressed={pip !== null}>
+                <IconPip className="size-4" />
+                {pip ? 'Tutup monitor mini' : 'Monitor mini'}
+              </button>
+            )}
           </div>
+        </div>
 
-          <div className="rounded-2xl bg-surface">
-            <div className="mx-auto aspect-[1150/1180] max-h-[46vh] w-full max-w-xl lg:max-h-[58vh]">
-              <PostureFigure posture={tracked ? snap.posture : null} />
-            </div>
-          </div>
-
-          {routine ? (
-            <div className="mt-5">
-              {pip ? (
-                <p className="text-sm text-muted">The {ROUTINES[routine].title.toLowerCase()} is running in the mini monitor.</p>
-              ) : (
-                runner
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 space-y-3">
-                {snap.cue && (
-                  <CueBanner cue={snap.cue} onStart={() => setRoutine(snap.cue)} onSnooze={() => mon.snooze(snap.cue!)} />
-                )}
-                <p className="min-h-10 text-sm text-pretty">{status}</p>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-8">
+          <section aria-label="Postur langsung" className="min-w-0 space-y-4">
+            <div className="card relative overflow-hidden bg-surface">
+              <div className="mx-auto aspect-[1150/1180] max-h-[52vh] w-full lg:max-h-[60vh]">
+                <PostureFigure posture={posture} />
               </div>
-              <dl className="mt-2 grid grid-cols-2 border-t border-rule sm:grid-cols-4">
-                <Readout
-                  label="Posture"
-                  value={tracked && snap.posture ? postureWord(drift, S.drift) : 'Not tracked'}
-                  detail={
-                    tracked && snap.posture
-                      ? `torso ${Math.round(snap.posture.torso * TORSO_MAX_DEG)}°, head ${Math.round(snap.posture.head * HEAD_MAX_DEG)}°`
-                      : 'needs camera or demo'
-                  }
-                />
-                <Readout
-                  label="Blink rate"
-                  value={snap.blinkRate === null ? (tracked ? 'Measuring' : 'Not tracked') : `${Math.round(snap.blinkRate)} / min`}
-                  detail={`low below ${S.lowBlink}`}
-                />
-                <Readout label="Next break" value={next.value} detail={next.detail} />
-                <Readout
-                  label="This session"
-                  value={session ? minutes(session.active_s) : '0 min'}
-                  detail={lastBreak ? `last break ${lastBreak}` : `${session?.resets ?? 0} resets, ${session?.eye_breaks ?? 0} eye breaks`}
-                />
-              </dl>
-            </>
-          )}
-        </section>
-
-        <aside className="divide-y divide-rule">
-          <Section title="Tracking">
-            <Seg<Mode>
-              name="Tracking mode"
-              value={mode}
-              options={[
-                ['camera', 'Camera'],
-                ['timer', 'Timer only'],
-                ['demo', 'Demo'],
-              ]}
-              onChange={setMode}
-            />
-            <div className="mt-5">
-              {mode === 'camera' && (
-                <CameraPanel
-                  camera={camera}
-                  onStart={startCamera}
-                  onStop={stopCamera}
-                  calibrated={calibrated}
-                  calibrate={mon.calibrate}
-                  previewElsewhere={pip !== null}
-                />
-              )}
-              {mode === 'timer' && (
-                <p className="text-sm text-muted">No camera in use. Eye breaks and desk resets follow the schedule below.</p>
-              )}
-              {mode === 'demo' && (
-                <div className="space-y-4">
-                  <Slider
-                    label="Head forward"
-                    value={sim.head * HEAD_MAX_DEG}
-                    max={HEAD_MAX_DEG}
-                    unit="°"
-                    onChange={(v) => setSim({ ...sim, head: v / HEAD_MAX_DEG })}
-                  />
-                  <Slider
-                    label="Torso slouch"
-                    value={sim.torso * TORSO_MAX_DEG}
-                    max={TORSO_MAX_DEG}
-                    unit="°"
-                    onChange={(v) => setSim({ ...sim, torso: v / TORSO_MAX_DEG })}
-                  />
-                  <Slider label="Blink rate" value={sim.blink} max={30} unit=" / min" onChange={(v) => setSim({ ...sim, blink: v })} />
-                  <label className="flex items-center gap-3 text-sm">
-                    <input type="checkbox" checked={sim.late} onChange={(e) => setSim({ ...sim, late: e.target.checked })} className="check" />
-                    Late night (clock set 40 min past bedtime)
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="text-sm text-muted">Show a break cue now:</span>
-                    <button type="button" className="btn btn-sm" onClick={() => mon.triggerCue('eye')}>
-                      Eye break
-                    </button>
-                    <button type="button" className="btn btn-sm" onClick={() => mon.triggerCue('reset')}>
-                      Desk reset
-                    </button>
-                  </div>
+              <span className="chip absolute top-3 left-3">Tampak samping</span>
+              <figure className="card absolute top-3 right-3 w-[30%] max-w-48 min-w-24 p-1.5">
+                <div className="aspect-[560/760] rounded-xl bg-surface">
+                  <FrontFigure posture={posture} />
+                </div>
+                <figcaption className="mt-1 text-center text-[11px] font-semibold text-muted">Tampak depan</figcaption>
+              </figure>
+              {deg && (
+                <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5" aria-label="Sudut saat ini">
+                  <span className="chip">Punggung {deg.torso}°</span>
+                  <span className="chip">Kepala {deg.head}°</span>
+                  <span className="chip">
+                    Miring {Math.abs(deg.side)}°{deg.side !== 0 && ` ${sideWord(deg.side)}`}
+                  </span>
                 </div>
               )}
             </div>
-          </Section>
 
-          <Section title="Breaks">
-            <div className="space-y-4">
-              <fieldset>
-                <legend className="label mb-2">20-second eye break</legend>
-                <Seg<number>
-                  name="Eye break interval"
-                  value={prefs.eyeMin}
-                  options={[
-                    [20, 'Every 20 min'],
-                    [30, '30 min'],
-                    [0, 'Off'],
-                  ]}
-                  onChange={(eyeMin) => update({ eyeMin })}
-                />
-              </fieldset>
-              <fieldset>
-                <legend className="label mb-2">60-second desk reset</legend>
-                <Seg<number>
-                  name="Desk reset interval"
-                  value={prefs.resetMin}
-                  options={[
-                    [30, '30 min'],
-                    [50, '50 min'],
-                    [60, '60 min'],
-                    [0, 'Off'],
-                  ]}
-                  onChange={(resetMin) => update({ resetMin })}
-                />
-              </fieldset>
-              <div className="flex flex-wrap items-center gap-x-4">
-                <label className="flex items-center gap-3 text-sm">
-                  <input type="checkbox" className="check" checked={prefs.sound} onChange={(e) => update({ sound: e.target.checked })} />
-                  Soft chime for cues
-                </label>
-                <button type="button" className="btn-quiet" onClick={chime}>
-                  Play it
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('eye')}>
-                  Eye break now
-                </button>
-                <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('reset')}>
-                  Desk reset now
-                </button>
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Evening">
-            <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-              <label>
-                <span className="label block">Bedtime</span>
-                <input
-                  type="time"
-                  value={hhmm(prefs.bedtime)}
-                  onChange={(e) => {
-                    const m = parseHhmm(e.target.value);
-                    if (m !== null) update({ bedtime: m });
-                  }}
-                  className="field mt-1"
-                />
-              </label>
-              <p>
-                <span className="label block">Now</span>
-                <span className="mt-1 inline-block py-1.5 tabular-nums">
-                  {snap.night.clock || '--:--'}
-                  {sim.late && mode === 'demo' && <span className="text-muted"> (simulated)</span>}
-                </span>
-              </p>
-            </div>
-            <fieldset className="mt-4">
-              <legend className="label mb-2">Warm shift</legend>
-              <Seg<Warmth>
-                name="Warm shift"
-                value={prefs.warmth}
-                options={[
-                  ['auto', 'By bedtime'],
-                  ['on', 'On now'],
-                  ['off', 'Off'],
-                ]}
-                onChange={(warmth) => update({ warmth })}
-              />
-            </fieldset>
-            <p className="mt-4 text-sm text-pretty">{guidance(snap, prefs.bedtime)}</p>
-            <p className="mt-2 text-[13px] text-muted">The tint covers Niskala only. Turn on your system night light for the whole screen.</p>
-          </Section>
-
-          <Section title="Sensitivity">
-            <Seg<Sensitivity>
-              name="Sensitivity"
-              value={prefs.sensitivity}
-              options={[
-                ['gentle', 'Gentle'],
-                ['balanced', 'Balanced'],
-                ['strict', 'Strict'],
-              ]}
-              onChange={(sensitivity) => update({ sensitivity })}
-            />
-            <p className="mt-3 text-sm text-muted">{SENSITIVITY_NOTE[prefs.sensitivity]}</p>
-          </Section>
-
-          <Section
-            title="Your data"
-            aside={
-              <Link href="/insights" className="link text-sm">
-                See your history
-              </Link>
-            }
-          >
-            <p className="text-sm text-muted text-pretty">
-              Saved in this browser: settings, your calibration and per-session totals. No images or face measurements are
-              stored.
-            </p>
-            {syncConfigured && (
-              <div className="mt-4 space-y-1">
-                <label className="flex items-center gap-3 text-sm">
-                  <input type="checkbox" className="check" checked={prefs.sync} onChange={(e) => update({ sync: e.target.checked })} />
-                  Back up session totals and settings (anonymous)
-                </label>
-                <p className="pl-7 text-[13px] text-muted">
-                  {mon.sync.state === 'off' && 'Off. Nothing leaves this browser.'}
-                  {mon.sync.state === 'idle' && 'On. The first backup runs within a minute.'}
-                  {mon.sync.state === 'ok' && `Backed up at ${new Date(mon.sync.at).toLocaleTimeString()}.`}
-                  {mon.sync.state === 'error' && `Backup failed (${mon.sync.message}). Your data is still saved here.`}
-                </p>
-              </div>
-            )}
-            <div className="mt-4 flex flex-wrap gap-x-5">
-              <button
-                type="button"
-                className="btn-quiet"
-                onClick={() => {
-                  const a = document.createElement('a');
-                  a.href = URL.createObjectURL(new Blob([exportData()], { type: 'application/json' }));
-                  a.download = 'niskala-data.json';
-                  a.click();
-                  URL.revokeObjectURL(a.href);
-                }}
-              >
-                Download my data
-              </button>
-              <button
-                type="button"
-                className="btn-quiet"
-                onClick={() => {
-                  if (!confirm('Delete calibration, settings and saved sessions from this browser?')) return;
-                  mon.discardSession();
-                  clearAll();
-                  location.reload();
-                }}
-              >
-                Delete local data
-              </button>
-              <button type="button" className="btn-quiet" onClick={() => update({ onboarded: false })}>
-                Run setup again
-              </button>
-            </div>
-          </Section>
-
-          <p className="pt-6 text-[13px] text-muted">
-            Keys: <kbd className="font-semibold text-ink">R</kbd> desk reset, <kbd className="font-semibold text-ink">E</kbd> eye
-            break
-            {pipSupported && (
+            {routine ? (
+              pip ? (
+                <p className="card p-4 text-sm text-muted">{ROUTINES[routine].title} sedang berjalan di monitor mini.</p>
+              ) : (
+                runner
+              )
+            ) : (
               <>
-                , <kbd className="font-semibold text-ink">M</kbd> mini monitor
+                {snap.cue && <CueBanner cue={snap.cue} onStart={() => setRoutine(snap.cue)} onSnooze={() => snooze(snap.cue!)} />}
+                <p className="flex gap-2.5 text-sm text-pretty">
+                  <IconInfo className="mt-0.5 size-4 shrink-0 text-muted" />
+                  {status}
+                </p>
+                {tracked && (
+                  <div className="card grid gap-5 p-4 sm:grid-cols-2">
+                    <Meter
+                      label="Ketegangan postur"
+                      value={snap.postureStrain}
+                      threshold={0.3}
+                      hint={snap.glow > 0 && snap.postureStrain >= snap.eyeStrain ? 'tepi berpendar' : glowFrom(snap.postureStrain) > 0 ? 'hampir' : 'aman'}
+                    />
+                    <Meter
+                      label="Kelelahan mata"
+                      value={snap.eyeStrain}
+                      threshold={0.3}
+                      hint={snap.blinkRate === null ? 'mengukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
+                    />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                  <StatCard
+                    icon={IconPosture}
+                    label="Postur"
+                    value={posture ? postureWord(posture, S.drift) : 'Tidak dilacak'}
+                    detail={deg ? `punggung ${deg.torso}° · kepala ${deg.head}°` : 'butuh kamera atau demo'}
+                    tone={posture && driftOf(posture) >= S.drift ? 'alert' : undefined}
+                  />
+                  <StatCard
+                    icon={IconLean}
+                    label="Miring"
+                    value={
+                      !deg
+                        ? 'Tidak dilacak'
+                        : Math.abs(deg.side) < 2 && Math.abs(deg.tilt) < 3
+                          ? 'Seimbang'
+                          : Math.abs(deg.side) * (TILT_MAX_DEG / SIDE_MAX_DEG) >= Math.abs(deg.tilt)
+                            ? `Badan ${sideWord(deg.side)}`
+                            : `Kepala ${sideWord(deg.tilt)}`
+                    }
+                    detail={deg ? `badan ${Math.abs(deg.side)}° · kepala ${Math.abs(deg.tilt)}°` : undefined}
+                  />
+                  <StatCard
+                    icon={IconEye}
+                    label="Kedip"
+                    value={snap.blinkRate === null ? (tracked ? 'Mengukur' : 'Tidak dilacak') : `${Math.round(snap.blinkRate)}/mnt`}
+                    detail={`rendah di bawah ${S.lowBlink}`}
+                    tone={snap.blinkRate !== null && snap.blinkRate < S.lowBlink ? 'alert' : undefined}
+                  />
+                  <StatCard
+                    icon={IconTimer}
+                    label="Condong"
+                    value={minutes(session?.slouch_s ?? 0)}
+                    detail={`${session?.resets ?? 0} peregangan · ${session?.eye_breaks ?? 0} istirahat mata`}
+                  />
+                </div>
               </>
             )}
-            , <kbd className="font-semibold text-ink">Esc</kbd> stop a break.
-          </p>
-        </aside>
+          </section>
+
+          <aside className="card self-start overflow-hidden lg:sticky lg:top-20">
+            <Tabs<Tab>
+              label="Pengaturan ruang kerja"
+              value={tab}
+              onChange={setTab}
+              tabs={[
+                { value: 'track', label: 'Pelacakan', icon: IconCamera },
+                { value: 'breaks', label: 'Jeda', icon: IconTimer },
+                { value: 'evening', label: 'Malam', icon: IconMoon },
+                { value: 'settings', label: 'Setelan', icon: IconGauge },
+              ]}
+            />
+            <div role="tabpanel" className="space-y-6 p-5">
+              {tab === 'track' && (
+                <>
+                  <Segmented<Mode>
+                    label="Cara memantau"
+                    value={mode}
+                    onChange={setMode}
+                    options={[
+                      { value: 'camera', label: 'Kamera', icon: IconCamera },
+                      { value: 'timer', label: 'Timer', icon: IconTimer },
+                      { value: 'demo', label: 'Demo', icon: IconSliders },
+                    ]}
+                  />
+                  {mode === 'camera' && (
+                    <CameraPanel
+                      camera={camera}
+                      onStart={startCamera}
+                      onStop={stopCamera}
+                      calibrated={calibrated}
+                      calibrate={mon.calibrate}
+                      previewElsewhere={pip !== null}
+                    />
+                  )}
+                  {mode === 'timer' && (
+                    <p className="text-sm text-muted text-pretty">
+                      Kamera tidak dipakai. Istirahat mata dan peregangan mengikuti jadwal di tab Jeda.
+                    </p>
+                  )}
+                  {mode === 'demo' && (
+                    <div className="space-y-4">
+                      <Slider label="Kepala ke depan" value={sim.head * HEAD_MAX_DEG} max={HEAD_MAX_DEG} unit="°" onChange={(v) => setSim({ ...sim, head: v / HEAD_MAX_DEG })} />
+                      <Slider label="Punggung membungkuk" value={sim.torso * TORSO_MAX_DEG} max={TORSO_MAX_DEG} unit="°" onChange={(v) => setSim({ ...sim, torso: v / TORSO_MAX_DEG })} />
+                      <Slider
+                        label="Badan miring"
+                        value={sim.side * SIDE_MAX_DEG}
+                        min={-SIDE_MAX_DEG}
+                        max={SIDE_MAX_DEG}
+                        unit="°"
+                        onChange={(v) => setSim({ ...sim, side: v / SIDE_MAX_DEG })}
+                      />
+                      <Slider
+                        label="Kepala miring"
+                        value={sim.tilt * TILT_MAX_DEG}
+                        min={-TILT_MAX_DEG}
+                        max={TILT_MAX_DEG}
+                        unit="°"
+                        onChange={(v) => setSim({ ...sim, tilt: v / TILT_MAX_DEG })}
+                      />
+                      <Slider label="Laju kedip" value={sim.blink} max={30} unit="/mnt" onChange={(v) => setSim({ ...sim, blink: v })} />
+                      <Switch checked={sim.late} onChange={(late) => setSim({ ...sim, late })} label="Larut malam" description="Jam diatur 40 menit lewat jam tidur." />
+                      <div className="flex flex-wrap items-center gap-2 border-t border-rule pt-4">
+                        <span className="text-[13px] text-muted">Tampilkan pengingat:</span>
+                        <button type="button" className="btn btn-sm" onClick={() => mon.triggerCue('eye')}>
+                          Istirahat mata
+                        </button>
+                        <button type="button" className="btn btn-sm" onClick={() => mon.triggerCue('reset')}>
+                          Peregangan
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {tab === 'breaks' && (
+                <>
+                  <Field label="Istirahat mata 20 detik">
+                    <Segmented
+                      label="Istirahat mata"
+                      value={prefs.eyeMin}
+                      onChange={(eyeMin) => update({ eyeMin })}
+                      options={[
+                        { value: 20, label: 'Tiap 20 mnt' },
+                        { value: 30, label: '30 mnt' },
+                        { value: 0, label: 'Mati' },
+                      ]}
+                    />
+                  </Field>
+                  <Field label="Peregangan 60 detik">
+                    <Segmented
+                      label="Peregangan"
+                      value={prefs.resetMin}
+                      onChange={(resetMin) => update({ resetMin })}
+                      options={[
+                        { value: 30, label: '30 mnt' },
+                        { value: 50, label: '50 mnt' },
+                        { value: 60, label: '60 mnt' },
+                        { value: 0, label: 'Mati' },
+                      ]}
+                    />
+                  </Field>
+                  <div>
+                    <Switch checked={prefs.sound} onChange={(sound) => update({ sound })} label="Bunyi lembut" description="Saat jeda tiba atau pendar menguat." />
+                    <button type="button" className="btn btn-ghost btn-sm mt-1 -ml-3" onClick={chime}>
+                      <IconVolume className="size-4" />
+                      Dengarkan contoh
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 border-t border-rule pt-5">
+                    <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('eye')}>
+                      <IconEye className="size-4" />
+                      Istirahat mata
+                    </button>
+                    <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('reset')}>
+                      <IconStretch className="size-4" />
+                      Peregangan
+                    </button>
+                  </div>
+                  <div className="rounded-xl bg-surface p-4 text-[13px] text-muted">
+                    <p className="mb-2 font-semibold text-ink">Pintasan keyboard</p>
+                    <ul className="grid grid-cols-2 gap-x-3 gap-y-2">
+                      <li>
+                        <kbd className="kbd">R</kbd> peregangan
+                      </li>
+                      <li>
+                        <kbd className="kbd">E</kbd> istirahat mata
+                      </li>
+                      {pipSupported && (
+                        <li>
+                          <kbd className="kbd">M</kbd> monitor mini
+                        </li>
+                      )}
+                      <li>
+                        <kbd className="kbd">Esc</kbd> hentikan jeda
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              )}
+
+              {tab === 'evening' && (
+                <>
+                  <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+                    <label>
+                      <span className="label block">Jam tidur</span>
+                      <input
+                        type="time"
+                        value={hhmm(prefs.bedtime)}
+                        onChange={(e) => {
+                          const m = parseHhmm(e.target.value);
+                          if (m !== null) update({ bedtime: m });
+                        }}
+                        className="field mt-1"
+                      />
+                    </label>
+                    <p>
+                      <span className="label block">Sekarang</span>
+                      <span className="mt-1 inline-block py-1.5 font-semibold tabular-nums">
+                        {snap.night.clock || '--:--'}
+                        {sim.late && mode === 'demo' && <span className="font-normal text-muted"> (simulasi)</span>}
+                      </span>
+                    </p>
+                  </div>
+                  <Field label="Layar hangat">
+                    <Segmented<Warmth>
+                      label="Layar hangat"
+                      value={prefs.warmth}
+                      onChange={(warmth) => update({ warmth })}
+                      options={[
+                        { value: 'auto', label: 'Ikut jam tidur' },
+                        { value: 'on', label: 'Nyala' },
+                        { value: 'off', label: 'Mati' },
+                      ]}
+                    />
+                  </Field>
+                  <div className="flex gap-3 rounded-xl bg-surface p-4 text-sm">
+                    <IconMoon className="mt-0.5 size-4 shrink-0 text-accent" />
+                    <p className="text-pretty">{guidance(snap, prefs.bedtime)}</p>
+                  </div>
+                  <p className="text-[13px] text-muted">Rona hangat hanya menutupi Niskala. Nyalakan juga night light sistem untuk seluruh layar.</p>
+                </>
+              )}
+
+              {tab === 'settings' && (
+                <>
+                  <Field label="Kepekaan">
+                    <Segmented<Sensitivity>
+                      label="Kepekaan"
+                      value={prefs.sensitivity}
+                      onChange={(sensitivity) => update({ sensitivity })}
+                      options={[
+                        { value: 'gentle', label: 'Longgar' },
+                        { value: 'balanced', label: 'Seimbang' },
+                        { value: 'strict', label: 'Ketat' },
+                      ]}
+                    />
+                    <p className="mt-2 text-[13px] text-muted">{SENSITIVITY_NOTE[prefs.sensitivity]}</p>
+                  </Field>
+                  <div className="space-y-4 border-t border-rule pt-5">
+                    <p className="text-sm text-muted text-pretty">
+                      Tersimpan di browser ini: setelan, kalibrasi, dan ringkasan tiap sesi. Tidak ada gambar atau data wajah yang
+                      disimpan.
+                    </p>
+                    {syncConfigured && (
+                      <div>
+                        <Switch checked={prefs.sync} onChange={(sync) => update({ sync })} label="Cadangkan ringkasan" description="Anonim, bisa dimatikan kapan saja." />
+                        <p className="mt-2 text-[13px] text-muted">
+                          {mon.sync.state === 'off' && 'Mati. Tidak ada yang keluar dari browser ini.'}
+                          {mon.sync.state === 'idle' && 'Nyala. Pencadangan pertama dalam satu menit.'}
+                          {mon.sync.state === 'ok' && `Dicadangkan pukul ${new Date(mon.sync.at).toLocaleTimeString('id-ID')}.`}
+                          {mon.sync.state === 'error' && `Gagal mencadangkan (${mon.sync.message}). Data tetap aman di sini.`}
+                        </p>
+                      </div>
+                    )}
+                    <div className="grid gap-2">
+                      <Link href="/riwayat" className="btn btn-sm justify-start">
+                        <IconHistory className="size-4" />
+                        Lihat riwayat
+                      </Link>
+                      <button
+                        type="button"
+                        className="btn btn-sm justify-start"
+                        onClick={() => {
+                          const a = document.createElement('a');
+                          a.href = URL.createObjectURL(new Blob([exportData()], { type: 'application/json' }));
+                          a.download = 'niskala-data.json';
+                          a.click();
+                          URL.revokeObjectURL(a.href);
+                          toast('Data diunduh sebagai niskala-data.json.');
+                        }}
+                      >
+                        <IconDownload className="size-4" />
+                        Unduh data saya
+                      </button>
+                      <button type="button" className="btn btn-sm justify-start" onClick={() => update({ onboarded: false })}>
+                        <IconRefresh className="size-4" />
+                        Ulangi pengaturan awal
+                      </button>
+                      <button type="button" className="btn btn-ghost btn-sm justify-start text-danger hover:text-danger" onClick={() => setConfirmDelete(true)}>
+                        <IconTrash className="size-4" />
+                        Hapus data lokal
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </aside>
+        </div>
       </main>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Hapus data lokal?"
+        body="Kalibrasi, setelan, dan semua ringkasan sesi di browser ini akan dihapus. Tindakan ini tidak bisa dibatalkan."
+        confirm="Hapus"
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          mon.discardSession();
+          clearAll();
+          location.reload();
+        }}
+      />
 
       {pip &&
         createPortal(
           <>
             {overlays}
             <main className="flex h-dvh flex-col gap-3 p-3">
-              <div className="min-h-0 flex-1 rounded-xl bg-surface">
-                <PostureFigure posture={tracked ? snap.posture : null} />
+              <div className="relative min-h-0 flex-1 rounded-2xl bg-surface">
+                <PostureFigure posture={posture} />
+                <div className="absolute top-2 right-2 w-[32%] rounded-xl border border-rule bg-raised p-1">
+                  <div className="aspect-[560/760] rounded-lg bg-surface">
+                    <FrontFigure posture={posture} />
+                  </div>
+                </div>
               </div>
               {runner ||
                 (snap.cue ? (
-                  <CueBanner cue={snap.cue} onStart={() => setRoutine(snap.cue)} onSnooze={() => mon.snooze(snap.cue!)} />
+                  <CueBanner cue={snap.cue} onStart={() => setRoutine(snap.cue)} onSnooze={() => snooze(snap.cue!)} />
                 ) : (
                   <p className="text-[13px] leading-snug text-pretty">
-                    <span className="font-semibold">{tracked && snap.posture ? postureWord(drift, S.drift) : 'Keeping time'}.</span>{' '}
-                    <span className="text-muted">
-                      {next.value === 'Off' ? 'Break schedule is off.' : `Next ${next.detail}: ${next.value.toLowerCase()}.`}
-                    </span>
+                    <span className="font-semibold">{posture ? postureWord(posture, S.drift) : 'Menjaga waktu'}.</span>{' '}
+                    <span className="text-muted">{next.value === 'Mati' ? 'Jadwal jeda mati.' : `${next.detail} ${next.value}.`}</span>
                   </p>
                 ))}
             </main>

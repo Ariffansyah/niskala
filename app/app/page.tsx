@@ -1,17 +1,11 @@
 import type { Metadata } from 'next';
-import SiteHeader from '@/components/site-header';
 import Workspace from '@/components/workspace';
 
 export const metadata: Metadata = {
-  title: 'Workspace',
-  description: 'Live posture and blink tracking, break cues and evening warm shift. Runs entirely in your browser.',
+  title: 'Ruang Kerja',
+  description: 'Pelacakan postur dan kedipan langsung, pengingat jeda, dan layar hangat menjelang tidur. Berjalan sepenuhnya di browser.',
 };
 
 export default function AppPage() {
-  return (
-    <>
-      <SiteHeader current="app" />
-      <Workspace />
-    </>
-  );
+  return <Workspace />;
 }

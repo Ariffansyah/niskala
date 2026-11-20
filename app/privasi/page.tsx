@@ -1,19 +1,25 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode, SVGProps } from 'react';
+import { IconCamera, IconEye, IconHistory, IconInfo, IconLock, IconShield } from '@/components/icons';
 import SiteFooter from '@/components/site-footer';
-import SiteHeader from '@/components/site-header';
+import { Badge } from '@/components/ui';
 
 export const metadata: Metadata = {
-  title: 'Privacy',
-  description: 'What Niskala processes, what it stores, and what can leave your device.',
+  title: 'Privasi',
+  description: 'Apa yang diproses Niskala, apa yang disimpan, dan apa yang bisa keluar dari perangkatmu.',
 };
 
-function Block({ title, children }: { title: string; children: ReactNode }) {
+function Block({ icon: Icon, title, children }: { icon: ComponentType<SVGProps<SVGSVGElement>>; title: string; children: ReactNode }) {
   return (
-    <section className="grid gap-x-10 gap-y-3 border-t border-rule py-8 md:grid-cols-[14rem_1fr]">
-      <h2 className="text-lg">{title}</h2>
-      <div className="space-y-3 text-pretty text-muted [&_strong]:font-semibold [&_strong]:text-ink">{children}</div>
+    <section className="card grid gap-4 p-6 sm:grid-cols-[2.5rem_1fr]">
+      <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
+        <Icon />
+      </span>
+      <div>
+        <h2 className="text-lg">{title}</h2>
+        <div className="mt-2 space-y-3 text-pretty text-muted [&_strong]:font-semibold [&_strong]:text-ink">{children}</div>
+      </div>
     </section>
   );
 }
@@ -21,57 +27,55 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 export default function PrivacyPage() {
   return (
     <>
-      <SiteHeader current="privacy" />
-      <main className="mx-auto max-w-4xl px-4 pt-4 pb-20 sm:px-8">
-        <h1 className="text-3xl sm:text-4xl">Privacy</h1>
-        <p className="mt-4 max-w-2xl text-lg text-muted text-pretty">
-          Niskala was built so that the camera can help without anyone else seeing through it. This page lists exactly what
-          happens to your data.
-        </p>
-        <div className="mt-10">
-          <Block title="The camera">
+      <main className="mx-auto max-w-3xl px-4 pt-10 pb-20 sm:px-8">
+        <Badge icon={IconShield}>Privasi</Badge>
+        <h1 className="mt-3 text-3xl sm:text-4xl">Kamera membantu, tanpa ada yang ikut melihat.</h1>
+        <p className="mt-4 text-lg text-muted text-pretty">Halaman ini menjelaskan dengan tepat apa yang terjadi pada datamu.</p>
+        <div className="mt-10 space-y-4">
+          <Block icon={IconCamera} title="Kamera">
             <p>
-              The camera only starts when you press <strong>Start camera</strong>, and stops when you press Stop, switch modes or
-              close the tab. Each frame is analysed by a face model running in your browser and then discarded.{' '}
-              <strong>No image, video or face landmark is uploaded or saved.</strong>
+              Kamera hanya menyala saat kamu menekan <strong>Nyalakan kamera</strong>, dan mati saat kamu menekan Matikan, berganti
+              mode, atau menutup tab. Setiap frame dianalisis model wajah yang berjalan di browsermu, lalu dibuang.{' '}
+              <strong>Tidak ada gambar, video, atau titik wajah yang diunggah atau disimpan.</strong>
             </p>
+            <p>Model dan runtime-nya disajikan dari situs ini sendiri, jadi tidak ada server pihak ketiga yang dihubungi.</p>
+          </Block>
+          <Block icon={IconEye} title="Yang ada di memori">
             <p>
-              The model and its runtime are served from this website, so no third-party server is contacted when tracking runs.
+              Selama pelacakan berjalan, Niskala menyimpan beberapa angka per frame: sudut kepala, kemiringan garis mata, jarak antar
+              mata di gambar, posisi wajah, dan apakah mata terpejam. Angka ini dipakai untuk tampilan langsung dan hilang saat kamu
+              meninggalkan halaman.
             </p>
           </Block>
-          <Block title="What is kept in memory">
+          <Block icon={IconHistory} title="Yang tersimpan di browsermu">
             <p>
-              While tracking runs, Niskala keeps a few numbers per frame: head angle, the distance between your eyes in the
-              picture, how high your face sits, and whether your eyes are closed. They are used for the live readouts and are
-              gone when you leave the page.
-            </p>
-          </Block>
-          <Block title="What is saved in your browser">
-            <p>
-              Stored in this browser&apos;s local storage: your <strong>settings</strong>, your <strong>calibration</strong> (three
-              numbers describing your upright pose) and <strong>session totals</strong> such as minutes active, minutes leaning,
-              breaks taken and average blink rate. They power the Insights page.
+              Di local storage browser ini: <strong>setelan</strong>, <strong>kalibrasi</strong> (lima angka yang menggambarkan posisi
+              tegakmu), dan <strong>ringkasan sesi</strong> seperti menit aktif, menit condong, jeda yang diambil, dan rata-rata kedip.
+              Semua itu menjadi bahan halaman Riwayat.
             </p>
             <p>
-              You can download all of it as a file, or delete it, from the <Link href="/app" className="link text-ink">workspace</Link>{' '}
-              under Your data.
+              Kamu bisa mengunduh atau menghapus semuanya dari tab Setelan di{' '}
+              <Link href="/app" className="link text-ink">
+                ruang kerja
+              </Link>
+              .
             </p>
           </Block>
-          <Block title="Optional backup">
+          <Block icon={IconLock} title="Pencadangan opsional">
             <p>
-              If a backup service is configured for this site, the workspace shows a <strong>Back up</strong> checkbox. It is off by
-              default. When you turn it on, session totals and settings (bedtime, warm shift, break schedule, sensitivity) are sent
-              to a Supabase database under an anonymous ID, with rules that let only that ID read its rows. Your calibration is
-              never sent.
+              Jika situs ini dikonfigurasi dengan layanan pencadangan, ruang kerja menampilkan sakelar <strong>Cadangkan ringkasan</strong>.
+              Bawaannya mati. Saat dinyalakan, ringkasan sesi dan setelan (jam tidur, layar hangat, jadwal jeda, kepekaan) dikirim ke
+              basis data Supabase dengan ID anonim, dengan aturan yang hanya mengizinkan ID itu membaca barisnya. Kalibrasimu tidak
+              pernah dikirim.
             </p>
           </Block>
-          <Block title="No tracking of you">
-            <p>There are no analytics, advertising scripts, cookies or accounts on this site.</p>
+          <Block icon={IconShield} title="Tanpa pelacakan dirimu">
+            <p>Tidak ada analitik, skrip iklan, cookie, atau akun di situs ini.</p>
           </Block>
-          <Block title="Not medical advice">
+          <Block icon={IconInfo} title="Bukan nasihat medis">
             <p>
-              Niskala gives general ergonomic and sleep-hygiene prompts. It is not a medical device. If you have ongoing neck,
-              back or eye pain, see a health professional.
+              Niskala memberi pengingat ergonomi dan kebersihan tidur yang umum. Ini bukan alat medis. Jika nyeri leher, punggung, atau
+              mata terus berlanjut, temui tenaga kesehatan.
             </p>
           </Block>
         </div>

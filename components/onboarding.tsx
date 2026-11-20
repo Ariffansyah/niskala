@@ -1,157 +1,178 @@
 'use client';
 
-import { useState } from 'react';
-import { prefsStore, type Mode, type Prefs } from '@/lib/store';
+import { useState, type ComponentType, type SVGProps } from 'react';
 import { hhmm, parseHhmm } from '@/lib/format';
-import PostureFigure from './posture-figure';
+import { prefsStore, type Mode, type Prefs } from '@/lib/store';
+import { IconArrowRight, IconCamera, IconCheck, IconMoon, IconSliders, IconTimer } from './icons';
+import PostureFigure, { FrontFigure } from './posture-figure';
+import { Segmented, Switch } from './ui-client';
 
-const MODES: { value: Mode; title: string; body: string }[] = [
+const MODES: { value: Mode; title: string; body: string; icon: ComponentType<SVGProps<SVGSVGElement>>; tag?: string }[] = [
   {
     value: 'camera',
-    title: 'Camera',
-    body: 'Tracks posture and blinking. Video is analysed inside this tab and never uploaded.',
+    title: 'Kamera',
+    body: 'Membaca postur (depan, belakang, dan samping) serta kedipan. Video dianalisis di tab ini dan tidak pernah diunggah.',
+    icon: IconCamera,
+    tag: 'Disarankan',
   },
-  {
-    value: 'timer',
-    title: 'Timer only',
-    body: 'No camera. Eye breaks and desk resets arrive on a schedule.',
-  },
-  {
-    value: 'demo',
-    title: 'Demo',
-    body: 'Sliders stand in for the camera, to see how everything responds.',
-  },
+  { value: 'timer', title: 'Timer saja', body: 'Tanpa kamera. Istirahat mata dan peregangan datang sesuai jadwal.', icon: IconTimer },
+  { value: 'demo', title: 'Demo', body: 'Slider menggantikan kamera, untuk melihat bagaimana semuanya merespons.', icon: IconSliders },
 ];
 
-function Option({ name, checked, onChange, title, body }: {
-  name: string;
-  checked: boolean;
-  onChange: () => void;
-  title: string;
-  body: string;
-}) {
-  return (
-    <label className="flex cursor-pointer gap-3 rounded-xl border border-rule bg-raised p-4 transition-colors hover:border-edge has-checked:border-accent has-checked:shadow-[inset_0_0_0_1px_var(--accent)] has-focus-visible:outline-2 has-focus-visible:outline-accent">
-      <input type="radio" name={name} checked={checked} onChange={onChange} className="check mt-1" />
-      <span>
-        <span className="block font-semibold">{title}</span>
-        <span className="block text-sm text-muted">{body}</span>
-      </span>
-    </label>
-  );
-}
+const STEPS = ['Cara memantau', 'Jam tidur', 'Jadwal jeda'];
 
 export default function Onboarding({ prefs }: { prefs: Prefs }) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Prefs>({ ...prefs, mode: 'camera' });
   const set = (p: Partial<Prefs>) => setDraft({ ...draft, ...p });
   const finish = (p: Prefs) => prefsStore.set({ ...p, onboarded: true });
-
-  const steps = [
-    {
-      title: 'How should Niskala keep watch?',
-      body: (
-        <div className="grid gap-3">
-          {MODES.map((m) => (
-            <Option key={m.value} name="mode" checked={draft.mode === m.value} onChange={() => set({ mode: m.value })} title={m.title} body={m.body} />
-          ))}
-        </div>
-      ),
-    },
-    {
-      title: 'When do you usually go to sleep?',
-      body: (
-        <div className="space-y-4">
-          <label className="block">
-            <span className="label block">Bedtime</span>
-            <input
-              type="time"
-              value={hhmm(draft.bedtime)}
-              onChange={(e) => {
-                const m = parseHhmm(e.target.value);
-                if (m !== null) set({ bedtime: m });
-              }}
-              className="field mt-1 text-lg"
-            />
-          </label>
-          <p className="text-sm text-muted text-pretty">
-            Two hours before this, the page starts to warm and Niskala suggests wrapping up instead of starting new work.
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: 'How often should breaks come?',
-      body: (
-        <div className="space-y-5">
-          <fieldset>
-            <legend className="label mb-2">20-second eye break (the 20-20-20 rule)</legend>
-            <div className="seg">
-              {[
-                [20, 'Every 20 min'],
-                [30, 'Every 30 min'],
-                [0, 'Off'],
-              ].map(([v, l]) => (
-                <label key={v} className="seg-item">
-                  <input type="radio" name="eye" className="sr-only" checked={draft.eyeMin === v} onChange={() => set({ eyeMin: v as number })} />
-                  {l}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend className="label mb-2">60-second desk reset</legend>
-            <div className="seg">
-              {[
-                [30, '30 min'],
-                [50, '50 min'],
-                [60, '60 min'],
-                [0, 'Off'],
-              ].map(([v, l]) => (
-                <label key={v} className="seg-item">
-                  <input type="radio" name="reset" className="sr-only" checked={draft.resetMin === v} onChange={() => set({ resetMin: v as number })} />
-                  {l}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <label className="flex items-center gap-3 text-sm">
-            <input type="checkbox" className="check" checked={draft.sound} onChange={(e) => set({ sound: e.target.checked })} />
-            Play a soft chime when a break is due
-          </label>
-        </div>
-      ),
-    },
-  ];
-  const last = step === steps.length - 1;
+  const last = step === STEPS.length - 1;
 
   return (
-    <section aria-labelledby="setup-title" className="grid items-center gap-10 py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-      <div className="mx-auto hidden aspect-square w-full max-w-lg rounded-2xl bg-surface lg:block">
-        <PostureFigure posture={{ head: 0, torso: 0 }} />
+    <section aria-labelledby="setup-title" className="grid items-start gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-12">
+      <div className="card relative hidden overflow-hidden bg-surface lg:block">
+        <div className="aspect-[1150/1180]">
+          <PostureFigure posture={null} />
+        </div>
+        <div className="card absolute top-4 right-4 w-[30%] p-1.5">
+          <div className="aspect-[560/760] rounded-xl bg-surface">
+            <FrontFigure posture={null} />
+          </div>
+          <p className="mt-1 text-center text-[11px] font-semibold text-muted">Tampak depan</p>
+        </div>
       </div>
-      <div className="enter" key={step}>
-        <p className="label">
-          Setup, {step + 1} of {steps.length}
-        </p>
-        <h1 id="setup-title" className="mt-1 mb-6 text-3xl">
-          {steps[step].title}
-        </h1>
-        {steps[step].body}
-        <div className="mt-8 flex flex-wrap items-center gap-3">
+
+      <div className="card p-6 sm:p-8">
+        <ol className="flex items-center gap-2" aria-label="Langkah pengaturan">
+          {STEPS.map((s, i) => (
+            <li key={s} className="flex flex-1 items-center gap-2" aria-current={i === step ? 'step' : undefined}>
+              <span
+                className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                  i < step ? 'bg-accent text-on-accent' : i === step ? 'bg-accent-soft text-accent ring-2 ring-accent' : 'bg-surface text-muted'
+                }`}
+              >
+                {i < step ? <IconCheck className="size-3.5" /> : i + 1}
+              </span>
+              <span className={`hidden text-[13px] sm:inline ${i === step ? 'font-semibold' : 'text-muted'}`}>{s}</span>
+              {i < STEPS.length - 1 && <span className="h-px flex-1 bg-rule" aria-hidden />}
+            </li>
+          ))}
+        </ol>
+
+        <div className="enter mt-8" key={step}>
+          {step === 0 && (
+            <>
+              <h1 id="setup-title" className="text-2xl sm:text-3xl">
+                Bagaimana Niskala memantaumu?
+              </h1>
+              <div className="mt-6 grid gap-3" role="radiogroup" aria-label="Cara memantau">
+                {MODES.map((m) => (
+                  <label
+                    key={m.value}
+                    className="flex cursor-pointer gap-4 rounded-2xl border border-rule bg-raised p-4 transition-colors hover:border-edge has-checked:border-accent has-checked:bg-accent-soft/40 has-checked:shadow-[inset_0_0_0_1px_var(--accent)] has-focus-visible:outline-2 has-focus-visible:outline-accent"
+                  >
+                    <input type="radio" name="mode" className="sr-only" checked={draft.mode === m.value} onChange={() => set({ mode: m.value })} />
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-accent">
+                      <m.icon />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="flex flex-wrap items-center gap-2 font-semibold">
+                        {m.title}
+                        {m.tag && <span className="badge badge-accent">{m.tag}</span>}
+                      </span>
+                      <span className="mt-0.5 block text-sm text-muted text-pretty">{m.body}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <h1 id="setup-title" className="text-2xl sm:text-3xl">
+                Biasanya tidur jam berapa?
+              </h1>
+              <label className="mt-6 block">
+                <span className="label block">Jam tidur</span>
+                <input
+                  type="time"
+                  value={hhmm(draft.bedtime)}
+                  onChange={(e) => {
+                    const m = parseHhmm(e.target.value);
+                    if (m !== null) set({ bedtime: m });
+                  }}
+                  className="field mt-1 text-xl"
+                />
+              </label>
+              <div className="mt-5 flex gap-3 rounded-xl bg-surface p-4 text-sm">
+                <IconMoon className="mt-0.5 size-4 shrink-0 text-accent" />
+                <p className="text-muted text-pretty">
+                  Dua jam sebelumnya, layar Niskala mulai menghangat dan kamu diingatkan untuk menyelesaikan pekerjaan alih-alih
+                  memulai yang baru.
+                </p>
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <h1 id="setup-title" className="text-2xl sm:text-3xl">
+                Seberapa sering jeda datang?
+              </h1>
+              <div className="mt-6 space-y-5">
+                <div>
+                  <p className="label mb-2">Istirahat mata 20 detik (aturan 20-20-20)</p>
+                  <Segmented
+                    label="Istirahat mata"
+                    value={draft.eyeMin}
+                    options={[
+                      { value: 20, label: 'Tiap 20 mnt' },
+                      { value: 30, label: '30 mnt' },
+                      { value: 0, label: 'Mati' },
+                    ]}
+                    onChange={(eyeMin) => set({ eyeMin })}
+                  />
+                </div>
+                <div>
+                  <p className="label mb-2">Peregangan 60 detik</p>
+                  <Segmented
+                    label="Peregangan"
+                    value={draft.resetMin}
+                    options={[
+                      { value: 30, label: '30 mnt' },
+                      { value: 50, label: '50 mnt' },
+                      { value: 60, label: '60 mnt' },
+                      { value: 0, label: 'Mati' },
+                    ]}
+                    onChange={(resetMin) => set({ resetMin })}
+                  />
+                </div>
+                <Switch
+                  checked={draft.sound}
+                  onChange={(sound) => set({ sound })}
+                  label="Bunyi lembut saat jeda tiba"
+                  description="Dua nada pendek, seperti bonang kecil."
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-rule pt-6">
           {step > 0 && (
             <button type="button" className="btn" onClick={() => setStep(step - 1)}>
-              Back
+              Kembali
             </button>
           )}
           <button type="button" className="btn btn-primary" onClick={() => (last ? finish(draft) : setStep(step + 1))}>
-            {last ? 'Open the workspace' : 'Continue'}
+            {last ? 'Buka ruang kerja' : 'Lanjut'}
+            <IconArrowRight className="size-4" />
           </button>
-          <button type="button" className="btn-quiet ml-auto" onClick={() => finish(prefs)}>
-            Skip, use defaults
+          <button type="button" className="btn btn-ghost ml-auto" onClick={() => finish(prefs)}>
+            Lewati
           </button>
         </div>
-        <p className="mt-6 text-xs text-muted">Everything here can be changed later in the workspace.</p>
       </div>
     </section>
   );

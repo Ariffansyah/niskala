@@ -4,7 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Niskala',
     short_name: 'Niskala',
-    description: 'Posture, blink and bedtime cues for long screen sessions. Runs entirely on your device.',
+    description: 'Pengingat postur, kedip, dan jam tidur untuk sesi layar yang panjang. Berjalan sepenuhnya di perangkatmu.',
+    lang: 'id',
     start_url: '/app',
     display: 'standalone',
     background_color: '#f4eee3',
