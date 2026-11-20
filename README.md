@@ -30,10 +30,13 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 - **Three modes:** Camera (posture and blinks), Timer only (no camera, scheduled breaks), and Demo (sliders).
 - **Edge glow:** turmeric for sustained leaning or low blinking, indigo when a scheduled break is due. Never a modal.
 - **Breaks:** a 20-second eye break (20-20-20 rule) and a 60-second desk reset. Both are timed and step-by-step, with live head-angle and blink feedback from the camera, and can be snoozed for 5 minutes.
-- **Mini monitor:** a floating always-on-top window (Document Picture-in-Picture, Chrome and Edge 116+). The camera video and the timers move into it, so tracking keeps its full rate while you work in other apps.
+- **Floating window (two monitors):** an always-on-top Picture-in-Picture window in Chrome and Edge 116+, or a small popup elsewhere, that can be dragged to the monitor you work on. It shows the figure, posture state, strain, the edge glow and break cues, and runs the guided breaks. The camera video and the timers move into it, so tracking keeps its full rate while the main tab is in the background.
+- **Desktop notifications:** opt-in system notifications for break cues and sustained strain, sent only when no Niskala window has focus.
+- **Status in the tab title:** "Condong ke depan · Niskala", "Waktunya jeda · Niskala", readable from the taskbar or another screen.
+- **Away detection:** with the camera on, nobody in frame for a minute means you left the desk. That time is not counted as screen time; 2 minutes away counts as an eye break and 5 minutes as a desk reset.
 - **Evening:** bedtime-aware warm shift with wind-down and past-bedtime guidance.
 - **Sensitivity:** Gentle, Balanced or Strict thresholds. Optional soft chime.
-- **Keyboard:** `R` reset, `E` eye break, `M` mini monitor, `Esc` stop.
+- **Keyboard:** `R` reset, `E` eye break, `M` floating window, `Esc` stop (snoozes the cue for 5 minutes).
 - **Data:** everything stays in local storage. Download as JSON, delete, or opt in to an anonymous Supabase backup.
 - **Installable:** web manifest and icons. Lontar/Malam/Auto theme with no flash on load.
 
@@ -77,6 +80,7 @@ The front view uses a second orthographic camera (`OrthoFront`) at webcam height
 
 ## Known limits
 
-- Without the mini monitor, tracking slows to about one frame a second while the tab is hidden, and blink rate is not measured.
+- Without the floating window, tracking slows to about one frame a second while the tab is hidden, and blink rate is not measured.
+- The popup fallback (browsers without Picture-in-Picture) is a normal window, so it can be covered by other windows.
 - Head pitch is compared to the calibration as an absolute change, so looking up for a long time also counts as drift.
 - The warm shift tints Niskala only, not the whole screen.
