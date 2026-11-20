@@ -43,3 +43,6 @@ next-env.d.ts
 
 # copied from node_modules on install
 /public/mediapipe
+
+# blender backups
+*.blend1
