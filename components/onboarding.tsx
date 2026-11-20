@@ -35,10 +35,10 @@ export default function Onboarding({ prefs }: { prefs: Prefs }) {
           <PostureFigure posture={null} />
         </div>
         <div className="card absolute top-4 right-4 w-[30%] p-1.5">
-          <div className="aspect-[560/760] rounded-xl bg-surface">
+          <div className="relative aspect-[560/760] rounded-xl bg-surface">
             <FrontFigure posture={null} />
+            <span className="chip absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px]">Depan</span>
           </div>
-          <p className="mt-1 text-center text-[11px] font-semibold text-muted">Tampak depan</p>
         </div>
       </div>
 

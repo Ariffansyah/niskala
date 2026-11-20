@@ -62,19 +62,17 @@ export default function RoutineRunner({ kind, posture, blinkTotal, onDone, onExi
   }
 
   return (
-    <div className={compact ? 'space-y-3' : 'card space-y-5 p-5 sm:p-6'}>
+    <div className={compact ? 'space-y-3' : 'card space-y-5 p-5 sm:p-6'} aria-label={title}>
       <div className="flex items-center gap-4 sm:gap-6">
         <ProgressRing value={t / total} size={compact ? 76 : 112}>
-          <p className={`${compact ? 'text-lg' : 'text-3xl'} leading-none font-bold tabular-nums`}>{Math.ceil(total - t)}</p>
-          <p className="mt-1 text-[11px] text-muted">detik</p>
+          <p className={`${compact ? 'text-base' : 'text-2xl'} leading-none font-bold tabular-nums`}>
+            {Math.ceil(total - t)}
+            <span className="text-[0.6em] font-semibold text-muted"> dtk</span>
+          </p>
         </ProgressRing>
         <div className="min-w-0" aria-live="polite">
-          <p className="label">
-            {title}
-            {steps.length > 1 && ` · langkah ${index + 1} dari ${steps.length}`}
-          </p>
-          <p className={`${compact ? 'text-lg' : 'text-2xl sm:text-3xl'} mt-1 leading-tight font-bold tracking-tight text-balance`}>{cue}</p>
-          {!compact && <p className="mt-2 text-sm text-muted text-pretty">{step.how}</p>}
+          <p className={`${compact ? 'text-lg' : 'text-2xl sm:text-3xl'} leading-tight font-bold tracking-tight text-balance`}>{cue}</p>
+          {!compact && <p className="mt-2 text-muted text-pretty">{step.how}</p>}
         </div>
       </div>
 
