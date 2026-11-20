@@ -25,6 +25,7 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 
 ## Workspace features
 
+- **Front or side camera:** a laptop webcam above the screen reads forward lean, sideways lean, head tilt and blinks (MediaPipe Face Landmarker). A camera at the side of the desk reads neck and trunk angles directly (MediaPipe Pose Landmarker), which is more accurate for forward-head posture but cannot see sideways lean or blinks. Each position has its own calibration, and any connected camera can be chosen.
 - **Two views of the figure:** side view (*tampak samping*) for forward lean, front view (*tampak depan*, mirrored like the webcam) for sideways lean and head tilt.
 - **Three modes:** Camera (posture and blinks), Timer only (no camera, scheduled breaks), and Demo (sliders).
 - **Edge glow:** turmeric for sustained leaning or low blinking, indigo when a scheduled break is due. Never a modal.
@@ -49,6 +50,8 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 | `components/posture-figure.tsx` | 2.5D figure: side view (four layers: hip, shoulder, neck pivots) and front view (three layers: hip and neck roll) |
 | `components/ui.tsx`, `ui-client.tsx` | Design-system parts: badge, stat card, meter, progress ring; switch, segmented control, tabs, confirm dialog, toasts |
 | `components/icons.tsx` | One-style icon set (24 px grid, 1.75 stroke) |
+
+**Side camera.** The neck angle is the shoulder-to-ear line against vertical (the inverse of the clinical craniovertebral angle) and the trunk angle is the hip-to-shoulder line, both taken from the body side with the most visible landmarks and signed by which way the nose points, so a camera on either side works.
 
 **Sideways lean.** The midpoint between the eye corners is compared with the calibration in eye-widths; the midpoint barely moves when the head turns, so glancing at a second monitor is not read as a lean. Head tilt is the angle of the eye line in the raw frame, ordered by position so it never wraps around ±180°.
 
