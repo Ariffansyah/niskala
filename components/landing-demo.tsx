@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { sideWord } from '@/lib/format';
 import { UPRIGHT } from '@/lib/signals';
-import { IconLean, IconPosture } from './icons';
+import { IconPosture } from './icons';
 import PostureFigure, { FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
 
 const THRESHOLD = 45;
@@ -46,32 +46,31 @@ export default function LandingDemo() {
         </div>
         <span className="chip absolute top-3 left-3">Tampak samping</span>
         <div className="card absolute top-3 right-3 w-[30%] p-1.5">
-          <div className="aspect-[560/760] rounded-xl bg-surface">
+          <div className="relative aspect-[560/760] rounded-xl bg-surface">
             <FrontFigure posture={posture} />
+            <span className="chip absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px]">Depan</span>
           </div>
-          <p className="mt-1 text-center text-[11px] font-semibold text-muted">Tampak depan</p>
         </div>
       </div>
 
-      <div className="float-card absolute top-[38%] -left-8 hidden w-44 xl:block" aria-hidden>
-        <p className="flex items-center gap-2 text-[12px] font-semibold text-muted">
-          <IconPosture className="size-4 text-accent" /> Punggung
+      <div className="float-card absolute top-[38%] -left-8 hidden w-48 xl:block" aria-hidden>
+        <p className="flex items-center gap-2 font-semibold">
+          <IconPosture className="size-4 text-accent" />
+          Punggung
+          <span className="ml-auto text-lg font-extrabold tabular-nums">{torsoDeg}°</span>
         </p>
-        <p className="mt-1 text-2xl font-extrabold tracking-tight tabular-nums">{torsoDeg}°</p>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-rule">
+        <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-rule">
           <div
             className={`h-full origin-left rounded-full transition-transform duration-300 ${slouch >= THRESHOLD ? 'bg-alert' : 'bg-accent'}`}
             style={{ transform: `scaleX(${Math.max(0.03, slouch / 100)})` }}
           />
         </div>
       </div>
-      <div className="float-card absolute -right-6 bottom-[34%] hidden w-48 xl:block" aria-hidden>
-        <p className="flex items-center gap-2 text-[12px] font-semibold text-muted">
-          <IconLean className="size-4 text-accent" /> Pendar tepi
-        </p>
-        <p className={`mt-1 flex items-center gap-2 text-lg font-extrabold ${glow ? 'text-alert-ink' : ''}`}>
+      <div className="float-card absolute -right-6 bottom-[34%] hidden xl:block" aria-hidden>
+        <p className="flex items-center gap-2 font-semibold">
           <span className={`size-2.5 rounded-full ${glow ? 'bg-alert' : 'bg-edge'}`} />
-          {glow ? 'Menyala' : off ? 'Menunggu…' : 'Padam'}
+          Pendar tepi
+          <span className={`ml-3 font-extrabold ${glow ? 'text-alert-ink' : 'text-muted'}`}>{glow ? 'menyala' : off ? 'menunggu' : 'padam'}</span>
         </p>
       </div>
 

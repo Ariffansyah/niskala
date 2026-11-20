@@ -27,9 +27,8 @@ export default function SiteFooter() {
           <Logo />
           <p className="mt-3 text-sm text-muted text-pretty">
             Pengingat postur, kedip, dan jam tidur untuk sesi layar yang panjang. Kamera diproses di browser kamu dan tidak
-            pernah diunggah.
+            pernah diunggah. Dibuat untuk Techcomfest 2027, SDG 3: Kehidupan Sehat dan Sejahtera.
           </p>
-          <p className="mt-4 text-[13px] text-muted">Techcomfest 2027 · SDG 3: Kehidupan Sehat dan Sejahtera</p>
         </div>
         {GROUPS.map((g) => (
           <nav key={g.title} aria-label={g.title}>
