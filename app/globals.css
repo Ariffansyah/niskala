@@ -331,7 +331,22 @@
   }
 }
 
+/* 24 frames of the 3D kawung from assets/objects/objects.blend in one strip; jump-none lands each step on a frame. */
+.kawung-turn {
+  aspect-ratio: 1;
+  background: url("/3d/logo-wobble.webp") 0 0 / 2400% 100% no-repeat;
+  animation: kawung-turn 3.2s steps(24, jump-none) infinite;
+}
+@keyframes kawung-turn {
+  to {
+    background-position-x: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .kawung-turn {
+    animation: none;
+  }
   .figure .joint,
   .edge-glow,
   .edge-cue,

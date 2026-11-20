@@ -287,9 +287,14 @@ export default function Home() {
 
         <section className="band motif-kawung">
           <div className="mx-auto grid max-w-6xl items-center gap-x-16 gap-y-8 px-4 py-20 sm:px-8 sm:py-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-            <h2 className="text-4xl sm:text-5xl">
-              <span className="text-on-band-muted">Sekala,</span> niskala.
-            </h2>
+            <div className="flex items-center gap-6 sm:gap-8">
+              <span className="grid size-28 shrink-0 place-items-center rounded-full bg-on-band shadow-[0_18px_40px_-12px_rgb(0_0_0/0.5)] sm:size-36">
+                <span className="kawung-turn size-24 sm:size-32" aria-hidden />
+              </span>
+              <h2 className="text-4xl sm:text-5xl">
+                <span className="text-on-band-muted">Sekala,</span> niskala.
+              </h2>
+            </div>
             <div className="space-y-4 text-lg text-pretty">
               <p>
                 Dalam pandangan Bali, <em>sekala</em> adalah dunia yang terlihat dan teraba, sedangkan <em>niskala</em> adalah yang tak
