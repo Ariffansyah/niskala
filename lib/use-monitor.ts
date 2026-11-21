@@ -13,9 +13,12 @@ import {
   nightState,
   postureFrom,
   postureFromProfile,
+  screenDistanceCm,
+  setupReport,
   stepStrain,
   type NightStage,
   type Posture,
+  type SetupReport,
 } from './signals';
 import { notify } from './notify';
 import { chime } from './sound';
@@ -55,6 +58,11 @@ export type Snapshot = {
   night: { level: number; stage: NightStage; minutesToBed: number; clock: string };
   session: SessionSummary | null;
   away: boolean;
+  /** Side camera only: the hip is out of view (now or at calibration), so only the neck is read. */
+  backHidden: boolean;
+  /** Front camera only: estimated eye-to-screen distance, and whether it has been too short for a while. */
+  distanceCm: number | null;
+  tooClose: boolean;
   /** Seconds the user was away, set only on the tick they come back. */
   returnedAfter: number | null;
 };
@@ -69,6 +77,9 @@ const MIN_CALIBRATION_FRAMES = 20;
 const AWAY_AFTER_S = 60;
 const AWAY_EYE_BREAK_S = 120;
 const AWAY_RESET_S = 300;
+// Closer than this for a while is worth a word: about two thirds of an arm's length.
+const TOO_CLOSE_CM = 45;
+const CLOSE_AFTER_S = 20;
 
 const NOTE = {
   posture: ['Udah lama bungkuk atau miring', 'Tegakin badan, atau stretching 60 detik.'],
@@ -92,6 +103,9 @@ const INITIAL: Snapshot = {
   night: { level: 0, stage: 'day', minutesToBed: 0, clock: '' },
   session: null,
   away: false,
+  backHidden: false,
+  distanceCm: null,
+  tooClose: false,
   returnedAfter: null,
 };
 
@@ -133,6 +147,9 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     lastCue: null as BreakKind | null,
     chimed: false,
     awayFor: 0,
+    distance: null as number | null,
+    closeFor: 0,
+    closeSaid: false,
     session: null as SessionSummary | null,
     last: 0,
     savedAt: 0,
@@ -203,17 +220,21 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
 
     let target: Posture | null = null;
     let rate: number | null = null;
+    let backHidden = false;
     if (mode === 'demo') {
       target = { head: sim.head, torso: sim.torso, side: sim.side, tilt: sim.tilt };
       rate = sim.blink;
     } else if (mode === 'camera' && cameraOn) {
       const s = f.sample && now - f.at < 1000 ? f.sample : null;
+      const d = s?.view === 'front' ? screenDistanceCm(s.setup) : null;
+      m.distance = d === null ? null : m.distance === null ? d : ema(m.distance, d, dt, 2);
       if (s?.view === 'front') {
         const b = baselineStore.get();
         target = b && postureFrom(s, b);
       } else if (s?.view === 'side') {
         const b = profileBaselineStore.get();
         target = b && postureFromProfile(s, b);
+        backHidden = s.trunk === null || b?.trunk === null;
       }
       // Blinks need the face; hidden tabs only get about one frame a second, too slow to see them.
       rate = watched && prefs.cameraView === 'front' ? (f.blinks?.rate(now) ?? null) : null;
@@ -253,6 +274,13 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
       alert(posture ? NOTE.posture : NOTE.eyes, posture && m.posture ? postureLine(m.posture) : SAY.eyes);
       m.chimed = true;
     } else if (glow === 0) m.chimed = false;
+
+    if (!(mode === 'camera' && cameraOn)) m.distance = null;
+    m.closeFor = !routine && m.distance !== null && m.distance < TOO_CLOSE_CM ? m.closeFor + dt : 0;
+    if (m.closeFor > CLOSE_AFTER_S && !m.closeSaid) {
+      m.closeSaid = true;
+      if (prefs.voice) speak(SAY.close);
+    } else if (m.closeFor === 0) m.closeSaid = false;
 
     const d = new Date();
     const nowMin = sim.late && mode === 'demo' ? (prefs.bedtime + 40) % 1440 : d.getHours() * 60 + d.getMinutes();
@@ -294,6 +322,9 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
       night: { ...night, clock: `${pad(Math.floor(nowMin / 60))}:${pad(nowMin % 60)}` },
       session: s && { ...s },
       away,
+      backHidden,
+      distanceCm: m.distance === null ? null : Math.round(m.distance),
+      tooClose: m.closeFor > CLOSE_AFTER_S,
       returnedAfter,
     });
   });
@@ -377,6 +408,20 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     [],
   );
 
+  /** Collects `ms` of front-camera frames and reports on the desk setup; null if the face was rarely seen. */
+  const checkSetup = useCallback(
+    (ms: number) =>
+      new Promise<SetupReport | null>((resolve) => {
+        face.current.collect = [];
+        setTimeout(() => {
+          const got = (face.current.collect ?? []).flatMap((s) => (s.view === 'front' ? [s.setup] : []));
+          face.current.collect = null;
+          resolve(got.length < MIN_CALIBRATION_FRAMES ? null : setupReport(got));
+        }, ms);
+      }),
+    [],
+  );
+
   const completeRoutine = useCallback((kind: Routine) => {
     const m = model.current;
     // Training is extra practice, not a scheduled break: it clears the posture strain and nothing else.
@@ -415,5 +460,5 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     model.current.session = null;
   }, []);
 
-  return { snap, calibrated, sync, onSample, calibrate, completeRoutine, snooze, triggerCue, discardSession };
+  return { snap, calibrated, sync, onSample, calibrate, checkSetup, completeRoutine, snooze, triggerCue, discardSession };
 }

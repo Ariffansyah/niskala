@@ -73,7 +73,7 @@ function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: b
   if (mode === 'camera' && !snap.posture)
     return view === 'front'
       ? 'Wajahmu nggak kelihatan. Lanjut lagi pas kamu balik.'
-      : 'Telinga, bahu, atau pinggul nggak kelihatan. Lanjut lagi pas badanmu masuk bingkai.';
+      : 'Telinga atau bahu nggak kelihatan. Lanjut lagi pas badanmu masuk bingkai.';
   if (snap.glow > 0 && snap.driftFor === 0 && snap.lowBlinkFor === 0) return 'Udah bagus lagi. Pinggir layar padam sebentar lagi.';
   if (snap.glow > 0 && snap.postureStrain >= snap.eyeStrain && snap.posture) {
     const d = dominant(snap.posture);
@@ -85,8 +85,10 @@ function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: b
   }
   if (snap.glow > 0)
     return `Pinggir layar nyala karena kamu cuma ngedip ${Math.round(snap.blinkRate ?? 0)} kali per menit${snap.lowBlinkFor >= 1 ? ` selama ${duration(snap.lowBlinkFor)}` : ''}. Kedip penuh, atau lihat jauh sebentar.`;
+  if (snap.tooClose && snap.distanceCm !== null) return `Kamu kedeketan ke layar, sekitar ${snap.distanceCm} cm. Mundur dikit sampai sekitar satu lengan, 50 sampai 75 cm.`;
   if (snap.driftFor > 0) return 'Postur mulai geser. Pinggir layar baru nyala kalau kelamaan.';
   if (snap.lowBlinkFor > 0) return 'Kedipan mulai jarang. Pinggir layar baru nyala kalau terus begitu.';
+  if (snap.backHidden) return 'Pinggulmu ketutup, jadi yang dicek cuma leher. Mundurin atau naikin kamera biar punggung ikut kebaca.';
   return 'Tegak, ngedip normal. Aman.';
 }
 
@@ -213,7 +215,7 @@ export default function Workspace() {
       const v = await startVision(mon.onSample, opts);
       if (token !== cameraRun.current.token) return v.stop();
       cameraRun.current.stop = v.stop;
-      setCamera({ state: 'on', video: v.video });
+      setCamera({ state: 'on', preview: v.preview });
       // Device names are only readable once permission is granted.
       listCameras().then(setCameras, () => {});
     } catch (e) {
@@ -306,7 +308,7 @@ export default function Workspace() {
     if (!pip || camera.state !== 'on') return;
     const holder = pip.document.createElement('div');
     holder.className = 'offscreen-video';
-    holder.append(camera.video);
+    holder.append(camera.preview);
     pip.document.body.append(holder);
   }, [pip, camera]);
 
@@ -466,6 +468,7 @@ export default function Workspace() {
                   <span className="chip">
                     Miring {Math.abs(deg.side)}°{deg.side !== 0 && ` ${sideWord(deg.side)}`}
                   </span>
+                  {snap.distanceCm !== null && <span className={`chip ${snap.tooClose ? 'text-alert-ink' : ''}`}>Jarak ±{snap.distanceCm} cm</span>}
                 </div>
               )}
             </div>
@@ -566,6 +569,7 @@ export default function Workspace() {
                       onStop={stopCamera}
                       calibrated={calibrated}
                       calibrate={mon.calibrate}
+                      checkSetup={mon.checkSetup}
                       previewElsewhere={pip !== null}
                       view={view}
                       onViewChange={(cameraView) => changeCamera({ cameraView })}
