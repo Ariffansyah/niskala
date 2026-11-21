@@ -448,6 +448,10 @@ export default function Workspace() {
                     </p>
                   )}
                 </div>
+                {/* Its own radio name: the Setelan tab can show a second picker at the same time. */}
+                <div className="mt-1.5 flex justify-center">
+                  <CastPicker value={prefs.figure} onChange={(figure) => update({ figure })} size="size-8" label="Ganti figur" />
+                </div>
               </figure>
               {deg && (
                 <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5" aria-label="Sudut saat ini">
