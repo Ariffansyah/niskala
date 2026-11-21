@@ -11,8 +11,9 @@ import { clearAll, exportData, prefsStore, type CameraView, type Mode, type Pref
 import { syncConfigured } from '@/lib/sync';
 import { allowNotifications, canNotify } from '@/lib/notify';
 import { toast } from '@/lib/toast';
-import { useMonitor, type Routine, type Sim, type Snapshot } from '@/lib/use-monitor';
+import { useMonitor, type BreakKind, type Routine, type Sim, type Snapshot } from '@/lib/use-monitor';
 import { describeCameraError, listCameras, startVision } from '@/lib/vision';
+import { SAY, doneLine, speak } from '@/lib/voice';
 import CameraPanel, { type Camera } from './camera-panel';
 import {
   IconBell,
@@ -37,7 +38,7 @@ import { openMiniMonitor, usePipSupported } from './mini-monitor';
 import Onboarding from './onboarding';
 import { CastPicker } from './cast';
 import PostureFigure, { FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TILT_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
-import RoutineRunner from './routine';
+import RoutineRunner, { type Upright } from './routine';
 import { Badge, Meter, Stat } from './ui';
 import { ConfirmDialog, Segmented, Switch, Tabs } from './ui-client';
 
@@ -50,7 +51,7 @@ const SENSITIVITY_NOTE: Record<Sensitivity, string> = {
   strict: 'Geser dikit aja ketahuan, setelah sekitar 6 detik.',
 };
 
-const CUE_TEXT: Record<Routine, [string, string]> = {
+const CUE_TEXT: Record<BreakKind, [string, string]> = {
   eye: ['Waktunya istirahat mata 20 detik.', 'Lihat yang jauh, terus kedip penuh.'],
   reset: ['Waktunya stretching 60 detik.', 'Leher, bahu, dan mata, dipandu satu-satu.'],
 };
@@ -64,7 +65,7 @@ function postureWord(p: Posture, threshold: number) {
 }
 
 function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: boolean, routine: Routine | null, view: CameraView) {
-  if (routine) return 'Lagi jeda. Pinggir layar nggak bakal nyala sampai selesai.';
+  if (routine) return routine === 'train' ? 'Lagi latihan postur. Pinggir layar nggak nyala sampai selesai.' : 'Lagi jeda. Pinggir layar nggak bakal nyala sampai selesai.';
   if (snap.away) return 'Kamu lagi nggak di depan layar. Waktu ini nggak dihitung waktu layar, tapi jadi jeda.';
   if (mode === 'timer') return 'Mode timer: jeda datang sesuai jadwal. Postur dan kedipan nggak dicek.';
   if (mode === 'camera' && !cameraOn) return 'Kamera mati. Nyalain di tab Mode, atau pakai mode timer.';
@@ -161,7 +162,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function CueBanner({ cue, onStart, onSnooze }: { cue: Routine; onStart: () => void; onSnooze: () => void }) {
+function CueBanner({ cue, onStart, onSnooze }: { cue: BreakKind; onStart: () => void; onSnooze: () => void }) {
   const [title, body] = CUE_TEXT[cue];
   return (
     <div role="status" className="enter card flex flex-wrap items-center gap-x-4 gap-y-3 border-cue px-4 py-3">
@@ -264,22 +265,28 @@ export default function Workspace() {
     }
   }
 
-  function finishRoutine() {
+  function finishRoutine(upright: Upright) {
     if (!routine) return;
     mon.completeRoutine(routine);
-    toast(`${ROUTINES[routine].title} selesai.`);
+    const done = `${ROUTINES[routine].title} selesai.`;
+    // A score only means something when the camera saw you for a fair part of the checked steps.
+    const msg = routine === 'train' && upright.measured >= 10 ? `${done} Kamu tegak ${Math.round(upright.held)} dari ${Math.round(upright.measured)} detik.` : done;
+    toast(msg);
+    if (prefs.voice) speak(doneLine(routine, upright));
     setRoutine(null);
   }
 
   // Stopping early is not the same as taking the break: bring the reminder back in 5 minutes.
   function stopRoutine() {
     if (!routine) return;
-    mon.snooze(routine);
-    toast('Jeda distop. Diingetin lagi 5 menit lagi.', 'info');
+    if (routine !== 'train') {
+      mon.snooze(routine);
+      toast('Jeda distop. Diingetin lagi 5 menit lagi.', 'info');
+    }
     setRoutine(null);
   }
 
-  function snooze(kind: Routine) {
+  function snooze(kind: BreakKind) {
     mon.snooze(kind);
     toast('Oke, diingetin lagi 5 menit lagi.', 'info');
   }
@@ -318,6 +325,7 @@ export default function Workspace() {
     else if (routine || !prefs.onboarded) return;
     else if (e.key === 'r') setRoutine('reset');
     else if (e.key === 'e') setRoutine('eye');
+    else if (e.key === 'l') setRoutine('train');
     else if (e.key === 'm') toggleMini();
   });
   useEffect(() => {
@@ -366,8 +374,11 @@ export default function Workspace() {
     <RoutineRunner
       key={routine}
       kind={routine}
+      who={prefs.figure}
       posture={snap.posture}
+      threshold={S.drift}
       blinkTotal={snap.blinkTotal}
+      voice={prefs.voice}
       onDone={finishRoutine}
       onExit={stopRoutine}
       compact={pip !== null}
@@ -411,6 +422,10 @@ export default function Workspace() {
             <button type="button" className="btn btn-sm flex-1 sm:flex-none" disabled={routine !== null} onClick={() => setRoutine('reset')}>
               <IconStretch className="size-4" />
               Stretching 60 dtk
+            </button>
+            <button type="button" className="btn btn-sm flex-1 sm:flex-none" disabled={routine !== null} onClick={() => setRoutine('train')}>
+              <IconPosture className="size-4" />
+              Latihan postur
             </button>
             <button type="button" className="btn btn-sm flex-1 sm:flex-none" onClick={toggleMini} aria-pressed={pip !== null}>
               <IconPip className="size-4" />
@@ -634,6 +649,18 @@ export default function Workspace() {
                       Coba dengar
                     </button>
                   </div>
+                  <div>
+                    <Switch
+                      checked={prefs.voice}
+                      onChange={(voice) => update({ voice })}
+                      label="Suara pengingat"
+                      description="Ngasih tahu kalau kamu bungkuk atau miring, pas jeda datang, dan mandu tiap gerakan."
+                    />
+                    <button type="button" className="btn btn-ghost btn-sm mt-1 -ml-3" onClick={() => speak(SAY.back)}>
+                      <IconVolume className="size-4" />
+                      Coba dengar
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 gap-2 border-t border-rule pt-5">
                     <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('eye')}>
                       <IconEye className="size-4" />
@@ -642,6 +669,10 @@ export default function Workspace() {
                     <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('reset')}>
                       <IconStretch className="size-4" />
                       Stretching
+                    </button>
+                    <button type="button" className="btn btn-sm col-span-2" disabled={routine !== null} onClick={() => setRoutine('train')}>
+                      <IconPosture className="size-4" />
+                      Latihan postur 2 menit
                     </button>
                   </div>
                   <div className="rounded-xl bg-surface p-4 text-[13px] text-muted">
@@ -652,6 +683,9 @@ export default function Workspace() {
                       </li>
                       <li>
                         <kbd className="kbd">E</kbd> istirahat mata
+                      </li>
+                      <li>
+                        <kbd className="kbd">L</kbd> latihan postur
                       </li>
                       <li>
                         <kbd className="kbd">M</kbd> jendela kecil

@@ -19,6 +19,7 @@ import {
 } from './signals';
 import { notify } from './notify';
 import { chime } from './sound';
+import { SAY, postureLine, speak } from './voice';
 import type { Sample } from './vision';
 import {
   baselineStore,
@@ -33,8 +34,8 @@ import {
 } from './store';
 import { pushToSupabase, syncConfigured } from './sync';
 
-export type { RoutineKind as Routine } from './routines';
-import type { RoutineKind as Routine } from './routines';
+export type { BreakKind, RoutineKind as Routine } from './routines';
+import type { BreakKind, RoutineKind as Routine } from './routines';
 export type Sim = { head: number; torso: number; side: number; tilt: number; blink: number; late: boolean };
 type SyncResult = { state: 'ok'; at: string } | { state: 'error'; message: string };
 export type SyncStatus = { state: 'off' | 'idle' } | SyncResult;
@@ -48,7 +49,7 @@ export type Snapshot = {
   lowBlinkFor: number;
   blinkTotal: number | null;
   glow: number;
-  cue: Routine | null;
+  cue: BreakKind | null;
   nextEyeS: number | null;
   nextResetS: number | null;
   night: { level: number; stage: NightStage; minutesToBed: number; clock: string };
@@ -128,8 +129,8 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     rateT: 0,
     sinceEye: 0,
     sinceReset: 0,
-    forced: null as Routine | null,
-    lastCue: null as Routine | null,
+    forced: null as BreakKind | null,
+    lastCue: null as BreakKind | null,
     chimed: false,
     awayFor: 0,
     session: null as SessionSummary | null,
@@ -177,8 +178,10 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     // With the floating window open the user can still see the cues, so time counts.
     const watched = document.visibilityState === 'visible' || timerWindow !== null;
     // Only worth a system notification when no Niskala surface has the user's attention.
-    const alert = (note: readonly [string, string]) => {
+    const alert = (note: readonly [string, string], spoken: string) => {
       if (prefs.sound) chime();
+      // Let the chime ring out before the voice starts.
+      if (prefs.voice) setTimeout(() => speak(spoken), prefs.sound ? 700 : 0);
       if (prefs.notify && timerWindow === null && !document.hasFocus()) notify(note[0], note[1]);
     };
 
@@ -240,13 +243,14 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     }
     const eyeDue = m.forced === 'eye' || (prefs.eyeMin > 0 && m.sinceEye >= prefs.eyeMin * 60);
     const resetDue = m.forced === 'reset' || (prefs.resetMin > 0 && m.sinceReset >= prefs.resetMin * 60);
-    const cue: Routine | null = routine ? null : resetDue ? 'reset' : eyeDue ? 'eye' : null;
-    if (cue && cue !== m.lastCue) alert(NOTE[cue]);
+    const cue: BreakKind | null = routine ? null : resetDue ? 'reset' : eyeDue ? 'eye' : null;
+    if (cue && cue !== m.lastCue) alert(NOTE[cue], SAY.due[cue]);
     m.lastCue = cue;
 
     const glow = routine ? 0 : 0.8 * Math.max(glowFrom(m.postureStrain), glowFrom(m.eyeStrain));
     if (glow > 0.5 && !m.chimed) {
-      alert(m.postureStrain >= m.eyeStrain ? NOTE.posture : NOTE.eyes);
+      const posture = m.postureStrain >= m.eyeStrain;
+      alert(posture ? NOTE.posture : NOTE.eyes, posture && m.posture ? postureLine(m.posture) : SAY.eyes);
       m.chimed = true;
     } else if (glow === 0) m.chimed = false;
 
@@ -375,6 +379,11 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
 
   const completeRoutine = useCallback((kind: Routine) => {
     const m = model.current;
+    // Training is extra practice, not a scheduled break: it clears the posture strain and nothing else.
+    if (kind === 'train') {
+      m.postureStrain = 0;
+      return;
+    }
     m.forced = null;
     m.sinceEye = 0;
     m.eyeStrain = 0;
@@ -387,7 +396,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
 
   // Due again in exactly SNOOZE_S, whatever the schedule.
   const snooze = useCallback(
-    (kind: Routine) => {
+    (kind: BreakKind) => {
       const m = model.current;
       m.forced = null;
       if (kind === 'eye') m.sinceEye = prefs.eyeMin * 60 - SNOOZE_S;
@@ -397,7 +406,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
   );
 
   /** Makes a cue due now, so the break flow can be tried without waiting for the schedule. */
-  const triggerCue = useCallback((kind: Routine) => {
+  const triggerCue = useCallback((kind: BreakKind) => {
     model.current.forced = kind;
   }, []);
 

@@ -19,6 +19,7 @@ export type Prefs = {
   eyeMin: number; // 0 = off
   resetMin: number; // 0 = off
   sound: boolean;
+  voice: boolean; // spoken reminders and step guidance
   notify: boolean; // system notifications while Niskala is not in focus
   figure: FigureId; // who stands in for you on screen
   sync: boolean;
@@ -35,6 +36,7 @@ export const DEFAULT_PREFS: Prefs = {
   eyeMin: 20,
   resetMin: 50,
   sound: false,
+  voice: false,
   notify: false,
   figure: 'raka',
   sync: false,
