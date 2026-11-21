@@ -1,4 +1,5 @@
 // Pure signal math shared by the camera and simulation paths. No DOM, no I/O.
+import { sideWord } from './format.ts';
 
 export type FaceSample = {
   pitch: number; // head pitch, degrees
@@ -73,6 +74,15 @@ export function postureFromProfile(s: ProfileSample, b: ProfileBaseline): Postur
     side: 0,
     tilt: 0,
   };
+}
+
+/** Which way the posture has moved most: forward, sideways, or a head tilt. */
+export function dominant(p: Posture) {
+  const forward = Math.max(p.head, p.torso);
+  const side = Math.abs(p.side);
+  const tilt = Math.abs(p.tilt);
+  if (forward >= side && forward >= tilt) return { kind: 'forward' as const };
+  return side >= tilt ? { kind: 'side' as const, dir: sideWord(p.side) } : { kind: 'tilt' as const, dir: sideWord(p.tilt) };
 }
 
 /** Largest deviation of any axis, 0..1. */

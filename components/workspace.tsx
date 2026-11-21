@@ -5,7 +5,7 @@ import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type
 import { createPortal } from 'react-dom';
 import { duration, hhmm, minutes, parseHhmm, sideWord } from '@/lib/format';
 import { ROUTINES } from '@/lib/routines';
-import { SENSITIVITY, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
+import { SENSITIVITY, dominant, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
 import { chime } from '@/lib/sound';
 import { clearAll, exportData, prefsStore, type CameraView, type Mode, type Prefs, type Warmth } from '@/lib/store';
 import { syncConfigured } from '@/lib/sync';
@@ -54,15 +54,6 @@ const CUE_TEXT: Record<Routine, [string, string]> = {
   eye: ['Waktunya istirahat mata 20 detik.', 'Lihat yang jauh, terus kedip penuh.'],
   reset: ['Waktunya stretching 60 detik.', 'Leher, bahu, dan mata, dipandu satu-satu.'],
 };
-
-/** Which way the posture has moved most: forward, sideways, or a head tilt. */
-function dominant(p: Posture) {
-  const forward = Math.max(p.head, p.torso);
-  const side = Math.abs(p.side);
-  const tilt = Math.abs(p.tilt);
-  if (forward >= side && forward >= tilt) return { kind: 'forward' as const };
-  return side >= tilt ? { kind: 'side' as const, dir: sideWord(p.side) } : { kind: 'tilt' as const, dir: sideWord(p.tilt) };
-}
 
 function postureWord(p: Posture, threshold: number) {
   const drift = driftOf(p);
