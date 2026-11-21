@@ -18,7 +18,7 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 
 | Route | What it is |
 | --- | --- |
-| `/` | Landing page whose hero is the live demo: the figures act out a slouch and a lean until you take the sliders, and the real edge glow answers |
+| `/` | Landing page whose hero is the live demo: Raka and Ayu act out a slouch and a lean until you take the sliders, and the real edge glow answers. Below it a pinned room plays the six signals as you scroll |
 | `/app` | Workspace: first-run setup, tracking, breaks, evening, sensitivity, data |
 | `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks and late minutes |
 | `/privasi` | What is processed, stored, and optionally backed up |
@@ -78,11 +78,27 @@ Each body group (seat, torso, arms, head) is rendered alone, with the groups in 
 
 The front view uses a second orthographic camera (`OrthoFront`) at webcam height with the desk, laptop and mug hidden. Its base, upper and head layers are in `render-front/`, assembled in `figure-front.aseprite`, and exported as `public/figure/front.png` (34 KB) with `lib/figure-front.json`.
 
-**Four figures, one rig.** Raka (nila hoodie) is the original. Ayu (blunt bob, daun sweater), Sekar (side-swept bob, mengkudu hoodie) and Bima (short curls, glasses, ungu sweater) share his body and pivots; only hair, accessories and the toon colours change, so the slices stay the same. `variants.py`, run inside Blender, renders their layers into `assets/figure/<name>/`, and `pack.sh` builds their sheets (`public/figure/<name>.png`, `<name>-front.png`) with Aseprite. Each palette is rebuilt from its own pixels; reusing Raka's would snap every colour to nila. The workspace lets you pick a figure in Setelan or during setup.
+**Figures.** The workspace, onboarding and the small window show the same Raka and Ayu as the landing page, through `components/cast.tsx`: the side view picks one of 17 frames from upright to fully slouched, the front view one of 17 from leaning left to right. Back and head share the side dial (the larger one leads), and body lean and head tilt share the front one. The older hand-modelled layered figures in `assets/figure/` are no longer used by the app.
 
 ## 3D objects
 
 `assets/objects/objects.blend` holds the kawung logo, a webcam, an eye, an hourglass, a mug, a moon and star, a padlock and a snake plant, modelled from primitives with the figure's toon shader and outlines. Each is rendered at 512 px and served as a trimmed WebP from `public/3d/` (9 to 15 KB each). `logo-wobble.webp` is 24 frames of the logo turning, played with CSS `steps()` and held on the first frame for reduced motion.
+
+## Story and cast
+
+The landing page has two characters, Raka and Ayu, generated in Tripo Studio and sent to Blender with the Tripo DCC Bridge. Ayu was generated from a front render of Raka, so both share the same proportions. Each arrived as one textured mesh of about 2 million faces and was decimated to 48 thousand. `assets/story/characters.py` turns them into toon characters: the Tripo colour texture goes through the shared toon shader, and both share one rig with the same bone names (FK spine, IK arms and legs with pole targets), placed from landmarks measured on each mesh. Bone-heat weighting fails on Tripo meshes that aren't watertight, so the weights come from a voxel-remeshed copy and are transferred to the real surface. Their T-poses differ (Raka's palms face forward, Ayu's face down); a per-character palm angle turns each rest hand palm-down before the poses apply. The seat height comes from each character's shin, so thighs rest level and feet stay flat.
+
+`assets/story/story.blend` holds the room: walls, window and clock built by hand, and furniture from Kenney's Furniture Kit (CC0) recoloured to the dye palette. Everything uses the figure's toon shader and outlines, and a `night` value in the shared shader dims the whole room towards nila. `animate.py` keys either character through the six beats in the character's own frame, so the same poses fit both bodies: typing, slouching, leaning on one hand, looking out of the window, standing up to stretch, carrying the mug to the coffee machine with a walk that plants each foot, nightfall, closing the laptop and a wave. The chair, mug, laptop lid and screen glow, and clock hands are keyed with it.
+
+`render.py` draws the room once by day and once by night, then the character and everything that moves as transparent frames with the room as a holdout, so the desk still hides their legs: 332 frames per character at 1200×900, about 5.5 MB of WebP each in `public/story/`. `lib/story.json` maps each beat to its frame range, the night fade, and the frames where the edge glows. `components/story.tsx` pins the room beside the text (above it on phones) and plays each beat's action once, at the scene's own speed, when you scroll to it; it loads every 16th frame first and fills the gaps, and only loads the character you pick. `hero.py` renders the hero's slider sequences, 17 side frames from upright to slouched and 17 front frames leaning from left to right (mirrored like a webcam), into `public/cast/`.
+
+```bash
+cd assets/story
+blender -b story.blend --python-expr "exec(open('animate.py').read()); animate('raka'); exec(open('render.py').read()); backgrounds(); actor('raka')"
+blender -b story.blend --python hero.py
+```
+
+The raw PNG renders go to `assets/story/render/` (ignored); convert them to WebP for `public/`.
 
 ## Known limits
 
