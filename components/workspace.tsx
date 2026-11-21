@@ -35,7 +35,8 @@ import {
 } from './icons';
 import { openMiniMonitor, usePipSupported } from './mini-monitor';
 import Onboarding from './onboarding';
-import PostureFigure, { FigurePicker, FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TILT_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
+import { CastPicker } from './cast';
+import PostureFigure, { FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TILT_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
 import RoutineRunner from './routine';
 import { Badge, Meter, Stat } from './ui';
 import { ConfirmDialog, Segmented, Switch, Tabs } from './ui-client';
@@ -714,7 +715,7 @@ export default function Workspace() {
               {tab === 'settings' && (
                 <>
                   <Field label="Figur">
-                    <FigurePicker value={prefs.figure} onChange={(figure) => update({ figure })} />
+                    <CastPicker value={prefs.figure} onChange={(figure) => update({ figure })} />
                   </Field>
                   <div className="space-y-4 rounded-xl bg-surface p-4">
                     <p className="text-pretty">

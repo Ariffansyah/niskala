@@ -7,7 +7,7 @@ export type Warmth = 'auto' | 'on' | 'off';
 export type Mode = 'camera' | 'timer' | 'demo';
 export type Theme = 'auto' | 'light' | 'dark';
 export type CameraView = 'front' | 'side';
-export type FigureId = 'raka' | 'ayu' | 'sekar' | 'bima';
+export type FigureId = 'raka' | 'ayu';
 
 export type Prefs = {
   mode: Mode;
@@ -112,7 +112,8 @@ function stored<T>(key: string, fallback: T, parse: (v: T | null) => T = (v) => 
   };
 }
 
-export const prefsStore = stored<Prefs>(KEY.prefs, DEFAULT_PREFS, (v) => ({ ...DEFAULT_PREFS, ...v }));
+// Sekar and Bima left with the 2D figures; anyone who picked them gets Raka.
+export const prefsStore = stored<Prefs>(KEY.prefs, DEFAULT_PREFS, (v) => ({ ...DEFAULT_PREFS, ...v, figure: v?.figure === 'ayu' ? 'ayu' : 'raka' }));
 // Baselines saved before sideways tracking lack roll and cx; asking for a fresh calibration is safer than guessing.
 export const baselineStore = stored<Baseline | null>(KEY.baseline, null, (v) => (v && 'roll' in v && 'cx' in v ? v : null));
 export const profileBaselineStore = stored<ProfileBaseline | null>(KEY.baselineSide, null, (v) => (v && 'neck' in v && 'trunk' in v ? v : null));
