@@ -6,7 +6,7 @@ import { sideWord } from '@/lib/format';
 import { ROUTINES, type Exercise, type RoutineKind as Kind } from '@/lib/routines';
 import { dominant, driftOf, type Posture } from '@/lib/signals';
 import type { FigureId } from '@/lib/store';
-import { speak, stepIntro } from '@/lib/voice';
+import { hush, speak, stepIntro } from '@/lib/voice';
 import { IconCamera, IconCheck, IconNext, IconPause, IconPlay } from './icons';
 import { HEAD_MAX_DEG, TILT_MAX_DEG } from './posture-figure';
 import { ProgressRing } from './ui';
@@ -59,7 +59,9 @@ export default function RoutineRunner({ kind, who, posture, threshold, blinkTota
   // A new step announces its name; after that only the cue changes are read out.
   const announce = useEffectEvent(() => speak(inStep < 1 ? stepIntro(step) : cue));
   useEffect(() => {
-    if (voice && running) announce();
+    if (!voice) return;
+    if (running) announce();
+    else hush();
   }, [voice, running, index, cue]);
 
   // Every move of the routine loads up front, so a new step shows its clip at once.

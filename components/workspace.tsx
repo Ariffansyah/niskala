@@ -14,7 +14,7 @@ import { allowNotifications, canNotify } from '@/lib/notify';
 import { toast } from '@/lib/toast';
 import { useMonitor, type BreakKind, type Routine, type Sim, type Snapshot } from '@/lib/use-monitor';
 import { describeCameraError, listCameras, startVision } from '@/lib/vision';
-import { SAY, doneLine, speak } from '@/lib/voice';
+import { SAY, doneLine, hush, speak } from '@/lib/voice';
 import CameraPanel, { type Camera } from './camera-panel';
 import {
   IconBell,
@@ -283,6 +283,7 @@ export default function Workspace() {
   // Stopping early is not the same as taking the break: bring the reminder back in 5 minutes.
   function stopRoutine() {
     if (!routine) return;
+    hush();
     if (routine !== 'train') {
       mon.snooze(routine);
       toast('Jeda distop. Diingetin lagi 5 menit lagi.', 'info');

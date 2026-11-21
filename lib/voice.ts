@@ -67,6 +67,12 @@ export function clipOf(text: string) {
 
 let playing: HTMLAudioElement | null = null;
 
+/** Stops the line that is playing, for a routine stopped or paused halfway. */
+export function hush() {
+  playing?.pause();
+  playing = null;
+}
+
 /** Plays the recording of a line; a newer line cuts off one still playing, so reminders never queue up. */
 export function speak(text: string) {
   try {
