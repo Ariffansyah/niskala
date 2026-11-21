@@ -1,26 +1,371 @@
 @import "tailwindcss";
 
+/* Palette from batik dyes, matched to the figures:
+   lontar palm-leaf cream (paper), soga brown (ink and line art),
+   nila indigo (the brand and every primary action), kunyit turmeric (strain, and the lit petal of the logo).
+   Dark mode is "malam": night, and the wax used to draw batik. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light dark;
+  --paper: light-dark(#f4eee3, #13141d);
+  --surface: light-dark(#ebe2d2, #1c1f2d);
+  --raised: light-dark(#fbf8f2, #232737);
+  --ink: light-dark(#2a1f19, #efe7d9);
+  --muted: light-dark(#6b5c50, #aba193);
+  --rule: light-dark(#ddd2c1, #2b2f43);
+  --edge: light-dark(#8c7e71, #6e7086);
+  --accent: light-dark(#2c3f6b, #a7b8e6);
+  --accent-soft: light-dark(#dfe3ec, #2a3350);
+  --on-accent: light-dark(#f6f1e8, #13141d);
+  --alert: light-dark(#c98a1e, #e2a13a);
+  --alert-ink: light-dark(#8a5a10, #ecb75f);
+  --danger: light-dark(#a5402b, #e88a72);
+  --cue: light-dark(#3a5085, #7f95d1);
+  --shadow: light-dark(rgb(42 31 25 / 0.08), rgb(0 0 0 / 0.35));
+  /* Deep nila bands for contrast sections; same text colours in both themes. */
+  --band: light-dark(#1c2643, #1a2140);
+  --on-band: #f1ead9;
+  --on-band-muted: #b8b4c4;
+  --band-accent: var(--kunyit);
+
+  /* More dyes from the same vats, one per topic so sections, readouts and figures are told apart by hue:
+     daun leaf green for the eyes and for what went well, mengkudu morinda red for time away from the desk,
+     ungu terong eggplant for the evening. Each has a soft tint for surfaces and an ink for text on that tint. */
+  --kunyit: #e9b04a;
+  --kunyit-soft: light-dark(#f7e6c1, #3a2e17);
+  --daun: light-dark(#2a765c, #6cc39c);
+  --daun-soft: light-dark(#dcebe2, #1b3a2f);
+  --daun-ink: light-dark(#1f5a45, #a3dfc3);
+  --mengkudu: light-dark(#c8553d, #ee8d74);
+  --mengkudu-soft: light-dark(#f6ded5, #45241c);
+  --mengkudu-ink: light-dark(#953724, #f6b6a5);
+  --ungu: light-dark(#6b4f9a, #b9a2e6);
+  --ungu-soft: light-dark(#e9e1f4, #2e2547);
+  --ungu-ink: light-dark(#523b7e, #d2c3f2);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-edge: var(--edge);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-alert: var(--alert);
+  --color-alert-ink: var(--alert-ink);
+  --color-danger: var(--danger);
+  --color-cue: var(--cue);
+  --color-band: var(--band);
+  --color-on-band: var(--on-band);
+  --color-on-band-muted: var(--on-band-muted);
+  --color-band-accent: var(--band-accent);
+  --color-kunyit: var(--kunyit);
+  --color-kunyit-soft: var(--kunyit-soft);
+  --color-daun: var(--daun);
+  --color-daun-soft: var(--daun-soft);
+  --color-daun-ink: var(--daun-ink);
+  --color-mengkudu: var(--mengkudu);
+  --color-mengkudu-soft: var(--mengkudu-soft);
+  --color-mengkudu-ink: var(--mengkudu-ink);
+  --color-ungu: var(--ungu);
+  --color-ungu-soft: var(--ungu-soft);
+  --color-ungu-ink: var(--ungu-ink);
+  /* Set by a .hue-* scope, so one card or section picks its dye and everything inside follows. */
+  --color-hue: var(--hue);
+  --color-hue-soft: var(--hue-soft);
+  --color-hue-ink: var(--hue-ink);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    @apply bg-paper font-sans text-[15px] leading-relaxed text-ink;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-bold tracking-tight text-balance;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 25%, transparent);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Buttons: primary for the one main action per view, outline by default, ghost for low emphasis. */
+  .btn {
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-edge bg-raised px-4 text-sm font-semibold whitespace-nowrap transition-colors hover:border-ink disabled:cursor-default disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-accent bg-accent text-on-accent hover:border-accent hover:bg-[color-mix(in_oklab,var(--accent)_86%,var(--ink))];
+  }
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-muted hover:border-transparent hover:bg-surface hover:text-ink;
+  }
+  .btn-danger {
+    @apply border-danger bg-danger text-raised hover:border-danger hover:bg-[color-mix(in_oklab,var(--danger)_86%,var(--ink))];
+  }
+  .btn-sm {
+    @apply min-h-8 rounded-lg px-3 text-[13px];
+  }
+  .btn-lg {
+    @apply min-h-12 px-6 text-base;
+  }
+  .btn-icon {
+    @apply size-10 min-h-0 px-0;
+  }
+  .link {
+    @apply underline decoration-edge underline-offset-4 hover:decoration-ink;
+  }
+
+  .card {
+    @apply rounded-2xl border border-rule bg-raised shadow-[0_1px_2px_var(--shadow)];
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-none font-semibold;
+  }
+  .badge-neutral {
+    @apply bg-surface text-muted;
+  }
+  .badge-accent {
+    @apply bg-accent-soft text-accent;
+  }
+  .badge-alert {
+    @apply bg-alert/15 text-alert-ink;
+  }
+  .live-dot {
+    @apply size-2 rounded-full bg-current;
+  }
+
+  .seg {
+    @apply inline-flex flex-wrap gap-0.5 rounded-xl bg-surface p-1;
+  }
+  .seg-item {
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:text-ink has-checked:bg-raised has-checked:font-semibold has-checked:text-ink has-checked:shadow-[0_1px_2px_var(--shadow)] has-focus-visible:outline-2 has-focus-visible:outline-accent;
+  }
+
+  .tab {
+    @apply -mb-px inline-flex min-w-0 cursor-pointer items-center justify-center gap-1.5 border-b-2 border-transparent px-1 py-3 text-[13px] font-medium whitespace-nowrap text-muted transition-colors hover:text-ink aria-selected:border-accent aria-selected:font-semibold aria-selected:text-ink;
+  }
+
+  .switch {
+    @apply relative h-6 w-11 shrink-0 cursor-pointer rounded-full bg-edge transition-colors aria-checked:bg-accent;
+  }
+  .switch-knob {
+    @apply absolute top-0.5 left-0.5 size-5 rounded-full bg-raised shadow-[0_1px_2px_var(--shadow)] transition-transform;
+  }
+  .switch[aria-checked="true"] .switch-knob {
+    @apply translate-x-5;
+  }
+
+  .field {
+    @apply rounded-xl border border-edge bg-raised px-3 py-1.5 tabular-nums;
+  }
+  .label {
+    @apply text-[13px] text-muted;
+  }
+  .range {
+    @apply h-6 w-full cursor-pointer appearance-none bg-transparent;
+  }
+  .range::-webkit-slider-runnable-track {
+    @apply h-1.5 rounded-full bg-rule;
+  }
+  .range::-moz-range-track {
+    @apply h-1.5 rounded-full bg-rule;
+  }
+  .range::-webkit-slider-thumb {
+    @apply -mt-[5px] size-4 appearance-none rounded-full border-2 border-raised bg-accent shadow-[0_0_0_1px_var(--accent)];
+  }
+  .range::-moz-range-thumb {
+    @apply size-4 rounded-full border-2 border-raised bg-accent;
+  }
+  .range-lg::-webkit-slider-runnable-track {
+    @apply h-2.5;
+  }
+  .range-lg::-moz-range-track {
+    @apply h-2.5;
+  }
+  .range-lg::-webkit-slider-thumb {
+    @apply -mt-[7px] size-6 border-[3px];
+  }
+  .range-lg::-moz-range-thumb {
+    @apply size-6 border-[3px];
+  }
+  .check {
+    @apply size-4 shrink-0 cursor-pointer accent-accent;
+  }
+  .kbd {
+    @apply inline-grid min-w-6 place-items-center rounded-md border border-rule bg-raised px-1.5 py-0.5 text-xs font-semibold shadow-[0_1px_0_var(--rule)];
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-rule bg-raised/90 px-2 py-1 text-xs font-semibold tabular-nums;
+  }
+  .toast {
+    @apply flex w-full max-w-sm items-center gap-3 rounded-xl border border-rule bg-raised px-4 py-3 text-sm shadow-[0_8px_24px_-8px_var(--shadow)];
+  }
+  .dialog {
+    @apply m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl border border-rule bg-raised p-6 text-ink shadow-[0_16px_48px_-12px_var(--shadow)];
+  }
+  .dialog::backdrop {
+    background: rgb(20 16 12 / 0.45);
+  }
+
+  .band {
+    @apply bg-band text-on-band;
+  }
+  .band-card {
+    @apply rounded-2xl border border-white/10 bg-white/[0.05];
+  }
+  /* Floating readouts layered over the stage; the one place a strong shadow marks elevation. */
+  .float-card {
+    @apply rounded-2xl border border-rule bg-raised px-4 py-3 shadow-[0_12px_32px_-12px_var(--shadow),0_2px_6px_var(--shadow)];
+  }
+  /* Spotlit floor for the figure, so the 2.5D render reads as standing in a space. */
+  .stage {
+    background:
+      radial-gradient(60% 18% at 50% 92%, color-mix(in oklab, var(--ink) 9%, transparent), transparent 70%),
+      radial-gradient(110% 85% at 50% 30%, var(--raised) 0%, var(--surface) 70%);
+  }
+  /* The same floor, lit in the dye of the card it sits in. */
+  .stage-hue {
+    background:
+      radial-gradient(60% 18% at 50% 92%, color-mix(in oklab, var(--ink) 9%, transparent), transparent 70%),
+      radial-gradient(110% 85% at 50% 30%, var(--raised) 0%, var(--hue-soft) 75%);
+  }
+  /* --mark sets how much of the word is highlighted, so a headline can fill up as something gets worse. */
+  .marker {
+    background: linear-gradient(transparent 62%, color-mix(in oklab, var(--alert) 45%, transparent) 62%) no-repeat 0 0 / var(--mark, 100%) 100%;
+    transition: background-size 300ms ease-out;
+    @apply px-1;
+  }
+}
+
+.hue-nila {
+  --hue: var(--accent);
+  --hue-soft: var(--accent-soft);
+  --hue-ink: var(--accent);
+}
+.hue-daun {
+  --hue: var(--daun);
+  --hue-soft: var(--daun-soft);
+  --hue-ink: var(--daun-ink);
+}
+.hue-mengkudu {
+  --hue: var(--mengkudu);
+  --hue-soft: var(--mengkudu-soft);
+  --hue-ink: var(--mengkudu-ink);
+}
+.hue-ungu {
+  --hue: var(--ungu);
+  --hue-soft: var(--ungu-soft);
+  --hue-ink: var(--ungu-ink);
+}
+.hue-kunyit {
+  --hue: var(--kunyit);
+  --hue-soft: var(--kunyit-soft);
+  --hue-ink: var(--alert-ink);
+}
+
+/* Kawung, one of the oldest batik motifs: four petals around a point. Used only on dark bands, as identity. */
+.motif-kawung {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23f1ead9' stroke-opacity='0.07' stroke-width='1.2'%3E%3Cellipse cx='24' cy='11' rx='6.5' ry='11'/%3E%3Cellipse cx='24' cy='37' rx='6.5' ry='11'/%3E%3Cellipse cx='11' cy='24' rx='11' ry='6.5'/%3E%3Cellipse cx='37' cy='24' rx='11' ry='6.5'/%3E%3C/g%3E%3Ccircle cx='24' cy='24' r='1.6' fill='%23f1ead9' fill-opacity='0.12'/%3E%3C/svg%3E");
+  background-size: 48px 48px;
+}
+
+/* Both overlays are fixed, paint once, and only animate opacity, so changes stay on the compositor. */
+.edge-glow,
+.edge-cue {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+}
+.edge-glow {
+  box-shadow: inset 0 0 140px 24px color-mix(in oklab, var(--alert) 75%, transparent);
+  transition: opacity 1.6s ease;
+}
+.edge-cue {
+  box-shadow: inset 0 0 110px 14px color-mix(in oklab, var(--cue) 60%, transparent);
+  transition: opacity 1.2s ease;
+}
+
+.warm-shift {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: #ff8f3a;
+  mix-blend-mode: multiply;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+
+/* Keeps the camera video rendered (so frames keep arriving) without showing it. */
+.offscreen-video {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.figure .joint {
+  transition: transform 300ms linear;
+}
+
+.enter {
+  transition:
+    opacity 0.3s ease,
+    translate 0.3s ease;
+  @starting-style {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+/* 24 frames of the 3D kawung from assets/objects/objects.blend in one strip; jump-none lands each step on a frame. */
+.kawung-turn {
+  aspect-ratio: 1;
+  background: url("/3d/logo-wobble.webp") 0 0 / 2400% 100% no-repeat;
+  animation: kawung-turn 3.2s steps(24, jump-none) infinite;
+}
+@keyframes kawung-turn {
+  to {
+    background-position-x: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kawung-turn {
+    animation: none;
+  }
+  .figure .joint,
+  .edge-glow,
+  .edge-cue,
+  .warm-shift,
+  .enter {
+    transition: none;
+  }
 }

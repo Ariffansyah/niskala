@@ -1,69 +1,291 @@
-import Image from "next/image";
+import Image from 'next/image';
+import Link from 'next/link';
+import { IconArrowRight, IconCamera, IconCheck, IconLock, IconPip, IconShield } from '@/components/icons';
+import Hero from '@/components/hero';
+import PostureFigure, { FrontFigure } from '@/components/posture-figure';
+import SiteFooter from '@/components/site-footer';
+import { ROUTINES } from '@/lib/routines';
+import { UPRIGHT } from '@/lib/signals';
+
+// Each signal has its own dye and a 3D object from assets/objects/objects.blend.
+const SMALL_SIGNALS: { img: string; hue: string; name: string; how: string; answer: string }[] = [
+  {
+    img: 'eye',
+    hue: 'hue-daun',
+    name: 'Kedipan',
+    how: 'Normalnya 15 sampai 20 kali per menit. Pas natap layar, bisa anjlok jauh.',
+    answer: 'Kalau kelamaan di bawah sepuluh per menit, pinggir layar nyala, plus ada istirahat mata 20 detik.',
+  },
+  {
+    img: 'hourglass',
+    hue: 'hue-kunyit',
+    name: 'Lama di depan layar',
+    how: 'Dihitung selama halaman ini atau jendela kecilnya kelihatan. Tanpa kamera juga jalan.',
+    answer: 'Istirahat mata 20-20-20 dan stretching 60 detik, sesuai jadwalmu.',
+  },
+  {
+    img: 'mug',
+    hue: 'hue-mengkudu',
+    name: 'Pas kamu pergi',
+    how: 'Kamera lihat kursimu kosong lebih dari semenit.',
+    answer: 'Waktu itu dihitung jeda, bukan waktu layar. Jadwal pengingatnya ikut nyesuain.',
+  },
+  {
+    img: 'moon',
+    hue: 'hue-ungu',
+    name: 'Jam malam',
+    how: 'Jam tidurmu, cukup diatur sekali.',
+    answer: 'Dua jam sebelumnya layar mulai hangat, dan kamu diingetin buat mulai beres-beres.',
+  },
+];
+
+const CAMERAS = [
+  {
+    title: 'Kamera depan',
+    where: 'Webcam laptop di atas layar udah cukup.',
+    reads: ['Bungkuk ke depan', 'Miring ke samping', 'Kepala miring', 'Kedipan'],
+    misses: [] as string[],
+    front: true,
+    who: 'ayu' as const,
+    hue: 'hue-daun',
+  },
+  {
+    title: 'Kamera samping',
+    where: 'Webcam USB atau HP, setinggi bahu di samping meja. Dari situ leher dan punggung kebaca langsung, kayak fisioterapis ngecek postur.',
+    reads: ['Sudut leher, lebih akurat', 'Sudut punggung, lebih akurat'],
+    misses: ['Miring ke samping', 'Kedipan'],
+    front: false,
+    who: 'raka' as const,
+    hue: 'hue-nila',
+  },
+];
+
+const STAYS = [
+  'Gambar dari kamera, dicek di tab lalu langsung dibuang',
+  'Titik wajah, titik badan, dan waktu kedip',
+  'Posisi tegakmu waktu kalibrasi',
+  'Semua setelan dan ringkasan sesi, kecuali kamu nyalain cadangan',
+  'Bahkan modelnya diambil dari situs ini, bukan CDN',
+];
+const CAN_LEAVE = [
+  'Ringkasan sesi yang dibulatkan: menit aktif, menit bungkuk, jeda, rata-rata kedip',
+  'Setelan: jam tidur, layar hangat, jadwal jeda, kepekaan',
+  'Cuma setelah kamu nyalain “Cadangkan ringkasan”, pakai ID anonim',
+];
 
 export default function Home() {
+  const reset = ROUTINES.reset;
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <>
+      <main className="overflow-x-clip">
+        <Hero />
+
+        <section id="cara-kerja" className="band motif-kawung">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+            <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Enam hal yang dicek, dan cara Niskala ngingetin kamu.</h2>
+            <div className="mt-12 grid gap-5 lg:grid-cols-2">
+              <article className="band-card hue-mengkudu overflow-hidden">
+                <div className="h-60 bg-hue/20 p-3">
+                  <PostureFigure posture={{ ...UPRIGHT, torso: 0.75, head: 0.85 }} who="sekar" className="drop-shadow-xl" />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl">Bungkuk ke depan</h3>
+                  <p className="mt-2 text-on-band-muted text-pretty">
+                    Kamera depan ngukur tinggi, ukuran, dan anggukan wajahmu. Kamera samping langsung ngukur sudut leher dan punggung.
+                    Semuanya dibandingin sama posisi tegakmu waktu kalibrasi 4 detik.
+                  </p>
+                  <p className="mt-4 flex gap-2 text-pretty">
+                    <IconArrowRight className="mt-1 size-4 shrink-0 text-band-accent" />
+                    Pinggir layar nyala kuning, tapi baru kalau posisi itu bertahan sekitar sepuluh detik.
+                  </p>
+                </div>
+              </article>
+              <article className="band-card hue-ungu overflow-hidden">
+                <div className="h-60 bg-hue/20 p-3">
+                  <FrontFigure posture={{ ...UPRIGHT, side: 0.85, tilt: -0.35 }} who="bima" className="drop-shadow-xl" />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl">Miring ke samping</h3>
+                  <p className="mt-2 text-on-band-muted text-pretty">
+                    Wajah geser ke kiri atau kanan, atau garis matamu miring. Noleh ke monitor kedua nggak dihitung miring.
+                  </p>
+                  <p className="mt-4 flex gap-2 text-pretty">
+                    <IconArrowRight className="mt-1 size-4 shrink-0 text-band-accent" />
+                    Pinggir layar nyala juga, dan kamu dikasih tahu arahnya: badan miring ke kanan, atau kepala miring ke kiri.
+                  </p>
+                </div>
+              </article>
+            </div>
+            <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+              {SMALL_SIGNALS.map((s) => (
+                <article key={s.name} className={`band-card ${s.hue} overflow-hidden`}>
+                  <div className="grid h-36 place-items-center bg-hue/30">
+                    <Image src={`/3d/${s.img}.webp`} alt="" width={460} height={460} unoptimized className="h-24 w-auto drop-shadow-lg" />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-lg">{s.name}</h3>
+                    <p className="mt-2 text-on-band-muted text-pretty">{s.how}</p>
+                    <p className="mt-3 text-pretty">{s.answer}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+          <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Kamera depan atau samping, dua-duanya bisa.</h2>
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            {CAMERAS.map((c) => (
+              <article key={c.title} className={`card ${c.hue} grid overflow-hidden sm:grid-cols-[11rem_1fr]`}>
+                <div className="stage stage-hue grid place-items-center border-b border-rule p-3 sm:border-r sm:border-b-0">
+                  <div className={c.front ? 'h-44 sm:h-full' : 'h-44 w-full sm:h-auto'}>
+                    {c.front ? <FrontFigure posture={null} who={c.who} /> : <PostureFigure posture={{ ...UPRIGHT, torso: 0.35, head: 0.5 }} who={c.who} />}
+                  </div>
+                </div>
+                <div className="p-6">
+                  <h3 className="flex items-center gap-2 text-xl">
+                    <IconCamera className="size-5 text-hue" />
+                    {c.title}
+                  </h3>
+                  <ul className="mt-4 space-y-2">
+                    {c.reads.map((r) => (
+                      <li key={r} className="flex items-center gap-2">
+                        <span className="grid size-5 place-items-center rounded-full bg-daun-soft text-daun-ink">
+                          <IconCheck className="size-3" />
+                        </span>
+                        {r}
+                      </li>
+                    ))}
+                    {c.misses.map((r) => (
+                      <li key={r} className="flex items-center gap-2 text-muted line-through decoration-edge">
+                        <span className="grid size-5 place-items-center rounded-full bg-surface">
+                          <span className="h-0.5 w-2 rounded-full bg-edge" />
+                        </span>
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-4 border-t border-rule pt-4 text-pretty">{c.where}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="hue-daun border-y border-rule bg-hue-soft">
+          <div className="mx-auto grid max-w-6xl gap-x-16 gap-y-10 px-4 py-20 sm:px-8 sm:py-24 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+            <div>
+              <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Semenit buat nebus sejam duduk.</h2>
+              <Link href="/app" className="btn mt-8">
+                Coba stretching-nya
+                <IconArrowRight className="size-4" />
+              </Link>
+            </div>
+            <ol className="relative space-y-3 before:absolute before:top-6 before:bottom-6 before:left-[1.4rem] before:w-px before:bg-hue/30">
+              {reset.steps.map((s, i) => (
+                <li key={s.title} className="relative flex gap-5">
+                  <span className="relative z-10 grid size-11 shrink-0 place-items-center rounded-full bg-hue text-base font-extrabold text-on-accent ring-4 ring-hue-soft">
+                    {i + 1}
+                  </span>
+                  <div className="card flex-1 p-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="mr-auto text-lg">{s.title}</h3>
+                      {s.check && (
+                        <span className="badge bg-hue-soft text-hue-ink">
+                          <IconCamera className="size-3.5" />
+                          dicek kamera
+                        </span>
+                      )}
+                      <span className="badge badge-neutral">{s.seconds} dtk</span>
+                    </div>
+                    <p className="mt-1 text-muted text-pretty">{s.how}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section id="privasi" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+          <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+            <div>
+              <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Video kameramu nggak pernah keluar dari tab.</h2>
+              <Link href="/privasi" className="btn mt-8">
+                Baca soal privasi
+              </Link>
+              <Image src="/3d/padlock.webp" alt="" width={316} height={460} unoptimized className="mt-12 hidden h-44 w-auto -rotate-6 drop-shadow-xl lg:block" />
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="card hue-daun p-6">
+                <h3 className="flex items-center gap-2 text-lg">
+                  <IconLock className="size-5 text-hue" />
+                  Tetap di perangkatmu
+                </h3>
+                <ul className="mt-4 space-y-3">
+                  {STAYS.map((x) => (
+                    <li key={x} className="flex gap-3">
+                      <IconCheck className="mt-0.5 size-4 shrink-0 text-hue" />
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card hue-kunyit p-6">
+                <h3 className="flex items-center gap-2 text-lg">
+                  <IconShield className="size-5 text-hue-ink" />
+                  Keluar cuma kalau kamu izinkan
+                </h3>
+                <ul className="mt-4 space-y-3">
+                  {CAN_LEAVE.map((x) => (
+                    <li key={x} className="flex gap-3">
+                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-hue" aria-hidden />
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card hue-ungu flex gap-4 p-6 sm:col-span-2">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-hue-soft text-hue-ink">
+                  <IconPip />
+                </span>
+                <p className="text-pretty">
+                  Punya dua monitor? <span className="font-semibold">Jendela kecil</span> Niskala bisa kamu seret ke layar tempat kamu kerja,
+                  dan notifikasi desktop jadi cadangannya. Tetap nggak ada yang dikirim.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="band motif-kawung">
+          <div className="mx-auto grid max-w-6xl items-center gap-x-16 gap-y-8 px-4 py-20 sm:px-8 sm:py-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+            <div className="flex items-center gap-6 sm:gap-8">
+              <span className="grid size-28 shrink-0 place-items-center rounded-full bg-on-band shadow-[0_18px_40px_-12px_rgb(0_0_0/0.5)] sm:size-36">
+                <span className="kawung-turn size-24 sm:size-32" aria-hidden />
+              </span>
+              <h2 className="text-4xl sm:text-5xl">
+                <span className="text-on-band-muted">Sekala,</span> niskala.
+              </h2>
+            </div>
+            <div className="space-y-4 text-lg text-pretty">
+              <p>
+                Di Bali, <em>sekala</em> itu dunia yang kelihatan dan bisa disentuh. <em>Niskala</em> yang nggak kelihatan, tapi tetap
+                ngebentuk semuanya.
+              </p>
+              <p className="text-on-band-muted">
+                Kerja di depan layar juga punya sisi yang nggak kelihatan: punggung yang pelan-pelan bungkuk, mata yang lupa ngedip,
+                sejam yang tahu-tahu jadi tiga jam. Niskala bikin sisi itu kelihatan, terus minggir.
+              </p>
+              <Link href="/app" className="btn btn-lg mt-4 border-band-accent bg-band-accent text-[#1c2643] hover:border-on-band hover:bg-on-band">
+                Mulai sekarang, gratis
+                <IconArrowRight className="size-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
-    </div>
+      <SiteFooter />
+    </>
   );
 }

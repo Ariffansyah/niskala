@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Niskala
 
-## Getting Started
+Techcomfest 2027, Sub-theme 3: Smart Lifestyle & Digital Wellbeing (SDG 3).
 
-First, run the development server:
+A browser workspace (UI in Bahasa Indonesia) that watches posture and blink rate through the webcam, entirely on-device. Posture covers both planes: forward lean and head drop, and sideways lean and head tilt. It responds with a soft edge glow instead of pop-ups, guides 20-second eye breaks and a 60-second desk reset, and warms the screen as bedtime approaches.
+
+In Balinese thought *sekala* is the seen world and *niskala* the unseen. The logo is *kawung*, one of the oldest batik motifs: four petals that also read as eyes, one of them lit in kunyit, the thing Niskala makes visible. The palette follows batik dyes: lontar cream paper, soga brown line art, nila indigo for the brand and every primary action, and kunyit turmeric for strain. Three more dyes tell topics apart: daun leaf green for the eyes and for what went well, mengkudu morinda red for time away from the desk, and ungu eggplant for the evening. A `.hue-*` class sets a card or section's dye. The dark theme is *malam*.
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install   # also copies the MediaPipe wasm into public/mediapipe
+pnpm dev       # http://localhost:3000
+pnpm test      # signal math and insights aggregation (node:test, no build step)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Pages
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Route | What it is |
+| --- | --- |
+| `/` | Landing page whose hero is the live demo: the figures act out a slouch and a lean until you take the sliders, and the real edge glow answers |
+| `/app` | Workspace: first-run setup, tracking, breaks, evening, sensitivity, data |
+| `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks and late minutes |
+| `/privasi` | What is processed, stored, and optionally backed up |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Workspace features
 
-## Learn More
+- **Front or side camera:** a laptop webcam above the screen reads forward lean, sideways lean, head tilt and blinks (MediaPipe Face Landmarker). A camera at the side of the desk reads neck and trunk angles directly (MediaPipe Pose Landmarker), which is more accurate for forward-head posture but cannot see sideways lean or blinks. Each position has its own calibration, and any connected camera can be chosen.
+- **Two views of the figure:** side view for forward lean, front view (mirrored like the webcam) for sideways lean and head tilt.
+- **Three modes:** Camera (posture and blinks), Timer only (no camera, scheduled breaks), and Demo (sliders).
+- **Edge glow:** turmeric for sustained leaning or low blinking, indigo when a scheduled break is due. Never a modal.
+- **Breaks:** a 20-second eye break (20-20-20 rule) and a 60-second desk reset. Both are timed and step-by-step, with live head-angle and blink feedback from the camera, and can be snoozed for 5 minutes.
+- **Floating window (two monitors):** an always-on-top Picture-in-Picture window in Chrome and Edge 116+, or a small popup elsewhere, that can be dragged to the monitor you work on. It shows the figure, posture state, strain, the edge glow and break cues, and runs the guided breaks. The camera video and the timers move into it, so tracking keeps its full rate while the main tab is in the background.
+- **Desktop notifications:** opt-in system notifications for break cues and sustained strain, sent only when no Niskala window has focus.
+- **Status in the tab title:** "Bungkuk ke depan · Niskala", "Waktunya jeda · Niskala", readable from the taskbar or another screen.
+- **Away detection:** with the camera on, nobody in frame for a minute means you left the desk. That time is not counted as screen time; 2 minutes away counts as an eye break and 5 minutes as a desk reset.
+- **Evening:** bedtime-aware warm shift with wind-down and past-bedtime guidance.
+- **Sensitivity:** Gentle, Balanced or Strict thresholds. Optional soft chime.
+- **Keyboard:** `R` reset, `E` eye break, `M` floating window, `Esc` stop (snoozes the cue for 5 minutes).
+- **Data:** everything stays in local storage. Download as JSON, delete, or opt in to an anonymous Supabase backup.
+- **Installable:** web manifest and icons. Lontar/Malam/Auto theme with no flash on load.
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Module | Role |
+| --- | --- |
+| `lib/vision.ts` | MediaPipe Face Landmarker per video frame. Its loop follows the video element into the mini monitor window. |
+| `lib/signals.ts` | Pure math: baseline, posture on four axes (head, torso, side, tilt), blink counter, strain accumulators, sensitivity presets, bedtime stages |
+| `lib/insights.ts` | Per-day aggregation for the Insights page |
+| `lib/use-monitor.ts` | 4 Hz loop: drift, strain, glow, break cues, session totals, save and sync |
+| `lib/store.ts` | localStorage stores shaped for `useSyncExternalStore`, plus the pre-paint theme script |
+| `lib/sync.ts` | Optional Supabase backup (anonymous auth, RLS). The SDK loads only after opt-in. |
+| `components/posture-figure.tsx` | 2.5D figure: side view (four layers: hip, shoulder, neck pivots) and front view (three layers: hip and neck roll) |
+| `components/ui.tsx`, `ui-client.tsx` | Design-system parts: badge, stat card, meter, progress ring; switch, segmented control, tabs, confirm dialog, toasts |
+| `components/icons.tsx` | One-style icon set (24 px grid, 1.75 stroke) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Side camera.** The neck angle is the shoulder-to-ear line against vertical (the inverse of the clinical craniovertebral angle) and the trunk angle is the hip-to-shoulder line, both taken from the body side with the most visible landmarks and signed by which way the nose points, so a camera on either side works.
 
-## Deploy on Vercel
+**Sideways lean.** The midpoint between the eye corners is compared with the calibration in eye-widths; the midpoint barely moves when the head turns, so glancing at a second monitor is not read as a lean. Head tilt is the angle of the eye line in the raw frame, ordered by position so it never wraps around ±180°.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Debouncing.** Drift must pass the sensitivity threshold. Strain builds over 6 to 16 seconds, and the glow stays dark for the first 30%, so a glance at your phone never lights the edge.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Privacy.** Video frames and landmarks never leave the tab. The model and wasm are served from this origin.
+
+## Supabase (optional)
+
+1. Run `supabase/schema.sql` in the SQL editor.
+2. Enable **Authentication → Anonymous sign-ins**.
+3. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Set the same variables in Vercel.
+
+Without them the backup option is hidden. On Vercel, `VERCEL_PROJECT_PRODUCTION_URL` sets the canonical URL for metadata, the sitemap and robots.txt. Set `NEXT_PUBLIC_SITE_URL` to override it for a custom domain.
+
+## Figure assets
+
+`assets/figure/figure.blend` holds the scene: a primitive-built figure at a desk with laptop and mug, a three-band toon emission shader with a rim term, inverted-hull outlines in soga brown, an orthographic camera, and `pivot_hip` → `pivot_arms` / `pivot_neck` empties.
+
+Each body group (seat, torso, arms, head) is rendered alone, with the groups in front of it set as holdouts (`assets/figure/render/`). `figure.aseprite` stacks the layers, holds the pivot slices, and exports a 256-colour packed sheet (`public/figure/sheet.png`, 70 KB) plus `lib/figure-sheet.json`. In the browser the arms counter-rotate around the shoulder, so the hands stay on the keyboard as the back rounds.
+
+The front view uses a second orthographic camera (`OrthoFront`) at webcam height with the desk, laptop and mug hidden. Its base, upper and head layers are in `render-front/`, assembled in `figure-front.aseprite`, and exported as `public/figure/front.png` (34 KB) with `lib/figure-front.json`.
+
+**Four figures, one rig.** Raka (nila hoodie) is the original. Ayu (blunt bob, daun sweater), Sekar (side-swept bob, mengkudu hoodie) and Bima (short curls, glasses, ungu sweater) share his body and pivots; only hair, accessories and the toon colours change, so the slices stay the same. `variants.py`, run inside Blender, renders their layers into `assets/figure/<name>/`, and `pack.sh` builds their sheets (`public/figure/<name>.png`, `<name>-front.png`) with Aseprite. Each palette is rebuilt from its own pixels; reusing Raka's would snap every colour to nila. The workspace lets you pick a figure in Setelan or during setup.
+
+## 3D objects
+
+`assets/objects/objects.blend` holds the kawung logo, a webcam, an eye, an hourglass, a mug, a moon and star, a padlock and a snake plant, modelled from primitives with the figure's toon shader and outlines. Each is rendered at 512 px and served as a trimmed WebP from `public/3d/` (9 to 15 KB each). `logo-wobble.webp` is 24 frames of the logo turning, played with CSS `steps()` and held on the first frame for reduced motion.
+
+## Known limits
+
+- Without the floating window, tracking slows to about one frame a second while the tab is hidden, and blink rate is not measured.
+- The popup fallback (browsers without Picture-in-Picture) is a normal window, so it can be covered by other windows.
+- Head pitch is compared to the calibration as an absolute change, so looking up for a long time also counts as drift.
+- The warm shift tints Niskala only, not the whole screen.
