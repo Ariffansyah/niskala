@@ -1,3 +1,4 @@
+import type { Coach } from './coach';
 import type { Baseline, ProfileBaseline, Sensitivity } from './signals';
 
 // Everything here is local to the browser. Only `SessionSummary` and part of
@@ -65,6 +66,7 @@ const KEY = {
   sessions: 'niskala:sessions',
   syncedAt: 'niskala:synced-at',
   theme: 'niskala:theme',
+  coach: 'niskala:coach',
 };
 const MAX_SESSIONS = 200;
 
@@ -120,6 +122,8 @@ export const prefsStore = stored<Prefs>(KEY.prefs, DEFAULT_PREFS, (v) => ({ ...D
 export const baselineStore = stored<Baseline | null>(KEY.baseline, null, (v) => (v && 'roll' in v && 'cx' in v ? v : null));
 export const profileBaselineStore = stored<ProfileBaseline | null>(KEY.baselineSide, null, (v) => (v && 'neck' in v && 'trunk' in v ? v : null));
 export const themeStore = stored<Theme>(KEY.theme, 'auto');
+// The last coaching and the local day it was asked for.
+export const coachStore = stored<{ day: string; coach: Coach } | null>(KEY.coach, null);
 const NO_SESSIONS: SessionSummary[] = [];
 export const sessionsStore = stored<SessionSummary[]>(KEY.sessions, NO_SESSIONS, (v) =>
   // Rows saved before eye breaks existed lack the field.

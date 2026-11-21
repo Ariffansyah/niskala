@@ -7,7 +7,8 @@ import { duration, hhmm, minutes, parseHhmm, sideWord } from '@/lib/format';
 import { ROUTINES } from '@/lib/routines';
 import { SENSITIVITY, dominant, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
 import { chime } from '@/lib/sound';
-import { clearAll, exportData, prefsStore, type CameraView, type Mode, type Prefs, type Warmth } from '@/lib/store';
+import { byDay, dayScore, streak } from '@/lib/insights';
+import { clearAll, exportData, prefsStore, sessionsStore, type CameraView, type Mode, type Prefs, type Warmth } from '@/lib/store';
 import { syncConfigured } from '@/lib/sync';
 import { allowNotifications, canNotify } from '@/lib/notify';
 import { toast } from '@/lib/toast';
@@ -191,6 +192,7 @@ export default function Workspace() {
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const pipSupported = usePipSupported();
   const notifySupported = useSyncExternalStore(noop, canNotify, () => false);
+  const sessions = useSyncExternalStore(sessionsStore.subscribe, sessionsStore.get, sessionsStore.server);
   const [sim, setSim] = useState<Sim>({ head: 0, torso: 0, side: 0, tilt: 0, blink: 16, late: false });
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [camera, setCamera] = useState<Camera>({ state: 'off' });
@@ -342,6 +344,11 @@ export default function Workspace() {
   const posture = tracked ? snap.posture : null;
   const session = snap.session;
   const next = nextBreak(snap);
+  // The current session is saved every 15 s, so today's score follows it closely. The clock is read only
+  // after hydration: the prerendered page has no "today".
+  const days = hydrated ? byDay(sessions, 60, new Date()) : [];
+  const todayScore = days.length ? dayScore(days[days.length - 1]) : null;
+  const run = streak(days);
   const status = statusLine(snap, mode, cameraOn, calibrated, routine, view);
   // The tab title is visible from the taskbar or another monitor, so it carries the state too.
   const title = routine
@@ -414,6 +421,11 @@ export default function Workspace() {
           <p className="text-sm">
             <span className="text-muted">Sesi </span>
             <span className="font-semibold tabular-nums">{session ? minutes(session.active_s) : '0 dtk'}</span>
+          </p>
+          <p className="text-sm" title="Dari waktu tegak dan kedipan yang dicek hari ini. Target 70.">
+            <span className="text-muted">Skor hari ini </span>
+            <span className="font-semibold tabular-nums">{todayScore ?? '–'}</span>
+            {run > 0 && <span className="text-muted"> · {run} hari beruntun</span>}
           </p>
           <p className="text-sm">
             <span className="text-muted">Jeda berikutnya </span>
