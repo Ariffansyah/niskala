@@ -70,8 +70,14 @@ export default function Story() {
   const painter = useRef<() => void>(null);
 
   useEffect(() => {
+    // Held for the effect's lifetime: leaving the page detaches the refs before this cleanup runs, and the
+    // navigation's own scroll can still fire a frame in between.
+    const sky = skyRef.current!;
     const text = textRef.current!;
     const stage = stageRef.current!;
+    const nightLayer = nightRef.current!;
+    const glow = glowRef.current!;
+    const cue = cueRef.current!;
     const ctx = canvasRef.current!.getContext('2d')!;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const wide = matchMedia('(min-width: 1024px)');
@@ -96,12 +102,12 @@ export default function Story() {
     const show = (f: number) => {
       want = f;
       const night = clamp((f - story.night[0]) / (story.night[1] - story.night[0]));
-      nightRef.current!.style.opacity = String(night);
-      skyRef.current!.style.setProperty('--night', String(night));
+      nightLayer.style.opacity = String(night);
+      sky.style.setProperty('--night', String(night));
       // Light text only once the sky is past dusk; the rose half of the sunset still carries dark text.
-      skyRef.current!.toggleAttribute('data-night', night >= 0.6);
-      glowRef.current!.style.opacity = onScreen && within(f, story.glow) ? '0.8' : '0';
-      cueRef.current!.style.opacity = onScreen && within(f, story.cue) ? '0.8' : '0';
+      sky.toggleAttribute('data-night', night >= 0.6);
+      glow.style.opacity = onScreen && within(f, story.glow) ? '0.8' : '0';
+      cue.style.opacity = onScreen && within(f, story.cue) ? '0.8' : '0';
       paint();
     };
 
