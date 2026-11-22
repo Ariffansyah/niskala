@@ -123,15 +123,22 @@ export default function Home() {
         </section>
 
         <section id="privasi" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
-          <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
             <div>
               <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Video kameramu nggak pernah keluar dari tab.</h2>
               <Link href="/privasi" className="btn mt-8">
                 Baca soal privasi
               </Link>
-              <Image src="/3d/padlock.webp" alt="" width={316} height={460} unoptimized className="mt-12 hidden h-44 w-auto -rotate-6 drop-shadow-xl lg:block" />
             </div>
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="relative grid gap-5 sm:grid-cols-2">
+              <Image
+                src="/3d/padlock.webp"
+                alt=""
+                width={316}
+                height={460}
+                unoptimized
+                className="absolute -top-14 -right-5 z-10 hidden h-32 w-auto rotate-12 drop-shadow-xl sm:block"
+              />
               <div className="card hue-daun p-6">
                 <h3 className="flex items-center gap-2 text-lg">
                   <IconLock className="size-5 text-hue" />
