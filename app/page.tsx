@@ -48,13 +48,6 @@ export default function Home() {
       <main className="overflow-x-clip">
         <Hero />
 
-        <section id="cara-kerja" className="band motif-kawung">
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
-            <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Enam hal yang dicek, dan cara Niskala ngingetin kamu.</h2>
-            <Story />
-          </div>
-        </section>
-
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
           <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Kamera depan atau samping, dua-duanya bisa.</h2>
           <div className="mt-10 grid gap-5 md:grid-cols-2">
@@ -180,8 +173,25 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="band motif-kawung">
-          <div className="mx-auto grid max-w-6xl items-center gap-x-16 gap-y-8 px-4 py-20 sm:px-8 sm:py-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <Story />
+
+        <section className="band relative overflow-hidden">
+          {/* One kawung at the scale of the room instead of a tiled wallpaper: four petals that also read as eyes. */}
+          <svg
+            aria-hidden
+            viewBox="0 0 48 48"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="0.3"
+            className="pointer-events-none absolute top-1/2 -right-56 size-[46rem] -translate-y-1/2 text-on-band opacity-[0.07] max-md:hidden"
+          >
+            <ellipse cx="24" cy="11" rx="6.5" ry="11" />
+            <ellipse cx="24" cy="37" rx="6.5" ry="11" />
+            <ellipse cx="11" cy="24" rx="11" ry="6.5" />
+            <ellipse cx="37" cy="24" rx="11" ry="6.5" />
+            <circle cx="24" cy="24" r="1.6" fill="currentColor" stroke="none" />
+          </svg>
+          <div className="relative mx-auto grid max-w-6xl items-center gap-x-16 gap-y-8 px-4 py-20 sm:px-8 sm:py-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
             <div className="flex items-center gap-6 sm:gap-8">
               <span className="grid size-28 shrink-0 place-items-center rounded-full bg-on-band shadow-[0_18px_40px_-12px_rgb(0_0_0/0.5)] sm:size-36">
                 <span className="kawung-turn size-24 sm:size-32" aria-hidden />

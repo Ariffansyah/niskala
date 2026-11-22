@@ -55,6 +55,7 @@ const clamp = (x: number) => Math.min(1, Math.max(0, x));
 const FPS = 12;
 
 export default function Story() {
+  const skyRef = useRef<HTMLElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -94,7 +95,11 @@ export default function Story() {
 
     const show = (f: number) => {
       want = f;
-      nightRef.current!.style.opacity = String(clamp((f - story.night[0]) / (story.night[1] - story.night[0])));
+      const night = clamp((f - story.night[0]) / (story.night[1] - story.night[0]));
+      nightRef.current!.style.opacity = String(night);
+      skyRef.current!.style.setProperty('--night', String(night));
+      // Light text only once the sky is past dusk; the rose half of the sunset still carries dark text.
+      skyRef.current!.toggleAttribute('data-night', night >= 0.6);
       glowRef.current!.style.opacity = onScreen && within(f, story.glow) ? '0.8' : '0';
       cueRef.current!.style.opacity = onScreen && within(f, story.cue) ? '0.8' : '0';
       paint();
@@ -123,8 +128,12 @@ export default function Story() {
       const b = Math.min(BEATS.length - 1, Math.floor(p));
       onScreen = r.top < innerHeight && r.bottom > 0;
       setBeat(b);
-      // Off screen nothing plays, and coming back replays the beat in view.
-      if (!onScreen) current = -1;
+      // Off screen nothing plays, and coming back replays the beat in view. Once scrolled past, it stays night,
+      // so the sky still meets the nila band below after a jump down the page.
+      if (!onScreen) {
+        current = -1;
+        if (r.bottom <= 0) want = story.frames - 1;
+      }
       else if (b !== current) {
         current = b;
         playBeat(b);
@@ -172,43 +181,48 @@ export default function Story() {
   }, [who]);
 
   return (
-    <div className="relative lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
-      <div aria-hidden ref={glowRef} className="edge-glow" />
-      <div aria-hidden ref={cueRef} className="edge-cue" />
+    <section ref={skyRef} id="cara-kerja" className="sky">
+      <div className="mx-auto max-w-6xl px-4 pt-20 pb-10 sm:px-8 sm:pt-28">
+        <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Sehari bareng Niskala, dari pagi sampai jam tidur.</h2>
+        <div className="relative lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
+          <div aria-hidden ref={glowRef} className="edge-glow" />
+          <div aria-hidden ref={cueRef} className="edge-cue" />
 
-      <div className="sticky top-16 z-10 -mx-4 bg-band px-4 py-3 sm:-mx-8 sm:px-8 lg:order-2 lg:mx-0 lg:flex lg:h-[calc(100svh-4rem)] lg:items-center lg:self-start lg:bg-transparent lg:p-0">
-        <div className="relative w-full">
-          <div ref={stageRef} aria-hidden className="relative aspect-[4/3] w-full">
-            <Image src="/story/day.webp" alt="" fill unoptimized className="object-contain" />
-            <div ref={nightRef} className="absolute inset-0 opacity-0">
-              <Image src="/story/night.webp" alt="" fill unoptimized className="object-contain" />
+          <div className="sky-fill sticky top-16 z-10 -mx-4 px-4 py-3 sm:-mx-8 sm:px-8 lg:order-2 lg:mx-0 lg:flex lg:h-[calc(100svh-4rem)] lg:items-center lg:self-start lg:bg-transparent lg:p-0">
+            <div className="relative w-full">
+              <div ref={stageRef} aria-hidden className="sky-stage relative aspect-[4/3] w-full overflow-hidden rounded-3xl">
+                <Image src="/story/day.webp" alt="" fill unoptimized className="object-contain" />
+                <div ref={nightRef} className="absolute inset-0 opacity-0">
+                  <Image src="/story/night.webp" alt="" fill unoptimized className="object-contain" />
+                </div>
+                <canvas ref={canvasRef} width={story.width} height={story.height} className="absolute inset-0 size-full" />
+              </div>
+              <div className="absolute bottom-3 left-3 rounded-full bg-raised p-1.5 shadow-[0_8px_20px_-10px_rgb(0_0_0/0.5)] lg:-bottom-4 lg:-left-4">
+                <CastPicker value={who} onChange={setWho} size="size-10" label="Siapa yang main" />
+              </div>
             </div>
-            <canvas ref={canvasRef} width={story.width} height={story.height} className="absolute inset-0 size-full" />
           </div>
-          <div className="absolute bottom-3 left-3 rounded-full bg-raised p-1.5 shadow-[0_8px_20px_-10px_rgb(0_0_0/0.5)]">
-            <CastPicker value={who} onChange={setWho} size="size-10" label="Siapa yang main" />
+
+          <div ref={textRef} className="lg:order-1">
+            {BEATS.map((b, i) => (
+              <article
+                key={b.title}
+                className={`${b.hue} flex min-h-[75svh] flex-col justify-center py-10 transition-opacity duration-500 lg:min-h-[80svh] ${i === beat ? '' : 'opacity-35'}`}
+              >
+                <h3 className="flex items-center gap-3 text-2xl sm:text-3xl">
+                  <span className="size-3 shrink-0 rounded-full bg-hue" aria-hidden />
+                  {b.title}
+                </h3>
+                <p className="mt-3 text-lg text-sky-muted text-pretty">{b.how}</p>
+                <p className="mt-4 flex gap-2 text-lg text-pretty">
+                  <IconArrowRight className="mt-1.5 size-4 shrink-0 text-sky-mark" />
+                  {b.answer}
+                </p>
+              </article>
+            ))}
           </div>
         </div>
       </div>
-
-      <div ref={textRef} className="lg:order-1">
-        {BEATS.map((b, i) => (
-          <article
-            key={b.title}
-            className={`${b.hue} flex min-h-[75svh] flex-col justify-center py-10 transition-opacity duration-500 lg:min-h-[90svh] ${i === beat ? '' : 'opacity-35'}`}
-          >
-            <h3 className="flex items-center gap-3 text-2xl sm:text-3xl">
-              <span className="size-3 shrink-0 rounded-full bg-hue" aria-hidden />
-              {b.title}
-            </h3>
-            <p className="mt-3 text-lg text-on-band-muted text-pretty">{b.how}</p>
-            <p className="mt-4 flex gap-2 text-lg text-pretty">
-              <IconArrowRight className="mt-1.5 size-4 shrink-0 text-band-accent" />
-              {b.answer}
-            </p>
-          </article>
-        ))}
-      </div>
-    </div>
+    </section>
   );
 }
