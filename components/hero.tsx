@@ -94,7 +94,9 @@ export default function Hero() {
         sebelum terasa.
       </h1>
 
-      <figure className="relative mt-24 min-w-0 lg:col-start-2 lg:row-span-4 lg:self-center">
+      <figure className="relative isolate mt-24 min-w-0 lg:col-start-2 lg:row-span-4 lg:self-center">
+        {/* Morning light behind the stage: the page starts at daybreak and the story below ends at night. */}
+        <div aria-hidden className="absolute -inset-x-24 -inset-y-28 -z-10 bg-[radial-gradient(closest-side_at_62%_38%,color-mix(in_oklab,var(--kunyit)_38%,transparent),transparent)]" />
         {/* The stage stands in for a screen: the webcam clips onto its top edge and says the one thing people worry about. */}
         <div className="absolute bottom-[calc(100%-2.25rem)] left-1/2 z-10 flex w-64 -translate-x-1/2 flex-col items-center sm:bottom-[calc(100%-2.75rem)]">
           <p className="relative rounded-2xl border border-rule bg-raised px-3.5 py-2 text-center leading-snug font-semibold text-balance shadow-[0_8px_20px_-10px_var(--shadow)]">
