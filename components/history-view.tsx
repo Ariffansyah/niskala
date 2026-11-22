@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useState, useSyncExternalStore } from 'react';
 import { minutes } from '@/lib/format';
 import { weekSummary, type Week } from '@/lib/coach';
-import { GOAL, byDay, dayKey, dayScore, missions, streak, totals, type Day } from '@/lib/insights';
-import { coachStore, exportData, sessionsStore } from '@/lib/store';
+import { GOAL, byDay, dayKey, dayScore, missions, painAverages, painByScore, painOf, streak, totals, type Day } from '@/lib/insights';
+import { checkinsStore, coachStore, exportData, sessionsStore, type Checkin } from '@/lib/store';
 import { toast } from '@/lib/toast';
 import { IconArrowRight, IconCheck, IconDownload, IconEye, IconGauge, IconHistory, IconMoon, IconPosture, IconStretch, IconTimer } from './icons';
 import { Stat } from './ui';
@@ -105,6 +105,111 @@ function Chart({ days }: { days: Day[] }) {
   );
 }
 
+const one = (v: number) => v.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+
+/** Self-rated discomfort per day next to the score: the place where better posture can show up as less pain. */
+function PainCard({ days, checkins }: { days: Day[]; checkins: Checkin[] }) {
+  const byKey = new Map(checkins.map((c) => [c.day, c]));
+  const cmp = painByScore(days, checkins);
+  const avg = painAverages(days, checkins);
+  // Numbers fit a cell at 7 days on a phone and at 14 on wider screens; past that the tooltip and table carry them.
+  const numbers = days.length <= 7 ? '' : days.length <= 14 ? 'max-sm:hidden' : 'hidden';
+  const every = days.length > 14 ? 5 : 1;
+
+  return (
+    <section className="card p-5 sm:p-6">
+      <h2 className="text-lg">Pegal dan postur</h2>
+      {avg.n === 0 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-4">
+          <p className="max-w-xl text-muted text-pretty">
+            Isi cek pegal di ruang kerja tiap udahan kerja. Setelah beberapa hari, di sini kelihatan apakah hari yang lebih tegak bikin
+            badanmu lebih enteng.
+          </p>
+          <Link href="/app" className="btn btn-sm">
+            Isi cek pegal
+            <IconArrowRight className="size-4" />
+          </Link>
+        </div>
+      ) : (
+        <>
+          <ol className="mt-5 flex gap-[3px] sm:gap-1.5" aria-hidden>
+            {days.map((d) => {
+              const c = byKey.get(d.key);
+              const v = c && painOf(c);
+              const score = dayScore(d);
+              return (
+                <li
+                  key={d.key}
+                  className={`grid aspect-square max-h-14 flex-1 place-items-center rounded-md text-sm font-bold tabular-nums ${c ? '' : 'border border-dashed border-edge/40'}`}
+                  // One hue from faint to strong; the number inside carries the value too. Capped so the ink stays readable.
+                  style={v === undefined ? undefined : { background: `color-mix(in oklab, var(--mengkudu) ${Math.round(8 + v * 4.7)}%, var(--surface))` }}
+                  title={`${dayLabel(d.date)}: ${c ? `leher ${c.neck}, punggung ${c.back}, mata ${c.eyes}` : 'belum diisi'}${score === null ? '' : `, skor ${score}`}`}
+                >
+                  {v !== undefined && <span className={numbers}>{one(v)}</span>}
+                </li>
+              );
+            })}
+          </ol>
+          <ol className="mt-2 flex gap-[3px] text-center text-[11px] text-muted tabular-nums sm:gap-1.5" aria-hidden>
+            {days.map((d, i) => (
+              <li key={d.key} className="flex-1">
+                {(days.length - 1 - i) % every === 0 ? d.date.getDate() : ''}
+              </li>
+            ))}
+          </ol>
+          <div className="mt-5 space-y-2 text-pretty">
+            {cmp.ready ? (
+              <p>
+                Di hari skormu {GOAL} ke atas, pegalmu rata-rata <strong className="tabular-nums">{one(cmp.good.mean!)}</strong>. Di hari lain{' '}
+                <strong className="tabular-nums">{one(cmp.low.mean!)}</strong>.{' '}
+                {cmp.low.mean! - cmp.good.mean! >= 0.5
+                  ? 'Hari yang lebih tegak kelihatan bikin badanmu lebih enteng.'
+                  : cmp.good.mean! - cmp.low.mean! >= 0.5
+                    ? 'Belum kelihatan bedanya ke arah yang bagus. Coba cek setup meja, atau stretching lebih sering.'
+                    : 'Bedanya masih tipis, terus isi biar polanya makin jelas.'}
+              </p>
+            ) : (
+              <p className="text-muted">
+                Biar kelihatan polanya, butuh minimal dua hari dengan skor {GOAL} ke atas dan dua hari di bawahnya yang ada cek pegalnya.
+                Sekarang {cmp.good.n} dan {cmp.low.n}.
+              </p>
+            )}
+            <p className="text-muted tabular-nums">
+              Rata-rata dari {avg.n} hari: leher {one(avg.neck!)} · punggung {one(avg.back!)} · mata {one(avg.eyes!)}
+            </p>
+          </div>
+          <table className="sr-only">
+            <caption>Pegal per hari, skala 0 sampai 10</caption>
+            <thead>
+              <tr>
+                <th>Hari</th>
+                <th>Leher dan bahu</th>
+                <th>Punggung</th>
+                <th>Mata</th>
+                <th>Skor postur</th>
+              </tr>
+            </thead>
+            <tbody>
+              {days.map((d) => {
+                const c = byKey.get(d.key);
+                return (
+                  <tr key={d.key}>
+                    <td>{dayLabel(d.date)}</td>
+                    <td>{c?.neck ?? 'belum diisi'}</td>
+                    <td>{c?.back ?? 'belum diisi'}</td>
+                    <td>{c?.eyes ?? 'belum diisi'}</td>
+                    <td>{dayScore(d) ?? 'belum ada'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </>
+      )}
+    </section>
+  );
+}
+
 function CoachCard({ week, today }: { week: Week; today: string }) {
   const saved = useSyncExternalStore(coachStore.subscribe, coachStore.get, coachStore.server);
   const [busy, setBusy] = useState(false);
@@ -166,6 +271,7 @@ function CoachCard({ week, today }: { week: Week; today: string }) {
 
 export default function HistoryView() {
   const sessions = useSyncExternalStore(sessionsStore.subscribe, sessionsStore.get, sessionsStore.server);
+  const checkins = useSyncExternalStore(checkinsStore.subscribe, checkinsStore.get, checkinsStore.server);
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [range, setRange] = useState<(typeof RANGES)[number]>(14);
 
@@ -223,7 +329,9 @@ export default function HistoryView() {
 
           <Chart days={days} />
 
-          <CoachCard week={weekSummary(recent.slice(-7), run)} today={dayKey(new Date())} />
+          <PainCard days={days} checkins={checkins} />
+
+          <CoachCard week={weekSummary(recent.slice(-7), run, checkins)} today={dayKey(new Date())} />
 
           {best && (
             <div className="card flex items-center gap-4 p-5">
