@@ -18,7 +18,7 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 
 | Route | What it is |
 | --- | --- |
-| `/` | Landing page whose hero is the live demo: Raka and Ayu act out a slouch and a lean until you take the sliders, and the real edge glow answers. Below it a pinned room plays the six signals as you scroll |
+| `/` | Landing page whose hero is the live demo: Raka and Ayu act out a slouch and a lean until you take the sliders, and the real edge glow answers. Further down, a pinned room plays the six signals as you scroll, and the page runs from morning to night with it: the section's background goes from lontar through dusk to nila as the room's lights change, straight into the closing band |
 | `/app` | Workspace: first-run setup, tracking, breaks, evening, sensitivity, data |
 | `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks, late minutes, trainings and full-mission days |
 | `/privasi` | What is processed, stored, and optionally backed up |
