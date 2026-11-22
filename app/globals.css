@@ -345,6 +345,15 @@
     rotate: 1turn;
   }
 }
+.twinkle {
+  opacity: 0.25;
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  to {
+    opacity: 0.85;
+  }
+}
 
 /* Kawung, one of the oldest batik motifs: four petals around a point. Used only on dark bands, as identity. */
 .motif-kawung {
@@ -419,7 +428,8 @@
 @media (prefers-reduced-motion: reduce) {
   .kawung-turn,
   .drift,
-  .drift > svg {
+  .drift > svg,
+  .twinkle {
     animation: none;
   }
   .edge-glow,

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import story from '@/lib/story.json';
+import { Stars } from './ambient';
 import { CastPicker, type CastId } from './cast';
 import { IconArrowRight } from './icons';
 
@@ -187,8 +188,10 @@ export default function Story() {
   }, [who]);
 
   return (
-    <section ref={skyRef} id="cara-kerja" className="sky">
-      <div className="mx-auto max-w-6xl px-4 pt-20 pb-10 sm:px-8 sm:pt-28">
+    <section ref={skyRef} id="cara-kerja" className="sky relative">
+      {/* Stars come out with the room's night, over the last beat and the space below it. */}
+      <Stars className="bottom-0 h-[150svh] transition-opacity duration-[1.2s]" style={{ opacity: 'var(--night, 0)' }} />
+      <div className="relative mx-auto max-w-6xl px-4 pt-20 pb-10 sm:px-8 sm:pt-28">
         <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Sehari bareng Niskala, dari pagi sampai jam tidur.</h2>
         <div className="relative lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
           <div aria-hidden ref={glowRef} className="edge-glow" />

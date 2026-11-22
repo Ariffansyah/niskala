@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { IconArrowRight, IconCamera, IconCheck, IconLock, IconPip, IconShield } from '@/components/icons';
-import { Drift } from '@/components/ambient';
+import { Drift, Stars } from '@/components/ambient';
 import { CastFrame } from '@/components/cast';
 import Hero from '@/components/hero';
 import SiteFooter from '@/components/site-footer';
@@ -191,6 +191,7 @@ export default function Home() {
         <Story />
 
         <section className="band relative overflow-hidden">
+          <Stars className="inset-y-0 opacity-70" />
           {/* One kawung at the scale of the room instead of a tiled wallpaper: four petals that also read as eyes. */}
           <svg
             aria-hidden
