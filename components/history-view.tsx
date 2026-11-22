@@ -28,7 +28,8 @@ function download() {
 }
 
 function Chart({ days }: { days: Day[] }) {
-  const max = Math.max(...days.map((d) => d.active_s), 1);
+  // Round the top up to the next half hour so the axis reads "3 j" and "1 j 30 mnt", not "2 j 58 mnt".
+  const max = Math.ceil(Math.max(...days.map((d) => d.active_s), 1) / 1800) * 1800;
   const every = days.length > 14 ? 5 : 1;
   return (
     <figure className="card p-5 sm:p-6">
