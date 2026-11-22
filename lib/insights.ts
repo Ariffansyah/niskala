@@ -10,6 +10,7 @@ export type Day = {
   late_s: number;
   resets: number;
   eye_breaks: number;
+  trainings: number;
   blink: number | null; // active-time weighted mean
 };
 
@@ -22,7 +23,7 @@ export function byDay(sessions: SessionSummary[], count: number, now: Date): Day
   const index = new Map<string, Day & { blinkW: number; blinkT: number }>();
   for (let i = count - 1; i >= 0; i--) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const d = { key: dayKey(date), date, active_s: 0, tracked_s: 0, slouch_s: 0, low_blink_s: 0, late_s: 0, resets: 0, eye_breaks: 0, blink: null, blinkW: 0, blinkT: 0 };
+    const d = { key: dayKey(date), date, active_s: 0, tracked_s: 0, slouch_s: 0, low_blink_s: 0, late_s: 0, resets: 0, eye_breaks: 0, trainings: 0, blink: null, blinkW: 0, blinkT: 0 };
     index.set(d.key, d);
     days.push(d);
   }
@@ -36,6 +37,7 @@ export function byDay(sessions: SessionSummary[], count: number, now: Date): Day
     d.late_s += s.late_s;
     d.resets += s.resets;
     d.eye_breaks += s.eye_breaks;
+    d.trainings += s.trainings;
     if (s.avg_blink !== null) {
       d.blinkW += s.avg_blink * s.active_s;
       d.blinkT += s.active_s;

@@ -338,6 +338,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
       active_s: 0,
       resets: 0,
       eye_breaks: 0,
+      trainings: 0,
       slouch_s: 0,
       low_blink_s: 0,
       late_s: 0,
@@ -424,6 +425,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
 
   const completeRoutine = useCallback((kind: Routine) => {
     const m = model.current;
+    if (m.session) m.session[kind === 'train' ? 'trainings' : kind === 'reset' ? 'resets' : 'eye_breaks']++;
     // Training is extra practice, not a scheduled break: it clears the posture strain and nothing else.
     if (kind === 'train') {
       m.postureStrain = 0;
@@ -436,7 +438,6 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
       m.sinceReset = 0;
       m.postureStrain = 0;
     }
-    if (m.session) m.session[kind === 'reset' ? 'resets' : 'eye_breaks']++;
   }, []);
 
   // Due again in exactly SNOOZE_S, whatever the schedule.
