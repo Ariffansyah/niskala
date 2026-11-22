@@ -51,8 +51,10 @@ export default function PrivacyPage() {
           <Block icon={IconHistory} title="Yang kesimpan di browsermu">
             <p>
               Di local storage browser ini: <strong>setelan</strong>, <strong>kalibrasi</strong> (beberapa angka soal posisi tegakmu,
-              buat kamera depan dan samping), dan <strong>ringkasan sesi</strong> kayak menit aktif, menit bungkuk, jeda yang diambil,
-              dan rata-rata kedip. Semua itu jadi bahan halaman Riwayat.
+              buat kamera depan dan samping), <strong>ringkasan sesi</strong> (menit aktif, menit bungkuk, jeda yang diambil, rata-rata
+              kedip), dan <strong>cek pegal</strong> yang kamu isi sendiri. Semua itu jadi bahan halaman Riwayat. Cek pegal itu data
+              kesehatan, jadi nggak pernah ikut dicadangkan. Kalau kamu minta saran coach, yang dikirim cuma rata-rata mingguannya yang
+              dibulatkan.
             </p>
             <p>
               Kamu bisa unduh atau hapus semuanya dari tab Setelan di{' '}
