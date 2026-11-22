@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useEffectEvent, useRef, useState, type CSSProperties } from 'react';
 import { sideWord } from '@/lib/format';
 import { UPRIGHT } from '@/lib/signals';
+import { Drift } from './ambient';
 import { CAST, CastFrame, CastPicker, type CastId } from './cast';
 import { IconArrowRight, IconPosture } from './icons';
 import { HEAD_MAX_DEG, SIDE_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
@@ -83,8 +84,15 @@ export default function Hero() {
   const take = () => setAuto(false);
 
   return (
-    <section ref={sectionRef} className="mx-auto grid max-w-6xl gap-x-16 gap-y-10 px-4 pt-14 pb-20 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:grid-rows-[1fr_auto_auto_1fr] lg:gap-y-12 lg:pt-12">
+    <section ref={sectionRef} className="relative mx-auto grid max-w-6xl gap-x-16 gap-y-10 px-4 pt-14 pb-20 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:grid-rows-[1fr_auto_auto_1fr] lg:gap-y-12 lg:pt-12">
       <div aria-hidden className="edge-glow" style={{ opacity: glow && inView ? (auto ? 0.6 : 0.8) : 0 }} />
+      <Drift
+        spots={[
+          { top: '4%', left: '-3%', size: '26rem', turn: 150, float: 17 },
+          { top: '62%', left: '38%', size: '11rem', turn: 110, float: 13 },
+          { top: '-6%', right: '-4%', size: '18rem', turn: 170, float: 21 },
+        ]}
+      />
 
       <h1 className="text-[2.6rem] leading-[1.05] font-extrabold sm:text-6xl lg:col-start-1 lg:row-start-2 lg:text-[3.7rem]">
         Lihat{' '}

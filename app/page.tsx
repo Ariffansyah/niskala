@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { IconArrowRight, IconCamera, IconCheck, IconLock, IconPip, IconShield } from '@/components/icons';
+import { Drift } from '@/components/ambient';
 import { CastFrame } from '@/components/cast';
 import Hero from '@/components/hero';
 import SiteFooter from '@/components/site-footer';
@@ -48,7 +49,8 @@ export default function Home() {
       <main className="overflow-x-clip">
         <Hero />
 
-        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+        <section className="relative mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+          <Drift spots={[{ top: '-8%', right: '-2%', size: '22rem', turn: 160, float: 19 }]} />
           <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Kamera depan atau samping, dua-duanya bisa.</h2>
           <div className="mt-10 grid gap-5 md:grid-cols-2">
             {CAMERAS.map((c) => (
@@ -122,7 +124,13 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="privasi" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+        <section id="privasi" className="relative mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+          <Drift
+            spots={[
+              { top: '46%', left: '-6%', size: '20rem', turn: 140, float: 15 },
+              { top: '6%', left: '30%', size: '9rem', turn: 100, float: 12 },
+            ]}
+          />
           <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
             <div>
               <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Video kameramu nggak pernah keluar dari tab.</h2>
