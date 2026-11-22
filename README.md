@@ -20,7 +20,7 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 | --- | --- |
 | `/` | Landing page whose hero is the live demo: Raka and Ayu act out a slouch and a lean until you take the sliders, and the real edge glow answers. Below it a pinned room plays the six signals as you scroll |
 | `/app` | Workspace: first-run setup, tracking, breaks, evening, sensitivity, data |
-| `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks and late minutes |
+| `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks, late minutes, trainings and full-mission days |
 | `/privasi` | What is processed, stored, and optionally backed up |
 
 ## Workspace features
@@ -31,7 +31,8 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 - **Edge glow:** turmeric for sustained leaning or low blinking, indigo when a scheduled break is due. Never a modal.
 - **Breaks:** a 20-second eye break (20-20-20 rule) and a 60-second desk reset. Both are timed and step-by-step, with live head-angle and blink feedback from the camera, and can be snoozed for 5 minutes.
 - **Desk setup check:** with the front camera, three seconds give an estimate of the eye-to-screen distance (from the iris, which is close to 11.7 mm wide in nearly every adult), whether the screen is too low or too high (from where the eyes sit relative to the camera), and whether the face is lit or backlit, with a score and concrete fixes. Sitting closer than about 45 cm for 20 seconds also shows up in the status line.
-- **Daily score and streak:** a 0-100 score per day from the tracked time spent upright (three quarters) and blinking normally (one quarter), a target of 70, and the number of days in a row that met it, in the workspace bar and on the Riwayat page.
+- **Daily score and streak:** a 0-100 score per day from the tracked time spent upright (three quarters) and blinking normally (one quarter), a target of 70, and the number of days in a row that met it, in the workspace's missions card and on the Riwayat page.
+- **Daily missions:** four small goals a day that tie the other features together: three eye breaks, two stretching breaks, one posture training and a score of 70. An open one starts its routine in one click, it ticks off as soon as the routine ends, the floating window shows how many are done, and Riwayat and the weekly coach count the days where all four were met.
 - **Weekly coach:** on request, the Riwayat page sends the last 7 days as rounded totals to `/api/coach`, which asks Gemini for a headline and three tips in casual Indonesian. The server checks and rebuilds the numbers before they reach the prompt, answers only this site's own pages, allows a few requests per hour per address (as seen by the hosting proxy) and a fixed number for everyone together, and stores nothing. The limits live in the server's memory: on a host that runs many instances, put them in a shared store. You can see exactly what is sent before asking.
 - **Posture training:** a 2-minute routine started by hand (sit tall, chin tucks, shoulder-blade squeezes, then holding it while working). The camera counts the seconds you stay upright and the result is shown at the end.
 - **Voice:** optional spoken reminders in Indonesian. It names what drifted ("Kepalamu maju ke arah layar", "Badanmu miring ke kanan"), announces breaks, reads each step of the guided routines and sums up a training. Every line is recorded once with Gemini TTS and served as a small MP3 from `public/voice/`, so nothing is sent anywhere while the app runs.
@@ -74,6 +75,8 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 1. Run `supabase/schema.sql` in the SQL editor.
 2. Enable **Authentication → Anonymous sign-ins**.
 3. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Set the same variables in Vercel.
+
+A project set up before posture trainings were counted needs `supabase/schema.sql` run again: it adds the `trainings` column, and backups fail without it.
 
 Without them the backup option is hidden. On Vercel, `VERCEL_PROJECT_PRODUCTION_URL` sets the canonical URL for metadata, the sitemap and robots.txt. Set `NEXT_PUBLIC_SITE_URL` to override it for a custom domain.
 
