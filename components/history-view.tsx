@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useSyncExternalStore } from 'react';
 import { minutes } from '@/lib/format';
 import { weekSummary, type Week } from '@/lib/coach';
-import { GOAL, byDay, dayKey, dayScore, streak, totals, type Day } from '@/lib/insights';
+import { GOAL, byDay, dayKey, dayScore, missions, streak, totals, type Day } from '@/lib/insights';
 import { coachStore, exportData, sessionsStore } from '@/lib/store';
 import { toast } from '@/lib/toast';
 import { IconArrowRight, IconCheck, IconDownload, IconEye, IconGauge, IconHistory, IconMoon, IconPosture, IconStretch, IconTimer } from './icons';
@@ -58,11 +58,12 @@ function Chart({ days }: { days: Day[] }) {
               const h = (d.active_s / max) * 100;
               const lean = d.active_s ? (d.slouch_s / d.active_s) * 100 : 0;
               const score = dayScore(d);
+              const ms = missions(d);
               return (
                 <li
                   key={d.key}
                   className="group flex h-full flex-1 flex-col justify-end"
-                  title={`${dayLabel(d.date)}: ${minutes(d.active_s)}, ${pct(d.slouch_s, d.active_s)}% bungkuk${score === null ? '' : `, skor ${score}`}`}
+                  title={`${dayLabel(d.date)}: ${minutes(d.active_s)}, ${pct(d.slouch_s, d.active_s)}% bungkuk${score === null ? '' : `, skor ${score}`}, misi ${ms.filter((m) => m.done).length}/${ms.length}`}
                 >
                   <div className="flex flex-col overflow-hidden rounded-t-md transition-opacity group-hover:opacity-80" style={{ height: `${h}%` }}>
                     <div className="flex-1 bg-accent" />
@@ -215,6 +216,8 @@ export default function HistoryView() {
             <Stat icon={IconStretch} hue="hue-mengkudu" label="Jeda diambil" value={String(t.resets + t.eye_breaks)} detail={`${t.resets} stretching, ${t.eye_breaks} mata`} />
             <Stat icon={IconEye} hue="hue-daun" label="Rata-rata kedip" value={t.blink === null ? 'Belum ada' : `${Math.round(t.blink)}/mnt`} />
             <Stat icon={IconMoon} hue="hue-ungu" label="Lewat jam tidur" value={minutes(t.late_s)} />
+            <Stat icon={IconCheck} hue="hue-daun" label="Semua misi beres" value={`${t.missionDays} hari`} detail={`dari ${t.activeDays}`} />
+            <Stat icon={IconPosture} label="Latihan postur" value={`${t.trainings} kali`} />
             <Stat icon={IconHistory} label="Disimpan di" value="browser ini" detail="coach cuma dapat ringkasan" />
           </div>
 
