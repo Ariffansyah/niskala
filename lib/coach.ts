@@ -1,5 +1,6 @@
 // The weekly coach: the rounded numbers that leave the device, the prompt built from them, and the shape of the reply.
-import { GOAL, dayScore, missions, type Day } from './insights.ts';
+import { GOAL, dayScore, missions, painAverages, type Day } from './insights.ts';
+import type { Checkin } from './store.ts';
 
 export type Week = {
   days: number;
@@ -12,6 +13,10 @@ export type Week = {
   eyeBreaks: number;
   trainings: number;
   missionDays: number;
+  checkinDays: number;
+  neckPain: number | null;
+  backPain: number | null;
+  eyePain: number | null;
   lateMin: number;
   avgScore: number | null;
   streak: number;
@@ -23,10 +28,13 @@ const toMin = (s: number) => Math.round(s / 60);
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((100 * part) / whole) : 0);
 const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
 
-/** Seven days of totals in whole minutes and percents: everything the coach ever sees. */
-export function weekSummary(days: Day[], streak: number): Week {
+const round = (v: number | null) => (v === null ? null : Math.round(v));
+
+/** Seven days of totals in whole minutes and percents, and rounded discomfort: everything the coach ever sees. */
+export function weekSummary(days: Day[], streak: number, checkins: Checkin[] = []): Week {
   const sum = (f: (d: Day) => number) => days.reduce((a, d) => a + f(d), 0);
   const tracked = sum((d) => d.tracked_s);
+  const pain = painAverages(days, checkins);
   return {
     days: days.filter((d) => d.active_s > 0).length,
     activeMin: toMin(sum((d) => d.active_s)),
@@ -38,6 +46,10 @@ export function weekSummary(days: Day[], streak: number): Week {
     eyeBreaks: sum((d) => d.eye_breaks),
     trainings: sum((d) => d.trainings),
     missionDays: days.filter((d) => missions(d).every((m) => m.done)).length,
+    checkinDays: pain.n,
+    neckPain: round(pain.neck),
+    backPain: round(pain.back),
+    eyePain: round(pain.eyes),
     lateMin: toMin(sum((d) => d.late_s)),
     avgScore: mean(days.flatMap((d) => dayScore(d) ?? [])),
     streak,
@@ -64,6 +76,7 @@ export function parseWeek(v: unknown): Week | null {
   const limits = { days: 7, activeMin: WEEK_MIN, trackedMin: WEEK_MIN, leanPct: 100, lowBlinkPct: 100, stretchBreaks: 500, eyeBreaks: 500, trainings: 500, missionDays: 7, lateMin: WEEK_MIN, streak: 366 };
   if (!Object.entries(limits).every(([k, max]) => isInt(w[k], max))) return null;
   if (!intOrNull(w.avgBlink, 120) || !intOrNull(w.avgScore, 100)) return null;
+  if (!isInt(w.checkinDays, 7) || !['neckPain', 'backPain', 'eyePain'].every((k) => intOrNull(w[k], 10))) return null;
   if (!Array.isArray(w.perDay) || w.perDay.length > 7) return null;
   const perDay: Week['perDay'] = [];
   for (const x of w.perDay as Record<string, unknown>[]) {
@@ -84,6 +97,10 @@ export function parseWeek(v: unknown): Week | null {
     eyeBreaks: n('eyeBreaks'),
     trainings: n('trainings'),
     missionDays: n('missionDays'),
+    checkinDays: w.checkinDays as number,
+    neckPain: w.neckPain as number | null,
+    backPain: w.backPain as number | null,
+    eyePain: w.eyePain as number | null,
     lateMin: n('lateMin'),
     avgScore: w.avgScore as number | null,
     streak: n('streak'),
@@ -95,9 +112,10 @@ export function coachPrompt(week: Week) {
   return [
     'Kamu coach ergonomi yang ramah buat orang yang kerja lama di depan laptop. Ini ringkasan 7 hari terakhir dari aplikasi Niskala:',
     JSON.stringify(week),
-    `Artinya: leanPct = persen waktu bungkuk atau miring, lowBlinkPct = persen waktu kedipan di bawah 10 per menit, avgBlink = kedipan per menit, lateMin = menit di depan layar lewat jam tidur, score 0 sampai 100 dengan target ${GOAL}, streak = hari beruntun mencapai target, trainings = berapa kali Latihan postur 2 menit diselesaikan, missionDays = hari yang semua misi hariannya beres (istirahat mata 3 kali, stretching 2 kali, latihan postur sekali, skor ${GOAL} ke atas). score null artinya hari itu postur nggak dicek.`,
+    `Artinya: leanPct = persen waktu bungkuk atau miring, lowBlinkPct = persen waktu kedipan di bawah 10 per menit, avgBlink = kedipan per menit, lateMin = menit di depan layar lewat jam tidur, score 0 sampai 100 dengan target ${GOAL}, streak = hari beruntun mencapai target, trainings = berapa kali Latihan postur 2 menit diselesaikan, missionDays = hari yang semua misi hariannya beres (istirahat mata 3 kali, stretching 2 kali, latihan postur sekali, skor ${GOAL} ke atas). score null artinya hari itu postur nggak dicek. neckPain, backPain, eyePain = rata-rata pegal yang kamu isi sendiri di leher dan bahu, punggung, dan mata, skala 0 (nggak pegal) sampai 10 (pegal banget), dari checkinDays hari; null artinya belum diisi.`,
     'Tulis dalam bahasa Indonesia santai (pakai "kamu", boleh "nggak"), tanpa istilah medis berat dan tanpa diagnosis. Sebut periodenya "minggu ini".',
     'headline: satu kalimat yang merangkum minggu ini dengan angka yang paling penting.',
+    'Kalau ada angka pegal, kaitkan saran dengan bagian yang paling pegal (misalnya mata yang pegal dengan kedipan, leher dengan bungkuk). Kalau pegalnya 7 ke atas, sarankan juga periksa ke dokter atau fisioterapis, tanpa nakut-nakutin.',
     'tips: tepat 3 saran yang spesifik ke angka di atas. Masing-masing title pendek (maksimal 6 kata) dan body 1 sampai 2 kalimat yang bisa langsung dicoba besok. Kalau cocok, sarankan fitur Niskala: Latihan postur 2 menit, Cek setup meja, stretching 60 detik, istirahat mata 20 detik, atau layar hangat menjelang jam tidur.',
   ].join('\n');
 }
