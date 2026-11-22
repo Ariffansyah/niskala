@@ -433,18 +433,20 @@ export default function Workspace() {
             <span className="font-semibold tabular-nums">{next.value}</span>
             <span className="text-muted"> · {next.detail}</span>
           </p>
-          <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
-            <button type="button" className="btn btn-sm flex-1 sm:flex-none" disabled={routine !== null} onClick={() => setRoutine('reset')}>
-              <IconStretch className="size-4" />
-              Stretching 60 dtk
+          <div className="grid w-full grid-cols-3 gap-2 sm:ml-auto sm:flex sm:w-auto">
+            <button type="button" className="btn btn-sm px-2 sm:px-3" disabled={routine !== null} onClick={() => setRoutine('reset')}>
+              <IconStretch className="size-4 max-sm:hidden" />
+              Stretching
             </button>
-            <button type="button" className="btn btn-sm flex-1 sm:flex-none" disabled={routine !== null} onClick={() => setRoutine('train')}>
-              <IconPosture className="size-4" />
-              Latihan postur
+            <button type="button" className="btn btn-sm px-2 sm:px-3" disabled={routine !== null} onClick={() => setRoutine('train')}>
+              <IconPosture className="size-4 max-sm:hidden" />
+              <span>
+                Latihan<span className="max-sm:hidden"> postur</span>
+              </span>
             </button>
-            <button type="button" className="btn btn-sm flex-1 sm:flex-none" onClick={toggleMini} aria-pressed={pip !== null}>
-              <IconPip className="size-4" />
-              {pip ? 'Tutup jendela kecil' : 'Jendela kecil'}
+            <button type="button" className="btn btn-sm px-2 sm:px-3" onClick={toggleMini} aria-pressed={pip !== null}>
+              <IconPip className="size-4 max-sm:hidden" />
+              {pip ? 'Tutup jendela' : 'Jendela kecil'}
             </button>
           </div>
         </div>
@@ -495,56 +497,47 @@ export default function Workspace() {
             ) : (
               <>
                 {snap.cue && <CueBanner cue={snap.cue} onStart={() => setRoutine(snap.cue)} onSnooze={() => snooze(snap.cue!)} />}
-                <p className="flex gap-2.5 text-sm text-pretty">
-                  <IconInfo className="mt-0.5 size-4 shrink-0 text-muted" />
+                <p
+                  className={`flex gap-2.5 rounded-xl px-4 py-3 text-sm text-pretty transition-colors ${snap.glow > 0 ? 'bg-alert/15 text-alert-ink' : 'bg-surface'}`}
+                >
+                  <IconInfo className={`mt-0.5 size-4 shrink-0 ${snap.glow > 0 ? '' : 'text-muted'}`} />
                   {status}
                 </p>
-                {tracked && (
-                  <div className="card grid gap-5 p-4 sm:grid-cols-2">
-                    <Meter
-                      label="Tegang di postur"
-                      value={snap.postureStrain}
-                      threshold={0.3}
-                      hint={snap.glow > 0 && snap.postureStrain >= snap.eyeStrain ? 'pinggir nyala' : glowFrom(snap.postureStrain) > 0 ? 'hampir' : 'aman'}
+                <div className="card px-4">
+                  {tracked && (
+                    <div className="grid gap-5 border-b border-rule py-4 sm:grid-cols-2">
+                      <Meter
+                        label="Tegang di postur"
+                        value={snap.postureStrain}
+                        threshold={0.3}
+                        hint={snap.glow > 0 && snap.postureStrain >= snap.eyeStrain ? 'pinggir nyala' : glowFrom(snap.postureStrain) > 0 ? 'hampir' : 'aman'}
+                      />
+                      <Meter
+                        label="Capek di mata"
+                        value={snap.eyeStrain}
+                        threshold={0.3}
+                        hint={sideOnly ? 'nggak kebaca dari samping' : snap.blinkRate === null ? 'ngukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
+                      />
+                    </div>
+                  )}
+                  <div className="grid gap-x-8 py-1 sm:grid-cols-2 max-sm:[&>*:first-child]:border-b max-sm:[&>*:first-child]:border-rule">
+                    <Stat
+                      icon={IconLean}
+                      label="Miring"
+                      value={
+                        sideOnly && cameraOn
+                          ? 'Nggak kebaca'
+                          : !deg
+                            ? 'Nggak dicek'
+                            : Math.abs(deg.side) < 2 && Math.abs(deg.tilt) < 3
+                              ? 'Lurus'
+                              : Math.abs(deg.side) * (TILT_MAX_DEG / SIDE_MAX_DEG) >= Math.abs(deg.tilt)
+                                ? `Badan ${Math.abs(deg.side)}° ${sideWord(deg.side)}`
+                                : `Kepala ${Math.abs(deg.tilt)}° ${sideWord(deg.tilt)}`
+                      }
                     />
-                    <Meter
-                      label="Capek di mata"
-                      value={snap.eyeStrain}
-                      threshold={0.3}
-                      hint={sideOnly ? 'nggak kebaca dari samping' : snap.blinkRate === null ? 'ngukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
-                    />
+                    <Stat icon={IconTimer} hue="hue-kunyit" label="Bungkuk sesi ini" value={minutes(session?.slouch_s ?? 0)} />
                   </div>
-                )}
-                <div className="card grid gap-x-8 px-4 py-1 sm:grid-cols-2 [&>*]:border-b [&>*]:border-rule sm:[&>*:nth-last-child(-n+2)]:border-b-0 [&>*:last-child]:border-b-0">
-                  <Stat
-                    icon={IconPosture}
-                    label="Postur"
-                    value={posture ? postureWord(posture, S.drift) : 'Nggak dicek'}
-                    tone={posture && driftOf(posture) >= S.drift ? 'alert' : undefined}
-                  />
-                  <Stat
-                    icon={IconLean}
-                    label="Miring"
-                    value={
-                      sideOnly && cameraOn
-                        ? 'Nggak kebaca'
-                        : !deg
-                          ? 'Nggak dicek'
-                          : Math.abs(deg.side) < 2 && Math.abs(deg.tilt) < 3
-                            ? 'Lurus'
-                            : Math.abs(deg.side) * (TILT_MAX_DEG / SIDE_MAX_DEG) >= Math.abs(deg.tilt)
-                              ? `Badan ${Math.abs(deg.side)}° ${sideWord(deg.side)}`
-                              : `Kepala ${Math.abs(deg.tilt)}° ${sideWord(deg.tilt)}`
-                    }
-                  />
-                  <Stat
-                    icon={IconEye}
-                    hue="hue-daun"
-                    label="Kedip"
-                    value={sideOnly ? 'Nggak kebaca' : snap.blinkRate === null ? (tracked ? 'Ngukur' : 'Nggak dicek') : `${Math.round(snap.blinkRate)}/mnt`}
-                    tone={snap.blinkRate !== null && snap.blinkRate < S.lowBlink ? 'alert' : undefined}
-                  />
-                  <Stat icon={IconTimer} hue="hue-kunyit" label="Bungkuk sesi ini" value={minutes(session?.slouch_s ?? 0)} />
                 </div>
               </>
             )}
