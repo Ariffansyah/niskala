@@ -60,6 +60,9 @@ export type SessionSummary = {
   source: 'camera' | 'timer' | 'simulation';
 };
 
+/** How sore one evening felt, 0 (not at all) to 10 (as bad as it gets), the usual pain rating scale. */
+export type Checkin = { day: string; neck: number; back: number; eyes: number };
+
 const KEY = {
   prefs: 'niskala:prefs',
   baseline: 'niskala:baseline',
@@ -68,8 +71,10 @@ const KEY = {
   syncedAt: 'niskala:synced-at',
   theme: 'niskala:theme',
   coach: 'niskala:coach',
+  checkins: 'niskala:checkins',
 };
 const MAX_SESSIONS = 200;
+const MAX_CHECKINS = 366;
 
 // Storage can throw (private mode, quota, blocked cookies); the app must keep working without it.
 function read<T>(key: string): T | null {
@@ -137,13 +142,23 @@ export function saveSession(s: SessionSummary) {
   sessionsStore.set([s, ...rest].slice(0, MAX_SESSIONS));
 }
 
+// Health data, so it never leaves this browser: sync.ts does not read it.
+const NO_CHECKINS: Checkin[] = [];
+export const checkinsStore = stored<Checkin[]>(KEY.checkins, NO_CHECKINS);
+
+/** One check-in per local day; a second one the same day replaces the first. */
+export function saveCheckin(c: Checkin) {
+  const rest = (read<Checkin[]>(KEY.checkins) ?? []).filter((x) => x.day !== c.day);
+  checkinsStore.set([c, ...rest].slice(0, MAX_CHECKINS));
+}
+
 export const loadSyncedAt = () => read<string>(KEY.syncedAt);
 export const saveSyncedAt = (iso: string) => write(KEY.syncedAt, iso);
 
 /** Everything this browser holds, for the user's own download. */
 export function exportData() {
   return JSON.stringify(
-    { exported_at: new Date().toISOString(), prefs: prefsStore.get(), sessions: sessionsStore.get() },
+    { exported_at: new Date().toISOString(), prefs: prefsStore.get(), sessions: sessionsStore.get(), checkins: checkinsStore.get() },
     null,
     2,
   );
