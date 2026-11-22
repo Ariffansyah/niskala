@@ -8,7 +8,7 @@ import { ROUTINES } from '@/lib/routines';
 import { SENSITIVITY, dominant, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
 import { chime } from '@/lib/sound';
 import { byDay, dayScore, missions, streak, type Mission, type MissionId } from '@/lib/insights';
-import { clearAll, exportData, prefsStore, sessionsStore, type CameraView, type Mode, type Prefs, type Warmth } from '@/lib/store';
+import { checkinsStore, clearAll, exportData, prefsStore, saveCheckin, sessionsStore, type CameraView, type Checkin, type Mode, type Prefs, type Warmth } from '@/lib/store';
 import { syncConfigured } from '@/lib/sync';
 import { allowNotifications, canNotify } from '@/lib/notify';
 import { toast } from '@/lib/toast';
@@ -105,11 +105,11 @@ function nextBreak(snap: Snapshot) {
   return { value: `${Math.max(1, Math.ceil(n.s / 60))} mnt lagi`, detail: n.what };
 }
 
-function guidance(snap: Snapshot, bedtime: number) {
+function guidance(snap: Snapshot, bedtime: number, checkedIn: boolean) {
   const { stage, minutesToBed } = snap.night;
   if (stage === 'day') return `Layar mulai hangat jam ${hhmm((bedtime + 1440 - 120) % 1440)}, dua jam sebelum jam tidurmu (${hhmm(bedtime)}).`;
   if (stage === 'wind-down')
-    return `${minutesToBed} menit lagi jam tidur. Beresin yang lagi dikerjain, tugas baru simpan buat besok. Catat kamu berhenti di mana biar besok gampang lanjut.`;
+    return `${minutesToBed} menit lagi jam tidur. Beresin yang lagi dikerjain, tugas baru simpan buat besok. Catat kamu berhenti di mana biar besok gampang lanjut.${checkedIn ? '' : ' Sebelum udahan, isi cek pegal hari ini.'}`;
   const ran = snap.session ? minutes(snap.session.active_s) : '';
   return `Udah ${-minutesToBed} menit lewat jam tidurmu, dan sesi ini jalan ${ran}. Layar terang jam segini bikin susah ngantuk. Simpan kerjaanmu dan berhenti di jeda berikutnya.`;
 }
@@ -235,12 +235,100 @@ function Missions({ list, score, run, busy, onStart }: { list: Mission[]; score:
   );
 }
 
+const PAIN_AREAS = [
+  { key: 'neck', label: 'Leher & bahu' },
+  { key: 'back', label: 'Punggung' },
+  { key: 'eyes', label: 'Mata' },
+] as const;
+
+const painWord = (v: number) => (v === 0 ? 'nggak pegal' : v <= 3 ? 'dikit' : v <= 6 ? 'lumayan' : v <= 8 ? 'pegal' : 'pegal banget');
+
+/** Once a day, how sore you feel. Riwayat sets it against the score, so better posture can show up as less pain. */
+function CheckinCard({ day, saved, evening }: { day: string; saved: Checkin | undefined; evening: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Checkin>(saved ?? { day, neck: 0, back: 0, eyes: 0 });
+
+  if (saved && !editing) {
+    return (
+      <section aria-labelledby="checkin-title" className="card flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+        <h2 id="checkin-title" className="text-base">
+          Cek pegal hari ini
+        </h2>
+        <p className="text-sm text-muted tabular-nums">
+          leher {saved.neck} · punggung {saved.back} · mata {saved.eyes}
+        </p>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm ml-auto"
+          onClick={() => {
+            setDraft(saved);
+            setEditing(true);
+          }}
+        >
+          Ubah
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-labelledby="checkin-title" className={`card p-4 transition-shadow ${evening ? 'ring-2 ring-cue/40' : ''}`}>
+      <h2 id="checkin-title" className="flex flex-wrap items-baseline gap-x-2 text-base">
+        Cek pegal hari ini
+        <span className="text-sm font-normal text-muted">{evening ? 'pas banget diisi sekarang' : 'paling pas diisi pas udahan kerja'}</span>
+      </h2>
+      <div className="mt-3 space-y-3">
+        {PAIN_AREAS.map((a) => {
+          const v = draft[a.key];
+          return (
+            <label key={a.key} className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-sm sm:grid-cols-[7.5rem_1fr_7rem]">
+              <span className="font-medium">{a.label}</span>
+              <span className="text-right text-muted tabular-nums sm:order-last sm:text-left">
+                <span className="font-bold text-ink">{v}</span> · {painWord(v)}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={10}
+                step={1}
+                value={v}
+                onChange={(e) => setDraft({ ...draft, [a.key]: Number(e.target.value) })}
+                aria-valuetext={`${v} dari 10, ${painWord(v)}`}
+                className="range col-span-2 sm:col-span-1"
+              />
+            </label>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        {saved && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
+            Batal
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => {
+            saveCheckin({ ...draft, day });
+            setEditing(false);
+            toast('Kesimpan. Polanya kelihatan di Riwayat setelah beberapa hari.');
+          }}
+        >
+          Simpan
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function Workspace() {
   const prefs = useSyncExternalStore(prefsStore.subscribe, prefsStore.get, prefsStore.server);
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const pipSupported = usePipSupported();
   const notifySupported = useSyncExternalStore(noop, canNotify, () => false);
   const sessions = useSyncExternalStore(sessionsStore.subscribe, sessionsStore.get, sessionsStore.server);
+  const checkins = useSyncExternalStore(checkinsStore.subscribe, checkinsStore.get, checkinsStore.server);
   const [sim, setSim] = useState<Sim>({ head: 0, torso: 0, side: 0, tilt: 0, blink: 16, late: false });
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [camera, setCamera] = useState<Camera>({ state: 'off' });
@@ -402,6 +490,7 @@ export default function Workspace() {
   const missionsDone = todayMissions.filter((m) => m.done).length;
   const allDone = today !== undefined && missionsDone === todayMissions.length;
   const run = streak(days);
+  const checkedIn = today ? checkins.find((c) => c.day === today.key) : undefined;
   const status = statusLine(snap, mode, cameraOn, calibrated, routine, view);
   // The tab title is visible from the taskbar or another monitor, so it carries the state too.
   const title = routine
@@ -598,6 +687,7 @@ export default function Workspace() {
               </>
             )}
             {today && <Missions list={todayMissions} score={dayScore(today)} run={run} busy={routine !== null} onStart={setRoutine} />}
+            {today && <CheckinCard key={today.key} day={today.key} saved={checkedIn} evening={snap.night.stage !== 'day'} />}
           </section>
 
           <aside className="card self-start overflow-hidden lg:sticky lg:top-20">
@@ -802,7 +892,7 @@ export default function Workspace() {
                   </Field>
                   <div className="flex gap-3 rounded-xl bg-surface p-4 text-sm">
                     <IconMoon className="mt-0.5 size-4 shrink-0 text-accent" />
-                    <p className="text-pretty">{guidance(snap, prefs.bedtime)}</p>
+                    <p className="text-pretty">{guidance(snap, prefs.bedtime, checkedIn !== undefined)}</p>
                   </div>
                   <p className="text-sm text-pretty">Warna hangat ini cuma di Niskala. Nyalain juga night light di sistem biar seluruh layar ikut.</p>
                 </>
@@ -850,7 +940,7 @@ export default function Workspace() {
                   </Field>
                   <div className="space-y-4 border-t border-rule pt-5">
                     <p className="text-sm text-muted text-pretty">
-                      Yang disimpan di browser ini: setelan, kalibrasi, dan ringkasan tiap sesi. Nggak ada gambar atau data wajah yang
+                      Yang disimpan di browser ini: setelan, kalibrasi, ringkasan tiap sesi, dan cek pegal. Nggak ada gambar atau data wajah yang
                       disimpan.
                     </p>
                     {syncConfigured && (
