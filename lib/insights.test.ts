@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GOAL, byDay, dayScore, streak, totals } from './insights.ts';
+import { GOAL, byDay, dayScore, missions, streak, totals } from './insights.ts';
 import type { SessionSummary } from './store.ts';
 
 const session = (started: Date, over: Partial<SessionSummary>): SessionSummary => ({
@@ -77,4 +77,21 @@ test('the streak counts goal days back from today without breaking on an unfinis
   assert.equal(streak(byDay([bad(16), good(17), good(18), good(19)], 10, now)), 3);
   assert.equal(streak(byDay([good(17), good(18), good(19), good(20)], 10, now)), 4);
   assert.equal(streak(byDay([good(17), bad(19)], 10, now)), 0);
+});
+
+test('missions add up across the day and every one has to be met for a full day', () => {
+  const now = new Date(2026, 10, 20, 18, 0);
+  const morning = session(new Date(2026, 10, 20, 9, 0), { active_s: 1800, slouch_s: 120, eye_breaks: 2, resets: 1 });
+  const [half] = byDay([morning], 1, now);
+  assert.deepEqual(
+    missions(half).map((m) => [m.id, m.done]),
+    [['eye', false], ['reset', false], ['train', false], ['score', true]],
+  );
+  const afternoon = session(new Date(2026, 10, 20, 14, 0), { active_s: 600, source: 'timer', eye_breaks: 1, resets: 1, trainings: 1 });
+  const days = byDay([morning, afternoon], 1, now);
+  assert.ok(missions(days[0]).every((m) => m.done));
+  assert.equal(totals(days).missionDays, 1);
+  // Under five tracked minutes there is no score, so the score mission stays open.
+  const [short] = byDay([session(new Date(2026, 10, 20, 9, 0), { active_s: 200, eye_breaks: 3, resets: 2, trainings: 1 })], 1, now);
+  assert.equal(missions(short).find((m) => m.id === 'score')!.done, false);
 });

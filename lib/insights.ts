@@ -71,6 +71,22 @@ export function streak(days: Day[]) {
   return n;
 }
 
+export type MissionId = 'eye' | 'reset' | 'train' | 'score';
+export type Mission = { id: MissionId; label: string; have: number; need: number; done: boolean };
+
+/** A small daily checklist that ties the breaks, posture training and the score together. */
+export function missions(d: Day): Mission[] {
+  const list = [
+    { id: 'eye' as const, label: 'Istirahat mata 3 kali', have: d.eye_breaks, need: 3 },
+    { id: 'reset' as const, label: 'Stretching 2 kali', have: d.resets, need: 2 },
+    { id: 'train' as const, label: 'Latihan postur sekali', have: d.trainings, need: 1 },
+    { id: 'score' as const, label: `Skor ${GOAL} ke atas`, have: dayScore(d) ?? 0, need: GOAL },
+  ];
+  return list.map((m) => ({ ...m, done: m.have >= m.need }));
+}
+
+export const missionsDone = (d: Day) => missions(d).filter((m) => m.done).length;
+
 export function totals(days: Day[]) {
   const sum = (f: (d: Day) => number) => days.reduce((a, d) => a + f(d), 0);
   const active = sum((d) => d.active_s);
@@ -82,6 +98,8 @@ export function totals(days: Day[]) {
     late_s: sum((d) => d.late_s),
     resets: sum((d) => d.resets),
     eye_breaks: sum((d) => d.eye_breaks),
+    trainings: sum((d) => d.trainings),
+    missionDays: days.filter((d) => missions(d).every((m) => m.done)).length,
     activeDays: days.filter((d) => d.active_s > 0).length,
     blink: withBlink.length
       ? withBlink.reduce((a, d) => a + d.blink! * d.active_s, 0) / withBlink.reduce((a, d) => a + d.active_s, 0)
