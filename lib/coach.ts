@@ -1,5 +1,5 @@
 // The weekly coach: the rounded numbers that leave the device, the prompt built from them, and the shape of the reply.
-import { GOAL, dayScore, type Day } from './insights.ts';
+import { GOAL, dayScore, missions, type Day } from './insights.ts';
 
 export type Week = {
   days: number;
@@ -10,6 +10,8 @@ export type Week = {
   avgBlink: number | null;
   stretchBreaks: number;
   eyeBreaks: number;
+  trainings: number;
+  missionDays: number;
   lateMin: number;
   avgScore: number | null;
   streak: number;
@@ -34,6 +36,8 @@ export function weekSummary(days: Day[], streak: number): Week {
     avgBlink: mean(days.flatMap((d) => (d.blink === null ? [] : [d.blink]))),
     stretchBreaks: sum((d) => d.resets),
     eyeBreaks: sum((d) => d.eye_breaks),
+    trainings: sum((d) => d.trainings),
+    missionDays: days.filter((d) => missions(d).every((m) => m.done)).length,
     lateMin: toMin(sum((d) => d.late_s)),
     avgScore: mean(days.flatMap((d) => dayScore(d) ?? [])),
     streak,
@@ -57,7 +61,7 @@ const WEEK_MIN = 7 * 1440;
 export function parseWeek(v: unknown): Week | null {
   if (!v || typeof v !== 'object') return null;
   const w = v as Record<string, unknown>;
-  const limits = { days: 7, activeMin: WEEK_MIN, trackedMin: WEEK_MIN, leanPct: 100, lowBlinkPct: 100, stretchBreaks: 500, eyeBreaks: 500, lateMin: WEEK_MIN, streak: 366 };
+  const limits = { days: 7, activeMin: WEEK_MIN, trackedMin: WEEK_MIN, leanPct: 100, lowBlinkPct: 100, stretchBreaks: 500, eyeBreaks: 500, trainings: 500, missionDays: 7, lateMin: WEEK_MIN, streak: 366 };
   if (!Object.entries(limits).every(([k, max]) => isInt(w[k], max))) return null;
   if (!intOrNull(w.avgBlink, 120) || !intOrNull(w.avgScore, 100)) return null;
   if (!Array.isArray(w.perDay) || w.perDay.length > 7) return null;
@@ -78,6 +82,8 @@ export function parseWeek(v: unknown): Week | null {
     avgBlink: w.avgBlink as number | null,
     stretchBreaks: n('stretchBreaks'),
     eyeBreaks: n('eyeBreaks'),
+    trainings: n('trainings'),
+    missionDays: n('missionDays'),
     lateMin: n('lateMin'),
     avgScore: w.avgScore as number | null,
     streak: n('streak'),
@@ -89,7 +95,7 @@ export function coachPrompt(week: Week) {
   return [
     'Kamu coach ergonomi yang ramah buat orang yang kerja lama di depan laptop. Ini ringkasan 7 hari terakhir dari aplikasi Niskala:',
     JSON.stringify(week),
-    `Artinya: leanPct = persen waktu bungkuk atau miring, lowBlinkPct = persen waktu kedipan di bawah 10 per menit, avgBlink = kedipan per menit, lateMin = menit di depan layar lewat jam tidur, score 0 sampai 100 dengan target ${GOAL}, streak = hari beruntun mencapai target. score null artinya hari itu postur nggak dicek.`,
+    `Artinya: leanPct = persen waktu bungkuk atau miring, lowBlinkPct = persen waktu kedipan di bawah 10 per menit, avgBlink = kedipan per menit, lateMin = menit di depan layar lewat jam tidur, score 0 sampai 100 dengan target ${GOAL}, streak = hari beruntun mencapai target, trainings = berapa kali Latihan postur 2 menit diselesaikan, missionDays = hari yang semua misi hariannya beres (istirahat mata 3 kali, stretching 2 kali, latihan postur sekali, skor ${GOAL} ke atas). score null artinya hari itu postur nggak dicek.`,
     'Tulis dalam bahasa Indonesia santai (pakai "kamu", boleh "nggak"), tanpa istilah medis berat dan tanpa diagnosis. Sebut periodenya "minggu ini".',
     'headline: satu kalimat yang merangkum minggu ini dengan angka yang paling penting.',
     'tips: tepat 3 saran yang spesifik ke angka di atas. Masing-masing title pendek (maksimal 6 kata) dan body 1 sampai 2 kalimat yang bisa langsung dicoba besok. Kalau cocok, sarankan fitur Niskala: Latihan postur 2 menit, Cek setup meja, stretching 60 detik, istirahat mata 20 detik, atau layar hangat menjelang jam tidur.',
