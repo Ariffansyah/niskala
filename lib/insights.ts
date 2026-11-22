@@ -1,4 +1,4 @@
-import type { SessionSummary } from './store';
+import type { Checkin, SessionSummary } from './store';
 
 export type Day = {
   key: string; // local YYYY-MM-DD
@@ -104,5 +104,40 @@ export function totals(days: Day[]) {
     blink: withBlink.length
       ? withBlink.reduce((a, d) => a + d.blink! * d.active_s, 0) / withBlink.reduce((a, d) => a + d.active_s, 0)
       : null,
+  };
+}
+
+/** The mean of the three areas, so one number can sit on a day. */
+export const painOf = (c: Checkin) => (c.neck + c.back + c.eyes) / 3;
+
+const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+/**
+ * Discomfort on days that met the score goal against days that did not, over the given days. Only days with both a
+ * score and a check-in count, and each side needs two of them before the comparison means anything.
+ */
+export function painByScore(days: Day[], checkins: Checkin[]) {
+  const byDay = new Map(checkins.map((c) => [c.day, c]));
+  const good: number[] = [];
+  const low: number[] = [];
+  for (const d of days) {
+    const c = byDay.get(d.key);
+    const s = dayScore(d);
+    if (!c || s === null) continue;
+    (s >= GOAL ? good : low).push(painOf(c));
+  }
+  const ready = good.length >= 2 && low.length >= 2;
+  return { good: { n: good.length, mean: mean(good) }, low: { n: low.length, mean: mean(low) }, ready };
+}
+
+/** Each area's mean over the check-ins that fall on the given days, or null with none. */
+export function painAverages(days: Day[], checkins: Checkin[]) {
+  const keys = new Set(days.map((d) => d.key));
+  const inRange = checkins.filter((c) => keys.has(c.day));
+  return {
+    n: inRange.length,
+    neck: mean(inRange.map((c) => c.neck)),
+    back: mean(inRange.map((c) => c.back)),
+    eyes: mean(inRange.map((c) => c.eyes)),
   };
 }

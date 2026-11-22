@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GOAL, byDay, dayScore, missions, streak, totals } from './insights.ts';
-import type { SessionSummary } from './store.ts';
+import { GOAL, byDay, dayScore, missions, painAverages, painByScore, streak, totals } from './insights.ts';
+import type { Checkin, SessionSummary } from './store.ts';
 
 const session = (started: Date, over: Partial<SessionSummary>): SessionSummary => ({
   id: crypto.randomUUID(),
@@ -94,4 +94,27 @@ test('missions add up across the day and every one has to be met for a full day'
   // Under five tracked minutes there is no score, so the score mission stays open.
   const [short] = byDay([session(new Date(2026, 10, 20, 9, 0), { active_s: 200, eye_breaks: 3, resets: 2, trainings: 1 })], 1, now);
   assert.equal(missions(short).find((m) => m.id === 'score')!.done, false);
+});
+
+test('discomfort compares goal days with the rest only once each side has two days', () => {
+  const now = new Date(2026, 10, 20, 20, 0);
+  const at = (day: number, slouch: number) => session(new Date(2026, 10, day, 10, 0), { active_s: 1800, slouch_s: slouch });
+  // 16 and 17 meet the goal, 18 and 19 do not, 20 has a check-in but no tracked time.
+  const days = byDay([at(16, 60), at(17, 90), at(18, 1500), at(19, 1400)], 7, now);
+  const c = (day: number, neck: number, back: number, eyes: number): Checkin => ({ day: `2026-11-${day}`, neck, back, eyes });
+  const checkins = [c(16, 2, 1, 3), c(17, 1, 2, 3), c(18, 6, 5, 7), c(20, 9, 9, 9)];
+
+  const early = painByScore(days, checkins);
+  assert.equal(early.ready, false); // only one low day so far
+  assert.equal(early.good.n, 2);
+  assert.equal(early.good.mean, 2);
+
+  const full = painByScore(days, [...checkins, c(19, 5, 4, 6)]);
+  assert.equal(full.ready, true);
+  assert.equal(full.low.mean, 5.5);
+
+  const avg = painAverages(days, checkins);
+  assert.equal(avg.n, 4);
+  assert.equal(avg.neck, 4.5);
+  assert.equal(painAverages(days.slice(0, 2), checkins).n, 0);
 });
