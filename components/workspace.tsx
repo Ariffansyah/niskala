@@ -7,7 +7,7 @@ import { duration, hhmm, minutes, parseHhmm, sideWord } from '@/lib/format';
 import { ROUTINES } from '@/lib/routines';
 import { SENSITIVITY, dominant, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
 import { chime } from '@/lib/sound';
-import { byDay, dayScore, streak } from '@/lib/insights';
+import { byDay, dayScore, missions, streak, type Mission, type MissionId } from '@/lib/insights';
 import { clearAll, exportData, prefsStore, sessionsStore, type CameraView, type Mode, type Prefs, type Warmth } from '@/lib/store';
 import { syncConfigured } from '@/lib/sync';
 import { allowNotifications, canNotify } from '@/lib/notify';
@@ -19,6 +19,7 @@ import CameraPanel, { type Camera } from './camera-panel';
 import {
   IconBell,
   IconCamera,
+  IconCheck,
   IconDownload,
   IconEye,
   IconGauge,
@@ -187,6 +188,53 @@ function CueBanner({ cue, onStart, onSnooze }: { cue: BreakKind; onStart: () => 
   );
 }
 
+const MISSION_LOOK: Record<MissionId, [typeof IconEye, string]> = {
+  eye: [IconEye, 'hue-daun'],
+  reset: [IconStretch, 'hue-mengkudu'],
+  train: [IconPosture, 'hue-nila'],
+  score: [IconGauge, 'hue-nila'],
+};
+
+function Missions({ list, score, run, busy, onStart }: { list: Mission[]; score: number | null; run: number; busy: boolean; onStart: (r: Routine) => void }) {
+  return (
+    <section aria-labelledby="missions-title" className="card p-4">
+      <h2 id="missions-title" className="flex flex-wrap items-baseline gap-x-2 text-base">
+        Misi hari ini
+        <span className="text-sm font-normal text-muted tabular-nums">
+          {list.filter((m) => m.done).length}/{list.length} beres{run > 0 && ` · ${run} hari beruntun`}
+        </span>
+      </h2>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        {list.map((m) => {
+          const [Icon, hue] = MISSION_LOOK[m.id];
+          return (
+            <li key={m.id} className={`flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 ${m.done ? 'hue-daun bg-hue-soft' : 'bg-surface'}`}>
+              <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${m.done ? 'bg-daun text-raised' : `${hue} bg-hue-soft text-hue-ink`}`}>
+                {m.done ? <IconCheck className="size-4" /> : <Icon className="size-4" />}
+              </span>
+              <span className="min-w-0 flex-1 text-sm font-medium">{m.label}</span>
+              {m.done ? (
+                <span className="text-sm font-semibold text-hue-ink">Beres</span>
+              ) : m.id === 'score' ? (
+                <span className="text-sm text-muted tabular-nums">{score === null ? 'belum ada' : `sekarang ${score}`}</span>
+              ) : (
+                <>
+                  <span className="text-sm text-muted tabular-nums">
+                    {m.have}/{m.need}
+                  </span>
+                  <button type="button" className="btn btn-sm" disabled={busy} onClick={() => onStart(m.id as Routine)} aria-label={`Mulai ${ROUTINES[m.id as Routine].short.toLowerCase()}`}>
+                    Mulai
+                  </button>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export default function Workspace() {
   const prefs = useSyncExternalStore(prefsStore.subscribe, prefsStore.get, prefsStore.server);
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
@@ -201,6 +249,7 @@ export default function Workspace() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const cameraRun = useRef<{ token: number; stop?: () => void }>({ token: 0 });
+  const allDoneSeen = useRef<{ day: string; all: boolean } | null>(null);
 
   const mode = prefs.mode;
   const cameraOn = camera.state === 'on';
@@ -348,7 +397,10 @@ export default function Workspace() {
   // The current session is saved every 15 s, so today's score follows it closely. The clock is read only
   // after hydration: the prerendered page has no "today".
   const days = hydrated ? byDay(sessions, 60, new Date()) : [];
-  const todayScore = days.length ? dayScore(days[days.length - 1]) : null;
+  const today = days.at(-1);
+  const todayMissions = today ? missions(today) : [];
+  const missionsDone = todayMissions.filter((m) => m.done).length;
+  const allDone = today !== undefined && missionsDone === todayMissions.length;
   const run = streak(days);
   const status = statusLine(snap, mode, cameraOn, calibrated, routine, view);
   // The tab title is visible from the taskbar or another monitor, so it carries the state too.
@@ -379,6 +431,15 @@ export default function Workspace() {
   useEffect(() => {
     document.title = title;
   }, [title]);
+
+  // Cheer once per day, the moment the last mission ticks off; a score wobbling around the goal stays quiet.
+  const todayKey = today?.key;
+  useEffect(() => {
+    if (!todayKey) return;
+    const seen = allDoneSeen.current;
+    if (seen?.day === todayKey && !seen.all && allDone) toast('Semua misi hari ini beres. Mantap!');
+    allDoneSeen.current = { day: todayKey, all: allDone || (seen?.day === todayKey && seen.all) };
+  }, [todayKey, allDone]);
 
   const runner = routine && (
     <RoutineRunner
@@ -422,11 +483,6 @@ export default function Workspace() {
           <p className="text-sm">
             <span className="text-muted">Sesi </span>
             <span className="font-semibold tabular-nums">{session ? minutes(session.active_s) : '0 dtk'}</span>
-          </p>
-          <p className="text-sm" title="Dari waktu tegak dan kedipan yang dicek hari ini. Target 70.">
-            <span className="text-muted">Skor hari ini </span>
-            <span className="font-semibold tabular-nums">{todayScore ?? '–'}</span>
-            {run > 0 && <span className="text-muted"> · {run} hari beruntun</span>}
           </p>
           <p className="text-sm">
             <span className="text-muted">Jeda berikutnya </span>
@@ -541,6 +597,7 @@ export default function Workspace() {
                 </div>
               </>
             )}
+            {today && <Missions list={todayMissions} score={dayScore(today)} run={run} busy={routine !== null} onStart={setRoutine} />}
           </section>
 
           <aside className="card self-start overflow-hidden lg:sticky lg:top-20">
@@ -889,7 +946,10 @@ export default function Workspace() {
                 ) : (
                   <p className="flex items-center gap-2 text-sm">
                     <IconTimer className="size-4 shrink-0 text-accent" />
-                    <span className="text-muted">{next.value === 'Mati' ? 'Jadwal jeda mati' : `Jeda berikutnya ${next.value}`}</span>
+                    <span className="text-muted">
+                      {next.value === 'Mati' ? 'Jadwal jeda mati' : `Jeda berikutnya ${next.value}`}
+                      {today && ` · misi ${missionsDone}/${todayMissions.length}`}
+                    </span>
                     <button type="button" className="btn btn-ghost btn-sm ml-auto" onClick={() => setRoutine('reset')}>
                       Stretching
                     </button>

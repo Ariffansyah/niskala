@@ -425,6 +425,8 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
 
   const completeRoutine = useCallback((kind: Routine) => {
     const m = model.current;
+    // Save on the next tick, so today's missions tick off right away instead of up to 15 s later.
+    m.savedAt = -Infinity;
     if (m.session) m.session[kind === 'train' ? 'trainings' : kind === 'reset' ? 'resets' : 'eye_breaks']++;
     // Training is extra practice, not a scheduled break: it clears the posture strain and nothing else.
     if (kind === 'train') {
