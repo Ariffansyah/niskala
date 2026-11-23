@@ -77,6 +77,7 @@ const KEY = {
   coach: 'niskala:coach',
   checkins: 'niskala:checkins',
   who5: 'niskala:who5',
+  sample: 'niskala:sample',
 };
 const MAX_SESSIONS = 200;
 const MAX_CHECKINS = 366;
@@ -165,6 +166,27 @@ export const who5Store = stored<Who5[]>(KEY.who5, NO_WHO5);
 export function saveWho5(w: Who5) {
   const rest = (read<Who5[]>(KEY.who5) ?? []).filter((x) => x.day !== w.day);
   who5Store.set([w, ...rest].slice(0, MAX_CHECKINS));
+}
+
+/** Sample sessions carry this id prefix, so clearing them never touches a real one. */
+export const SAMPLE_ID = 'contoh-';
+// The days the sample covers while it is loaded, or null.
+export const sampleStore = stored<string[] | null>(KEY.sample, null);
+
+/** Fills a browser that has no data yet with sample sessions and check-ins, so Riwayat can be tried at once. */
+export function loadSample({ sessions, checkins, days }: { sessions: SessionSummary[]; checkins: Checkin[]; days: string[] }) {
+  sessionsStore.set(sessions);
+  checkinsStore.set(checkins);
+  sampleStore.set(days);
+}
+
+/** Removes the sample and the coaching asked about it; sessions and check-ins recorded since stay. */
+export function clearSample() {
+  const days = new Set(read<string[]>(KEY.sample) ?? []);
+  sessionsStore.set((read<SessionSummary[]>(KEY.sessions) ?? []).filter((s) => !s.id.startsWith(SAMPLE_ID)));
+  checkinsStore.set((read<Checkin[]>(KEY.checkins) ?? []).filter((c) => !days.has(c.day)));
+  coachStore.set(null);
+  sampleStore.set(null);
 }
 
 export const loadSyncedAt = () => read<string>(KEY.syncedAt);
