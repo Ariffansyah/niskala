@@ -82,13 +82,18 @@ export default function PrivacyPage() {
           <Block icon={IconLock} title="Coach mingguan, kalau kamu minta">
             <p>
               Tombol <strong>Minta saran coach</strong> di Riwayat ngirim angka ringkasan 7 hari terakhir ke server situs ini: menit di
-              depan layar, persen waktu bungkuk dan jarang kedip, jumlah jeda, skor harian, rata-rata pegal dan stres, semuanya dibulatkan. Server nerusin angka
-              itu ke Gemini (Google) buat nyusun tiga saran, lalu nggak nyimpan apa-apa. Video, titik wajah, dan sesi mentahmu nggak
-              ikut, dan kamu bisa lihat persis yang dikirim sebelum nekan tombolnya.
+              depan layar, persen waktu bungkuk dan jarang kedip, jumlah jeda, skor harian, rata-rata pegal dan stres, semuanya
+              dibulatkan. Server nerusin angka itu ke Gemini (Google) buat nyusun tiga saran, lalu nggak nyimpan apa-apa. Video, titik
+              wajah, dan sesi mentahmu nggak ikut, dan kamu bisa lihat persis yang dikirim sebelum nekan tombolnya.
             </p>
           </Block>
           <Block icon={IconShield} title="Kamu nggak dilacak">
             <p>Nggak ada analitik, skrip iklan, cookie, atau akun di situs ini.</p>
+            <p>
+              Situs ini juga minta browser ngunci beberapa hal: cuma Niskala sendiri yang boleh minta akses kamera, mikrofon dan lokasi
+              nggak bisa diminta sama sekali, situs lain nggak bisa nampilin Niskala di dalam halamannya, dan alamat halaman ini nggak
+              ikut kekirim pas kamu buka tautan keluar.
+            </p>
           </Block>
           <Block icon={IconInfo} title="Bukan saran medis">
             <p>
