@@ -2,9 +2,21 @@
 
 Techcomfest 2027, Sub-theme 3: Smart Lifestyle & Digital Wellbeing (SDG 3).
 
-A browser workspace (UI in Bahasa Indonesia) that watches posture and blink rate through the webcam, entirely on-device. Posture covers both planes: forward lean and head drop, and sideways lean and head tilt. It responds with a soft edge glow instead of pop-ups, guides 20-second eye breaks and a 60-second desk reset, and warms the screen as bedtime approaches.
+Stress can't be seen; the body and work habits that carry it can. Niskala is a browser workspace (UI in Bahasa Indonesia) that keeps the unseen side of screen work, stress and mental strain, in view through what is visible: posture and blink rate read through the webcam entirely on-device, breaks taken or skipped, and minutes past bedtime. It answers with a soft edge glow instead of pop-ups, guides a one-minute breathing pause, 20-second eye breaks and a 60-second stretch, asks for a daily stress rating and a weekly WHO-5, and shows from your own data how stress compares on days with enough breaks.
 
-In Balinese thought *sekala* is the seen world and *niskala* the unseen. The logo is *kawung*, one of the oldest batik motifs: four petals that also read as eyes, one of them lit in kunyit, the thing Niskala makes visible. The palette follows batik dyes: lontar cream paper, soga brown line art, nila indigo for the brand and every primary action, and kunyit turmeric for strain. Three more dyes tell topics apart: daun leaf green for the eyes and for what went well, mengkudu morinda red for time away from the desk, and ungu eggplant for the evening. A `.hue-*` class sets a card or section's dye. The dark theme is *malam*.
+## The problem
+
+34.9% of Indonesian adolescents aged 10 to 17 had a mental health problem in the past 12 months, and only 2.6% of them used a mental health service or counselling ([I-NAMHS 2022](https://theconversation.com/data-bicara-hanya-2-6-remaja-dengan-masalah-kesehatan-mental-di-indonesia-yang-mengakses-layanan-bantuan-atau-konseling-196593); [UGM](https://ugm.ac.id/en/news/one-third-of-indonesian-adolescents-suffer-mental-health-issues/)). Most help is something you have to go and look for once things are already bad.
+
+## What is different
+
+- **It is there while you work.** Niskala runs beside the work itself, so it does not wait until you have dropped to be opened.
+- **The evidence is your own data.** Riwayat sets the stress you rate each evening against whether you took your breaks that day, so the effect of pausing shows up in your own numbers.
+- **Reminders that don't add stress.** No pop-ups or alarms: the edge of the screen lights up softly and fades again.
+- **Private by design.** Video never leaves the browser. Under Indonesia's personal data protection law (UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi) health data is specific, sensitive personal data, so check-ins and WHO-5 answers stay in local storage, are never backed up, and only rounded weekly means reach the coach.
+- **No emotion guessing.** Niskala deliberately does not infer emotion or stress from the face. The camera reads angles and blinks; stress comes only from what you rate yourself.
+
+In Balinese thought *sekala* is the seen world and *niskala* the unseen. The logo is *kawung*, one of the oldest batik motifs: four petals that also read as eyes, one of them lit in kunyit, the thing Niskala makes visible. The palette follows batik dyes: lontar cream paper, soga brown line art, nila indigo for the brand and every primary action, and kunyit turmeric for strain. Three more dyes tell topics apart: daun leaf green for the eyes and for what went well, mengkudu morinda red for time away from the desk and for discomfort, and ungu eggplant for the evening and for the mind (stress, the breathing pause, the weekly check). A `.hue-*` class sets a card or section's dye. The dark theme is *malam*.
 
 ## Run
 
@@ -18,9 +30,9 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 
 | Route | What it is |
 | --- | --- |
-| `/` | Landing page whose hero is the live demo: Raka and Ayu act out a slouch and a lean until you take the sliders, and the real edge glow answers. Further down, a pinned room plays the six signals as you scroll, and the page runs from morning to night with it: the section's background goes from lontar through dusk to nila as the room's lights change, straight into the closing band. Behind the light sections a few faint kawung turn over minutes, and stars come out with the night; both stand still for reduced motion |
-| `/app` | Workspace: first-run setup, tracking, breaks, evening, sensitivity, data |
-| `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks, late minutes, trainings and full-mission days, and self-rated discomfort set against the score |
+| `/` | Landing page: the hero is the live demo, followed by the problem in numbers and what sets Niskala apart. The hero has Raka and Ayu act out a slouch and a lean until you take the sliders, and the real edge glow answers. Further down, a pinned room plays the six signals as you scroll, and the page runs from morning to night with it: the section's background goes from lontar through dusk to nila as the room's lights change, straight into the closing band. Behind the light sections a few faint kawung turn over minutes, and stars come out with the night; both stand still for reduced motion |
+| `/app` | Workspace: first-run setup, tracking, breaks and the breathing pause, daily missions, the daily check-in, the weekly WHO-5, evening, sensitivity, data |
+| `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks, late minutes, trainings and full-mission days, self-rated stress set against the breaks taken, and discomfort set against the score |
 | `/privasi` | What is processed, stored, and optionally backed up |
 
 ## Workspace features
@@ -32,9 +44,11 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 - **Breaks:** a 20-second eye break (20-20-20 rule) and a 60-second desk reset. Both are timed and step-by-step, with live head-angle and blink feedback from the camera, and can be snoozed for 5 minutes.
 - **Desk setup check:** with the front camera, three seconds give an estimate of the eye-to-screen distance (from the iris, which is close to 11.7 mm wide in nearly every adult), whether the screen is too low or too high (from where the eyes sit relative to the camera), and whether the face is lit or backlit, with a score and concrete fixes. Sitting closer than about 45 cm for 20 seconds also shows up in the status line.
 - **Daily score and streak:** a 0-100 score per day from the tracked time spent upright (three quarters) and blinking normally (one quarter), a target of 70, and the number of days in a row that met it, in the workspace's missions card and on the Riwayat page.
-- **Daily missions:** four small goals a day that tie the other features together: three eye breaks, two stretching breaks, one posture training and a score of 70. An open one starts its routine in one click, it ticks off as soon as the routine ends, the floating window shows how many are done, and Riwayat and the weekly coach count the days where all four were met.
-- **Daily discomfort check-in:** once a day, rate neck and shoulders, back and eyes from 0 to 10, the usual pain rating scale. In the evening the card is highlighted and the wind-down advice asks for it. Riwayat shows a strip of the days and, once there are at least two check-ins on each side of the score goal, compares discomfort on days that met it with the rest, so the effect of better posture shows up as how the body feels, not only as minutes upright. Check-ins are health data: they stay in the browser, are never backed up, and the coach only gets the rounded weekly mean of each area.
-- **Weekly coach:** on request, the Riwayat page sends the last 7 days as rounded totals to `/api/coach`, which asks Gemini for a headline and three tips in casual Indonesian, aimed at the areas that feel worst when check-ins exist. The server checks and rebuilds the numbers before they reach the prompt, answers only this site's own pages, allows a few requests per hour per address (as seen by the hosting proxy) and a fixed number for everyone together, and stores nothing. The limits live in the server's memory: on a host that runs many instances, put them in a shared store. You can see exactly what is sent before asking.
+- **Breathing pause:** one guided minute, five seconds in and five out (six breaths a minute). The kawung logo grows on each breath in and shrinks on each breath out, and the voice says when to breathe in and out. Start it from the missions card, the Jeda tab or the `N` key. It does not reset the eye or stretch timers.
+- **Daily missions:** five small goals a day that tie the other features together: three eye breaks, two stretching breaks, one breathing pause, one posture training and a score of 70. An open one starts its routine in one click, it ticks off as soon as the routine ends, the floating window shows how many are done, and Riwayat and the weekly coach count the days where all five were met. Days from before the breathing pause existed count as not fully done.
+- **Daily check-in:** once a day, rate stress, and neck and shoulders, back and eyes, each from 0 to 10, the usual rating scale. In the evening the card is highlighted and the wind-down advice asks for it. Riwayat shows a strip of the days and, once there are at least two check-ins on each side of the score goal, compares discomfort on days that met it with the rest, so the effect of better posture shows up as how the body feels, not only as minutes upright. Stress gets the same treatment against breaks: once there are two rated work days on each side, Riwayat compares stress on days that met every break mission (eye breaks, stretching and the breathing pause) with the other work days, and rings the days that did. Check-ins are health data: they stay in the browser, are never backed up, and the coach only gets the rounded weekly mean of each area and of stress.
+- **Weekly WHO-5:** once a week the workspace offers the WHO-5 Well-Being Index (WHO, 1998; free to use), five questions about the last two weeks on a six-point scale, scored 0 to 100. Under 50, the questionnaire's own cut-off, the card shows Healing119 from Kemenkes (call 119, extension 8, free, 24 hours, or chat at healing119.id) in plain words, with no diagnostic labels. The answers stay in the browser and are never sent anywhere, not even to the coach.
+- **Weekly coach:** on request, the Riwayat page sends the last 7 days as rounded totals to `/api/coach`, which asks Gemini for a headline and three tips in casual Indonesian, aimed at the areas that feel worst when check-ins exist. With a stress mean, one tip is about stress and tied to the work habits in the numbers; the prompt forbids guessing causes or naming conditions, and a mean of 7 or more adds a gentle pointer to someone they trust or Healing119. The server checks and rebuilds the numbers before they reach the prompt, answers only this site's own pages, allows a few requests per hour per address (as seen by the hosting proxy) and a fixed number for everyone together, and stores nothing. The limits live in the server's memory: on a host that runs many instances, put them in a shared store. You can see exactly what is sent before asking.
 - **Posture training:** a 2-minute routine started by hand (sit tall, chin tucks, shoulder-blade squeezes, then holding it while working). The camera counts the seconds you stay upright and the result is shown at the end.
 - **Voice:** optional spoken reminders in Indonesian. It names what drifted ("Kepalamu maju ke arah layar", "Badanmu miring ke kanan"), announces breaks, reads each step of the guided routines and sums up a training. Every line is recorded once with Gemini TTS and served as a small MP3 from `public/voice/`, so nothing is sent anywhere while the app runs.
 - **Floating window (two monitors):** an always-on-top Picture-in-Picture window in Chrome and Edge 116+, or a small popup elsewhere, that can be dragged to the monitor you work on. It shows the figure, posture state, strain, the edge glow and break cues, and runs the guided breaks. The camera video and the timers move into it, so tracking keeps its full rate while the main tab is in the background.
@@ -43,8 +57,8 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 - **Away detection:** with the camera on, nobody in frame for a minute means you left the desk. That time is not counted as screen time; 2 minutes away counts as an eye break and 5 minutes as a desk reset.
 - **Evening:** bedtime-aware warm shift with wind-down and past-bedtime guidance.
 - **Sensitivity:** Gentle, Balanced or Strict thresholds. Optional soft chime.
-- **Keyboard:** `R` reset, `E` eye break, `L` posture training, `M` floating window, `Esc` stop (snoozes a break cue for 5 minutes).
-- **Data:** everything stays in local storage. Download as JSON, delete, or opt in to an anonymous Supabase backup.
+- **Keyboard:** `R` reset, `E` eye break, `L` posture training, `N` breathing pause, `M` floating window, `Esc` stop (snoozes a break cue for 5 minutes).
+- **Data:** everything stays in local storage, including the check-ins and WHO-5 answers. Download as JSON, delete, or opt in to an anonymous Supabase backup.
 - **Installable:** web manifest and icons. Lontar/Malam/Auto theme with no flash on load.
 
 ## Architecture
@@ -77,7 +91,7 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 2. Enable **Authentication → Anonymous sign-ins**.
 3. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Set the same variables in Vercel.
 
-A project set up before posture trainings were counted needs `supabase/schema.sql` run again: it adds the `trainings` column, and backups fail without it.
+A project set up before posture trainings or breathing pauses were counted needs `supabase/schema.sql` run again: it adds the `trainings` and `breaths` columns, and backups fail without them.
 
 Without them the backup option is hidden. On Vercel, `VERCEL_PROJECT_PRODUCTION_URL` sets the canonical URL for metadata, the sitemap and robots.txt. Set `NEXT_PUBLIC_SITE_URL` to override it for a custom domain.
 
@@ -110,6 +124,10 @@ blender -b story.blend --python hero.py
 ```
 
 The raw PNG renders go to `assets/story/render/` (ignored); convert them to WebP for `public/`.
+
+## Tested
+
+On the production build (`pnpm build && pnpm start`): Chromium and Firefox, each at desktop size and at phone size (Pixel 7, and 375 px wide), with a couple of weeks of seeded data. In all four: the landing page, workspace and Riwayat have no sideways scroll; the check-in saves stress; WHO-5 waits for all five answers, scores them, and shows Healing119 under 50 with no diagnostic words; the breathing pause starts from `N` and the kawung grows on the breath in; Riwayat compares stress on days with every break against the rest; the coach payload carries the rounded stress and breathing pauses; and no page errors. With no camera, and with camera permission refused, the workspace shows a plain message and Timer mode keeps working. Safari/WebKit was not tested.
 
 ## Known limits
 
