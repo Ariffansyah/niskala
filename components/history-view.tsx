@@ -128,7 +128,7 @@ function DayStrip({ days, value, color, title, ring }: {
           return (
             <li
               key={d.key}
-              className={`grid aspect-square max-h-14 flex-1 place-items-center rounded-md text-sm font-bold tabular-nums ${v === undefined ? 'border border-dashed border-edge/40' : ''} ${ring?.(d) ? 'ring-2 ring-daun ring-offset-1 ring-offset-raised' : ''}`}
+              className={`grid aspect-square max-h-14 flex-1 place-items-center rounded-md text-sm font-bold tabular-nums ${v === undefined ? 'border border-dashed border-edge/40' : ''} ${ring?.(d) ? 'ring-2 ring-daun ring-inset' : ''}`}
               // One hue from faint to strong; the number inside carries the value too. Capped so the ink stays readable.
               style={v === undefined ? undefined : { background: `color-mix(in oklab, ${color} ${Math.round(8 + v * 4.7)}%, var(--surface))` }}
               title={title(d)}
@@ -252,7 +252,7 @@ function StressCard({ days, checkins }: { days: Day[]; checkins: Checkin[] }) {
         <h2 className="text-lg">Stres dan jeda</h2>
         {rated.length > 0 && (
           <span className="flex items-center gap-1.5 text-[13px] text-muted">
-            <span className="size-2.5 rounded-sm ring-2 ring-daun" /> semua jeda diambil
+            <span className="size-2.5 rounded-sm ring-2 ring-daun ring-inset" /> semua jeda diambil
           </span>
         )}
       </div>
