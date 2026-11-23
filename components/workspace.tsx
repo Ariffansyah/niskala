@@ -7,8 +7,8 @@ import { duration, hhmm, minutes, parseHhmm, sideWord } from '@/lib/format';
 import { ROUTINES } from '@/lib/routines';
 import { SENSITIVITY, dominant, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
 import { chime } from '@/lib/sound';
-import { byDay, dayScore, missions, streak, type Mission, type MissionId } from '@/lib/insights';
-import { checkinsStore, clearAll, exportData, prefsStore, saveCheckin, sessionsStore, type CameraView, type Checkin, type Mode, type Prefs, type Warmth } from '@/lib/store';
+import { WHO5_LOW, byDay, dayScore, missions, streak, who5DueOn, who5Score, type Mission, type MissionId } from '@/lib/insights';
+import { checkinsStore, clearAll, exportData, prefsStore, saveCheckin, saveWho5, sessionsStore, who5Store, type CameraView, type Checkin, type Mode, type Prefs, type Warmth, type Who5 } from '@/lib/store';
 import { syncConfigured } from '@/lib/sync';
 import { allowNotifications, canNotify } from '@/lib/notify';
 import { toast } from '@/lib/toast';
@@ -330,6 +330,120 @@ function CheckinCard({ day, saved, evening }: { day: string; saved: Checkin | un
   );
 }
 
+// WHO-5 Well-Being Index, close to the official Indonesian wording, addressed with "kamu" like the rest of the app.
+const WHO5_ITEMS = [
+  'Kamu merasa ceria dan semangat',
+  'Kamu merasa tenang dan santai',
+  'Kamu merasa aktif dan bertenaga',
+  'Kamu bangun tidur dengan badan segar dan cukup istirahat',
+  'Hari-harimu diisi hal-hal yang menarik buatmu',
+];
+const WHO5_OPTIONS = [
+  { value: 5, label: 'Selalu' },
+  { value: 4, label: 'Hampir selalu' },
+  { value: 3, label: 'Lebih dari separuh waktu' },
+  { value: 2, label: 'Kurang dari separuh waktu' },
+  { value: 1, label: 'Sesekali' },
+  { value: 0, label: 'Nggak pernah' },
+];
+const shortDate = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+};
+
+/** Where to talk to someone when the week was heavy. Plain words, no labels for how anyone feels. */
+function Healing119() {
+  return (
+    <div className="hue-ungu mt-3 flex gap-3 rounded-xl bg-hue-soft p-4 text-sm text-pretty">
+      <IconInfo className="mt-0.5 size-4 shrink-0 text-hue-ink" />
+      <p>
+        Minggu-minggu kayak gini bisa berat, dan kamu nggak harus nanggung sendirian. Cerita ke orang yang kamu percaya, atau ngobrol
+        sama Healing119 dari Kemenkes:{' '}
+        <a href="tel:119" className="link font-semibold">
+          telepon 119
+        </a>
+        , terus pilih ekstensi 8. Gratis, 24 jam. Bisa juga chat lewat{' '}
+        <a href="https://healing119.id" target="_blank" rel="noreferrer" className="link font-semibold">
+          healing119.id
+        </a>
+        .
+      </p>
+    </div>
+  );
+}
+
+/** WHO-5 once a week: five questions about the last two weeks, kept in this browser like the check-ins. */
+function Who5Card({ today, list }: { today: string; list: Who5[] }) {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState(() => WHO5_ITEMS.map(() => -1));
+  const last = list.reduce<Who5 | null>((a, w) => (a === null || w.day > a.day ? w : a), null);
+  const score = last && who5Score(last);
+  const dueOn = who5DueOn(list, today);
+  const help = score !== null && score < WHO5_LOW && <Healing119 />;
+
+  if (!open) {
+    return (
+      <section aria-labelledby="who5-title" className="card px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 id="who5-title" className="text-base">
+            Kabar mingguan
+          </h2>
+          <p className="text-sm text-muted tabular-nums">
+            {score !== null && `${score}/100 · `}
+            {dueOn <= today ? '5 pertanyaan, sekitar semenit' : `isi lagi ${shortDate(dueOn)}`}
+          </p>
+          {dueOn <= today && (
+            <button type="button" className="btn btn-sm ml-auto" onClick={() => setOpen(true)}>
+              Isi
+            </button>
+          )}
+        </div>
+        {help}
+      </section>
+    );
+  }
+
+  return (
+    <section aria-labelledby="who5-title" className="card p-4">
+      <h2 id="who5-title" className="flex flex-wrap items-baseline gap-x-2 text-base">
+        Kabar mingguan
+        <span className="text-sm font-normal text-muted">dua minggu terakhir, seberapa sering…</span>
+      </h2>
+      <ol className="mt-3 space-y-4">
+        {WHO5_ITEMS.map((q, i) => (
+          <li key={q}>
+            <p className="mb-1.5 text-sm font-medium">{q}</p>
+            <Segmented<number>
+              label={q}
+              size="sm"
+              value={items[i]}
+              onChange={(v) => setItems(items.map((x, j) => (j === i ? v : x)))}
+              options={WHO5_OPTIONS}
+            />
+          </li>
+        ))}
+      </ol>
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>
+          Nanti aja
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm"
+          disabled={items.includes(-1)}
+          onClick={() => {
+            saveWho5({ day: today, items });
+            setOpen(false);
+            toast('Kesimpan. Cuma ada di browser ini.');
+          }}
+        >
+          Simpan
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function Workspace() {
   const prefs = useSyncExternalStore(prefsStore.subscribe, prefsStore.get, prefsStore.server);
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
@@ -337,6 +451,7 @@ export default function Workspace() {
   const notifySupported = useSyncExternalStore(noop, canNotify, () => false);
   const sessions = useSyncExternalStore(sessionsStore.subscribe, sessionsStore.get, sessionsStore.server);
   const checkins = useSyncExternalStore(checkinsStore.subscribe, checkinsStore.get, checkinsStore.server);
+  const who5 = useSyncExternalStore(who5Store.subscribe, who5Store.get, who5Store.server);
   const [sim, setSim] = useState<Sim>({ head: 0, torso: 0, side: 0, tilt: 0, blink: 16, late: false });
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [camera, setCamera] = useState<Camera>({ state: 'off' });
@@ -697,6 +812,7 @@ export default function Workspace() {
             )}
             {today && <Missions list={todayMissions} score={dayScore(today)} run={run} busy={routine !== null} onStart={setRoutine} />}
             {today && <CheckinCard key={today.key} day={today.key} saved={checkedIn} evening={snap.night.stage !== 'day'} />}
+            {today && <Who5Card key={today.key} today={today.key} list={who5} />}
           </section>
 
           <aside className="card self-start overflow-hidden lg:sticky lg:top-20">
@@ -956,8 +1072,8 @@ export default function Workspace() {
                   </Field>
                   <div className="space-y-4 border-t border-rule pt-5">
                     <p className="text-sm text-muted text-pretty">
-                      Yang disimpan di browser ini: setelan, kalibrasi, ringkasan tiap sesi, dan cek pegal dan stres. Nggak ada gambar atau data
-                      wajah yang disimpan.
+                      Yang disimpan di browser ini: setelan, kalibrasi, ringkasan tiap sesi, cek pegal dan stres, dan kabar mingguan. Nggak ada
+                      gambar atau data wajah yang disimpan.
                     </p>
                     {syncConfigured && (
                       <div>
