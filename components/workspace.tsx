@@ -416,6 +416,8 @@ function Who5Card({ today, list }: { today: string; list: Who5[] }) {
             <Segmented<number>
               label={q}
               size="sm"
+              // A grid keeps six answers in tidy rows on a phone, in the scale's order.
+              className="grid grid-cols-2 sm:grid-cols-3 [&>*]:justify-center [&>*]:text-center"
               value={items[i]}
               onChange={(v) => setItems(items.map((x, j) => (j === i ? v : x)))}
               options={WHO5_OPTIONS}
