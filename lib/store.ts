@@ -64,6 +64,9 @@ export type SessionSummary = {
 /** How sore and how stressed one evening felt, 0 (not at all) to 10 (as bad as it gets). Check-ins saved before stress was asked lack it. */
 export type Checkin = { day: string; neck: number; back: number; eyes: number; stress?: number };
 
+/** The five WHO-5 answers of one week, each 0 (at no time) to 5 (all of the time), in the questionnaire's order. */
+export type Who5 = { day: string; items: number[] };
+
 const KEY = {
   prefs: 'niskala:prefs',
   baseline: 'niskala:baseline',
@@ -73,6 +76,7 @@ const KEY = {
   theme: 'niskala:theme',
   coach: 'niskala:coach',
   checkins: 'niskala:checkins',
+  who5: 'niskala:who5',
 };
 const MAX_SESSIONS = 200;
 const MAX_CHECKINS = 366;
@@ -153,13 +157,23 @@ export function saveCheckin(c: Checkin) {
   checkinsStore.set([c, ...rest].slice(0, MAX_CHECKINS));
 }
 
+// Also health data, kept like the check-ins: never synced, never sent to the coach.
+const NO_WHO5: Who5[] = [];
+export const who5Store = stored<Who5[]>(KEY.who5, NO_WHO5);
+
+/** Newest first; a second one the same day replaces the first. */
+export function saveWho5(w: Who5) {
+  const rest = (read<Who5[]>(KEY.who5) ?? []).filter((x) => x.day !== w.day);
+  who5Store.set([w, ...rest].slice(0, MAX_CHECKINS));
+}
+
 export const loadSyncedAt = () => read<string>(KEY.syncedAt);
 export const saveSyncedAt = (iso: string) => write(KEY.syncedAt, iso);
 
 /** Everything this browser holds, for the user's own download. */
 export function exportData() {
   return JSON.stringify(
-    { exported_at: new Date().toISOString(), prefs: prefsStore.get(), sessions: sessionsStore.get(), checkins: checkinsStore.get() },
+    { exported_at: new Date().toISOString(), prefs: prefsStore.get(), sessions: sessionsStore.get(), checkins: checkinsStore.get(), who5: who5Store.get() },
     null,
     2,
   );

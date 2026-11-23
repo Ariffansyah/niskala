@@ -1,4 +1,4 @@
-import type { Checkin, SessionSummary } from './store';
+import type { Checkin, SessionSummary, Who5 } from './store';
 
 export type Day = {
   key: string; // local YYYY-MM-DD
@@ -159,4 +159,18 @@ export function painAverages(days: Day[], checkins: Checkin[]) {
     eyes: mean(inRange.map((c) => c.eyes)),
     stress: mean(inRange.flatMap((c) => c.stress ?? [])),
   };
+}
+
+/** WHO-5 Well-Being Index: the five answers summed and multiplied by four, 0 (worst) to 100 (best). */
+export const who5Score = (w: Who5) => w.items.reduce((a, b) => a + b, 0) * 4;
+/** Under 50 is the questionnaire's own cut-off for suggesting a talk with someone. */
+export const WHO5_LOW = 50;
+export const WHO5_EVERY_DAYS = 7;
+
+/** The local day the next WHO-5 is due: today with none yet, else a week after the newest one. */
+export function who5DueOn(list: Who5[], today: string) {
+  const last = list.reduce<string | null>((a, w) => (a === null || w.day > a ? w.day : a), null);
+  if (last === null) return today;
+  const [y, m, d] = last.split('-').map(Number);
+  return dayKey(new Date(y, m - 1, d + WHO5_EVERY_DAYS));
 }

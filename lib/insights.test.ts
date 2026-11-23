@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GOAL, byDay, dayScore, missions, painAverages, painByScore, streak, stressByBreaks, totals } from './insights.ts';
+import { GOAL, byDay, dayScore, missions, painAverages, painByScore, streak, stressByBreaks, totals, who5DueOn, who5Score } from './insights.ts';
 import type { Checkin, SessionSummary } from './store.ts';
 
 const session = (started: Date, over: Partial<SessionSummary>): SessionSummary => ({
@@ -136,4 +136,12 @@ test('stress compares work days that took every break with the rest, skipping da
   // A check-in from before stress was asked has no stress value and is left out.
   assert.equal(stressByBreaks(days, [c(14, 3), c(15), c(16, 7), c(17, 8)]).ready, false);
   assert.equal(painAverages(days, [c(14, 3), c(15)]).stress, 3);
+});
+
+test('WHO-5 scores 0 to 100 and comes due a week after the last one', () => {
+  assert.equal(who5Score({ day: '2026-11-20', items: [5, 5, 5, 5, 5] }), 100);
+  assert.equal(who5Score({ day: '2026-11-20', items: [2, 3, 2, 3, 2] }), 48);
+  assert.equal(who5DueOn([], '2026-11-20'), '2026-11-20');
+  const list = [{ day: '2026-11-27', items: [] }, { day: '2026-11-20', items: [] }];
+  assert.equal(who5DueOn(list, '2026-11-28'), '2026-12-04'); // across a month end
 });
