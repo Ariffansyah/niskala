@@ -51,8 +51,10 @@ export default function PrivacyPage() {
           <Block icon={IconHistory} title="Yang kesimpan di browsermu">
             <p>
               Di local storage browser ini: <strong>setelan</strong>, <strong>kalibrasi</strong> (beberapa angka soal posisi tegakmu,
-              buat kamera depan dan samping), dan <strong>ringkasan sesi</strong> kayak menit aktif, menit bungkuk, jeda yang diambil,
-              dan rata-rata kedip. Semua itu jadi bahan halaman Riwayat.
+              buat kamera depan dan samping), <strong>ringkasan sesi</strong> (menit aktif, menit bungkuk, jeda yang diambil, rata-rata
+              kedip), dan <strong>cek pegal</strong> yang kamu isi sendiri. Semua itu jadi bahan halaman Riwayat. Cek pegal itu data
+              kesehatan, jadi nggak pernah ikut dicadangkan. Kalau kamu minta saran coach, yang dikirim cuma rata-rata mingguannya yang
+              dibulatkan.
             </p>
             <p>
               Kamu bisa unduh atau hapus semuanya dari tab Setelan di{' '}
@@ -68,6 +70,14 @@ export default function PrivacyPage() {
               Awalnya mati. Kalau dinyalain, ringkasan sesi dan setelan (jam tidur, layar hangat, jadwal jeda, kepekaan) dikirim ke
               database Supabase pakai ID anonim, dengan aturan yang cuma ngizinin ID itu baca datanya sendiri. Kalibrasimu nggak
               pernah dikirim.
+            </p>
+          </Block>
+          <Block icon={IconLock} title="Coach mingguan, kalau kamu minta">
+            <p>
+              Tombol <strong>Minta saran coach</strong> di Riwayat ngirim angka ringkasan 7 hari terakhir ke server situs ini: menit di
+              depan layar, persen waktu bungkuk dan jarang kedip, jumlah jeda, skor harian, semuanya dibulatkan. Server nerusin angka
+              itu ke Gemini (Google) buat nyusun tiga saran, lalu nggak nyimpan apa-apa. Video, titik wajah, dan sesi mentahmu nggak
+              ikut, dan kamu bisa lihat persis yang dikirim sebelum nekan tombolnya.
             </p>
           </Block>
           <Block icon={IconShield} title="Kamu nggak dilacak">

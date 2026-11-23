@@ -1,43 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { IconArrowRight, IconCamera, IconCheck, IconLock, IconPip, IconShield } from '@/components/icons';
+import { Drift, Stars } from '@/components/ambient';
+import { CastFrame } from '@/components/cast';
 import Hero from '@/components/hero';
-import PostureFigure, { FrontFigure } from '@/components/posture-figure';
 import SiteFooter from '@/components/site-footer';
+import Story from '@/components/story';
 import { ROUTINES } from '@/lib/routines';
-import { UPRIGHT } from '@/lib/signals';
-
-// Each signal has its own dye and a 3D object from assets/objects/objects.blend.
-const SMALL_SIGNALS: { img: string; hue: string; name: string; how: string; answer: string }[] = [
-  {
-    img: 'eye',
-    hue: 'hue-daun',
-    name: 'Kedipan',
-    how: 'Normalnya 15 sampai 20 kali per menit. Pas natap layar, bisa anjlok jauh.',
-    answer: 'Kalau kelamaan di bawah sepuluh per menit, pinggir layar nyala, plus ada istirahat mata 20 detik.',
-  },
-  {
-    img: 'hourglass',
-    hue: 'hue-kunyit',
-    name: 'Lama di depan layar',
-    how: 'Dihitung selama halaman ini atau jendela kecilnya kelihatan. Tanpa kamera juga jalan.',
-    answer: 'Istirahat mata 20-20-20 dan stretching 60 detik, sesuai jadwalmu.',
-  },
-  {
-    img: 'mug',
-    hue: 'hue-mengkudu',
-    name: 'Pas kamu pergi',
-    how: 'Kamera lihat kursimu kosong lebih dari semenit.',
-    answer: 'Waktu itu dihitung jeda, bukan waktu layar. Jadwal pengingatnya ikut nyesuain.',
-  },
-  {
-    img: 'moon',
-    hue: 'hue-ungu',
-    name: 'Jam malam',
-    how: 'Jam tidurmu, cukup diatur sekali.',
-    answer: 'Dua jam sebelumnya layar mulai hangat, dan kamu diingetin buat mulai beres-beres.',
-  },
-];
 
 const CAMERAS = [
   {
@@ -80,67 +49,15 @@ export default function Home() {
       <main className="overflow-x-clip">
         <Hero />
 
-        <section id="cara-kerja" className="band motif-kawung">
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
-            <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Enam hal yang dicek, dan cara Niskala ngingetin kamu.</h2>
-            <div className="mt-12 grid gap-5 lg:grid-cols-2">
-              <article className="band-card hue-mengkudu overflow-hidden">
-                <div className="h-60 bg-hue/20 p-3">
-                  <PostureFigure posture={{ ...UPRIGHT, torso: 0.75, head: 0.85 }} who="sekar" className="drop-shadow-xl" />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl">Bungkuk ke depan</h3>
-                  <p className="mt-2 text-on-band-muted text-pretty">
-                    Kamera depan ngukur tinggi, ukuran, dan anggukan wajahmu. Kamera samping langsung ngukur sudut leher dan punggung.
-                    Semuanya dibandingin sama posisi tegakmu waktu kalibrasi 4 detik.
-                  </p>
-                  <p className="mt-4 flex gap-2 text-pretty">
-                    <IconArrowRight className="mt-1 size-4 shrink-0 text-band-accent" />
-                    Pinggir layar nyala kuning, tapi baru kalau posisi itu bertahan sekitar sepuluh detik.
-                  </p>
-                </div>
-              </article>
-              <article className="band-card hue-ungu overflow-hidden">
-                <div className="h-60 bg-hue/20 p-3">
-                  <FrontFigure posture={{ ...UPRIGHT, side: 0.85, tilt: -0.35 }} who="bima" className="drop-shadow-xl" />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl">Miring ke samping</h3>
-                  <p className="mt-2 text-on-band-muted text-pretty">
-                    Wajah geser ke kiri atau kanan, atau garis matamu miring. Noleh ke monitor kedua nggak dihitung miring.
-                  </p>
-                  <p className="mt-4 flex gap-2 text-pretty">
-                    <IconArrowRight className="mt-1 size-4 shrink-0 text-band-accent" />
-                    Pinggir layar nyala juga, dan kamu dikasih tahu arahnya: badan miring ke kanan, atau kepala miring ke kiri.
-                  </p>
-                </div>
-              </article>
-            </div>
-            <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-              {SMALL_SIGNALS.map((s) => (
-                <article key={s.name} className={`band-card ${s.hue} overflow-hidden`}>
-                  <div className="grid h-36 place-items-center bg-hue/30">
-                    <Image src={`/3d/${s.img}.webp`} alt="" width={460} height={460} unoptimized className="h-24 w-auto drop-shadow-lg" />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-lg">{s.name}</h3>
-                    <p className="mt-2 text-on-band-muted text-pretty">{s.how}</p>
-                    <p className="mt-3 text-pretty">{s.answer}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+        <section className="relative mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+          <Drift spots={[{ top: '-8%', right: '-2%', size: '22rem', turn: 160, float: 19 }]} />
           <h2 className="max-w-2xl text-3xl sm:text-[2.6rem] sm:leading-tight">Kamera depan atau samping, dua-duanya bisa.</h2>
           <div className="mt-10 grid gap-5 md:grid-cols-2">
             {CAMERAS.map((c) => (
               <article key={c.title} className={`card ${c.hue} grid overflow-hidden sm:grid-cols-[11rem_1fr]`}>
                 <div className="stage stage-hue grid place-items-center border-b border-rule p-3 sm:border-r sm:border-b-0">
                   <div className={c.front ? 'h-44 sm:h-full' : 'h-44 w-full sm:h-auto'}>
-                    {c.front ? <FrontFigure posture={null} who={c.who} /> : <PostureFigure posture={{ ...UPRIGHT, torso: 0.35, head: 0.5 }} who={c.who} />}
+                    <CastFrame who={c.who} view={c.front ? 'front' : 'side'} amount={c.front ? 0 : 0.35} alt="" />
                   </div>
                 </div>
                 <div className="p-6">
@@ -207,16 +124,29 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="privasi" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
-          <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <section id="privasi" className="relative mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-24">
+          <Drift
+            spots={[
+              { top: '46%', left: '-6%', size: '20rem', turn: 140, float: 15 },
+              { top: '6%', left: '30%', size: '9rem', turn: 100, float: 12 },
+            ]}
+          />
+          <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
             <div>
               <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">Video kameramu nggak pernah keluar dari tab.</h2>
               <Link href="/privasi" className="btn mt-8">
                 Baca soal privasi
               </Link>
-              <Image src="/3d/padlock.webp" alt="" width={316} height={460} unoptimized className="mt-12 hidden h-44 w-auto -rotate-6 drop-shadow-xl lg:block" />
             </div>
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="relative grid gap-5 sm:grid-cols-2">
+              <Image
+                src="/3d/padlock.webp"
+                alt=""
+                width={316}
+                height={460}
+                unoptimized
+                className="absolute -top-14 -right-5 z-10 hidden h-32 w-auto rotate-12 drop-shadow-xl sm:block"
+              />
               <div className="card hue-daun p-6">
                 <h3 className="flex items-center gap-2 text-lg">
                   <IconLock className="size-5 text-hue" />
@@ -258,8 +188,26 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="band motif-kawung">
-          <div className="mx-auto grid max-w-6xl items-center gap-x-16 gap-y-8 px-4 py-20 sm:px-8 sm:py-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <Story />
+
+        <section className="band relative overflow-hidden">
+          <Stars className="inset-y-0 opacity-70" />
+          {/* One kawung at the scale of the room instead of a tiled wallpaper: four petals that also read as eyes. */}
+          <svg
+            aria-hidden
+            viewBox="0 0 48 48"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="0.3"
+            className="pointer-events-none absolute top-1/2 -right-56 size-[46rem] -translate-y-1/2 text-on-band opacity-[0.07] max-md:hidden"
+          >
+            <ellipse cx="24" cy="11" rx="6.5" ry="11" />
+            <ellipse cx="24" cy="37" rx="6.5" ry="11" />
+            <ellipse cx="11" cy="24" rx="11" ry="6.5" />
+            <ellipse cx="37" cy="24" rx="11" ry="6.5" />
+            <circle cx="24" cy="24" r="1.6" fill="currentColor" stroke="none" />
+          </svg>
+          <div className="relative mx-auto grid max-w-6xl items-center gap-x-16 gap-y-8 px-4 py-20 sm:px-8 sm:py-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
             <div className="flex items-center gap-6 sm:gap-8">
               <span className="grid size-28 shrink-0 place-items-center rounded-full bg-on-band shadow-[0_18px_40px_-12px_rgb(0_0_0/0.5)] sm:size-36">
                 <span className="kawung-turn size-24 sm:size-32" aria-hidden />

@@ -1,3 +1,4 @@
+import type { Coach } from './coach';
 import type { Baseline, ProfileBaseline, Sensitivity } from './signals';
 
 // Everything here is local to the browser. Only `SessionSummary` and part of
@@ -7,7 +8,7 @@ export type Warmth = 'auto' | 'on' | 'off';
 export type Mode = 'camera' | 'timer' | 'demo';
 export type Theme = 'auto' | 'light' | 'dark';
 export type CameraView = 'front' | 'side';
-export type FigureId = 'raka' | 'ayu' | 'sekar' | 'bima';
+export type FigureId = 'raka' | 'ayu';
 
 export type Prefs = {
   mode: Mode;
@@ -19,6 +20,7 @@ export type Prefs = {
   eyeMin: number; // 0 = off
   resetMin: number; // 0 = off
   sound: boolean;
+  voice: boolean; // spoken reminders and step guidance
   notify: boolean; // system notifications while Niskala is not in focus
   figure: FigureId; // who stands in for you on screen
   sync: boolean;
@@ -35,6 +37,7 @@ export const DEFAULT_PREFS: Prefs = {
   eyeMin: 20,
   resetMin: 50,
   sound: false,
+  voice: false,
   notify: false,
   figure: 'raka',
   sync: false,
@@ -49,12 +52,16 @@ export type SessionSummary = {
   active_s: number;
   resets: number;
   eye_breaks: number;
+  trainings: number; // posture trainings finished
   slouch_s: number;
   low_blink_s: number;
   late_s: number;
   avg_blink: number | null;
   source: 'camera' | 'timer' | 'simulation';
 };
+
+/** How sore one evening felt, 0 (not at all) to 10 (as bad as it gets), the usual pain rating scale. */
+export type Checkin = { day: string; neck: number; back: number; eyes: number };
 
 const KEY = {
   prefs: 'niskala:prefs',
@@ -63,8 +70,11 @@ const KEY = {
   sessions: 'niskala:sessions',
   syncedAt: 'niskala:synced-at',
   theme: 'niskala:theme',
+  coach: 'niskala:coach',
+  checkins: 'niskala:checkins',
 };
 const MAX_SESSIONS = 200;
+const MAX_CHECKINS = 366;
 
 // Storage can throw (private mode, quota, blocked cookies); the app must keep working without it.
 function read<T>(key: string): T | null {
@@ -112,15 +122,18 @@ function stored<T>(key: string, fallback: T, parse: (v: T | null) => T = (v) => 
   };
 }
 
-export const prefsStore = stored<Prefs>(KEY.prefs, DEFAULT_PREFS, (v) => ({ ...DEFAULT_PREFS, ...v }));
+// Sekar and Bima left with the 2D figures; anyone who picked them gets Raka.
+export const prefsStore = stored<Prefs>(KEY.prefs, DEFAULT_PREFS, (v) => ({ ...DEFAULT_PREFS, ...v, figure: v?.figure === 'ayu' ? 'ayu' : 'raka' }));
 // Baselines saved before sideways tracking lack roll and cx; asking for a fresh calibration is safer than guessing.
 export const baselineStore = stored<Baseline | null>(KEY.baseline, null, (v) => (v && 'roll' in v && 'cx' in v ? v : null));
 export const profileBaselineStore = stored<ProfileBaseline | null>(KEY.baselineSide, null, (v) => (v && 'neck' in v && 'trunk' in v ? v : null));
 export const themeStore = stored<Theme>(KEY.theme, 'auto');
+// The last coaching and the local day it was asked for.
+export const coachStore = stored<{ day: string; coach: Coach } | null>(KEY.coach, null);
 const NO_SESSIONS: SessionSummary[] = [];
 export const sessionsStore = stored<SessionSummary[]>(KEY.sessions, NO_SESSIONS, (v) =>
-  // Rows saved before eye breaks existed lack the field.
-  (v ?? NO_SESSIONS).map((s) => ({ ...s, eye_breaks: s.eye_breaks ?? 0 })),
+  // Rows saved before eye breaks or trainings were counted lack the field.
+  (v ?? NO_SESSIONS).map((s) => ({ ...s, eye_breaks: s.eye_breaks ?? 0, trainings: s.trainings ?? 0 })),
 );
 
 export function saveSession(s: SessionSummary) {
@@ -129,13 +142,23 @@ export function saveSession(s: SessionSummary) {
   sessionsStore.set([s, ...rest].slice(0, MAX_SESSIONS));
 }
 
+// Health data, so it never leaves this browser: sync.ts does not read it.
+const NO_CHECKINS: Checkin[] = [];
+export const checkinsStore = stored<Checkin[]>(KEY.checkins, NO_CHECKINS);
+
+/** One check-in per local day; a second one the same day replaces the first. */
+export function saveCheckin(c: Checkin) {
+  const rest = (read<Checkin[]>(KEY.checkins) ?? []).filter((x) => x.day !== c.day);
+  checkinsStore.set([c, ...rest].slice(0, MAX_CHECKINS));
+}
+
 export const loadSyncedAt = () => read<string>(KEY.syncedAt);
 export const saveSyncedAt = (iso: string) => write(KEY.syncedAt, iso);
 
 /** Everything this browser holds, for the user's own download. */
 export function exportData() {
   return JSON.stringify(
-    { exported_at: new Date().toISOString(), prefs: prefsStore.get(), sessions: sessionsStore.get() },
+    { exported_at: new Date().toISOString(), prefs: prefsStore.get(), sessions: sessionsStore.get(), checkins: checkinsStore.get() },
     null,
     2,
   );

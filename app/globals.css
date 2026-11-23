@@ -26,6 +26,8 @@
   --on-band: #f1ead9;
   --on-band-muted: #b8b4c4;
   --band-accent: var(--kunyit);
+  /* The story's sunset, between lontar and nila, so the sky never passes through a flat grey. */
+  --dusk: light-dark(#d39a86, #2c2140);
 
   /* More dyes from the same vats, one per topic so sections, readouts and figures are told apart by hue:
      daun leaf green for the eyes and for what went well, mengkudu morinda red for time away from the desk,
@@ -83,6 +85,10 @@
   --color-hue: var(--hue);
   --color-hue-soft: var(--hue-soft);
   --color-hue-ink: var(--hue-ink);
+  /* Set by .sky, so the story's text follows its section from day into night. */
+  --color-sky: var(--sky-ink);
+  --color-sky-muted: var(--sky-muted);
+  --color-sky-mark: var(--sky-mark);
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -283,6 +289,72 @@
   --hue-ink: var(--alert-ink);
 }
 
+/* The story's sky. The story sets --night (0 to 1) from the frames it shows, so the section goes from lontar through
+   dusk to nila together with the room, and its last beat runs straight into the nila band below. Text flips with data-night. */
+.sky,
+.sky-fill {
+  background-color: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--paper), var(--dusk) calc(clamp(0, var(--night, 0) * 2, 1) * 100%)),
+    var(--band) calc(clamp(0, var(--night, 0) * 2 - 1, 1) * 100%)
+  );
+  transition: background-color 1.2s ease;
+}
+.sky {
+  --sky-ink: var(--ink);
+  --sky-muted: var(--muted);
+  --sky-mark: var(--alert-ink);
+  color: var(--sky-ink);
+  transition:
+    background-color 1.2s ease,
+    color 0.4s ease;
+}
+.sky[data-night] {
+  --sky-ink: var(--on-band);
+  --sky-muted: var(--on-band-muted);
+  --sky-mark: var(--band-accent);
+}
+/* The room's backdrop: a shade deeper than the sky, so the cutaway walls never melt into the page. */
+.sky-stage {
+  background-color: color-mix(in oklab, var(--surface), #0e1328 calc(var(--night, 0) * 100%));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--ink) 8%, transparent),
+    0 24px 48px -28px var(--shadow);
+  transition: background-color 1.2s ease;
+}
+
+/* Background motion, kept quiet: one turn takes minutes and the float is a few pixels, so it reads as a cloth
+   stirring rather than something to watch. Only transform properties and opacity move. */
+.drift {
+  position: absolute;
+  aspect-ratio: 1;
+  color: var(--ink);
+  opacity: 0.09;
+  animation: drift-float var(--float, 16s) ease-in-out infinite alternate;
+}
+.drift > svg {
+  animation: drift-turn var(--turn, 120s) linear infinite;
+}
+@keyframes drift-float {
+  to {
+    translate: 0 -18px;
+  }
+}
+@keyframes drift-turn {
+  to {
+    rotate: 1turn;
+  }
+}
+.twinkle {
+  opacity: 0.25;
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  to {
+    opacity: 0.85;
+  }
+}
+
 /* Kawung, one of the oldest batik motifs: four petals around a point. Used only on dark bands, as identity. */
 .motif-kawung {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23f1ead9' stroke-opacity='0.07' stroke-width='1.2'%3E%3Cellipse cx='24' cy='11' rx='6.5' ry='11'/%3E%3Cellipse cx='24' cy='37' rx='6.5' ry='11'/%3E%3Cellipse cx='11' cy='24' rx='11' ry='6.5'/%3E%3Cellipse cx='37' cy='24' rx='11' ry='6.5'/%3E%3C/g%3E%3Ccircle cx='24' cy='24' r='1.6' fill='%23f1ead9' fill-opacity='0.12'/%3E%3C/svg%3E");
@@ -331,10 +403,6 @@
   pointer-events: none;
 }
 
-.figure .joint {
-  transition: transform 300ms linear;
-}
-
 .enter {
   transition:
     opacity 0.3s ease,
@@ -358,14 +426,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kawung-turn {
+  .kawung-turn,
+  .drift,
+  .drift > svg,
+  .twinkle {
     animation: none;
   }
-  .figure .joint,
   .edge-glow,
   .edge-cue,
   .warm-shift,
-  .enter {
+  .enter,
+  .sky,
+  .sky-fill,
+  .sky-stage {
     transition: none;
   }
 }

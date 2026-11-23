@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useState, useSyncExternalStore } from 'react';
 import { minutes } from '@/lib/format';
-import { byDay, totals, type Day } from '@/lib/insights';
-import { exportData, sessionsStore } from '@/lib/store';
+import { weekSummary, type Week } from '@/lib/coach';
+import { GOAL, byDay, dayKey, dayScore, missions, painAverages, painByScore, painOf, streak, totals, type Day } from '@/lib/insights';
+import { checkinsStore, coachStore, exportData, sessionsStore, type Checkin } from '@/lib/store';
 import { toast } from '@/lib/toast';
-import { IconArrowRight, IconDownload, IconEye, IconHistory, IconMoon, IconPosture, IconStretch, IconTimer } from './icons';
+import { IconArrowRight, IconCheck, IconDownload, IconEye, IconGauge, IconHistory, IconMoon, IconPosture, IconStretch, IconTimer } from './icons';
 import { Stat } from './ui';
 import { Segmented } from './ui-client';
 
@@ -27,7 +28,8 @@ function download() {
 }
 
 function Chart({ days }: { days: Day[] }) {
-  const max = Math.max(...days.map((d) => d.active_s), 1);
+  // Round the top up to the next half hour so the axis reads "3 j" and "1 j 30 mnt", not "2 j 58 mnt".
+  const max = Math.ceil(Math.max(...days.map((d) => d.active_s), 1) / 1800) * 1800;
   const every = days.length > 14 ? 5 : 1;
   return (
     <figure className="card p-5 sm:p-6">
@@ -55,8 +57,14 @@ function Chart({ days }: { days: Day[] }) {
             {days.map((d) => {
               const h = (d.active_s / max) * 100;
               const lean = d.active_s ? (d.slouch_s / d.active_s) * 100 : 0;
+              const score = dayScore(d);
+              const ms = missions(d);
               return (
-                <li key={d.key} className="group flex h-full flex-1 flex-col justify-end" title={`${dayLabel(d.date)}: ${minutes(d.active_s)}, ${pct(d.slouch_s, d.active_s)}% bungkuk`}>
+                <li
+                  key={d.key}
+                  className="group flex h-full flex-1 flex-col justify-end"
+                  title={`${dayLabel(d.date)}: ${minutes(d.active_s)}, ${pct(d.slouch_s, d.active_s)}% bungkuk${score === null ? '' : `, skor ${score}`}, misi ${ms.filter((m) => m.done).length}/${ms.length}`}
+                >
                   <div className="flex flex-col overflow-hidden rounded-t-md transition-opacity group-hover:opacity-80" style={{ height: `${h}%` }}>
                     <div className="flex-1 bg-accent" />
                     <div className="bg-alert" style={{ height: `${lean}%` }} />
@@ -97,8 +105,173 @@ function Chart({ days }: { days: Day[] }) {
   );
 }
 
+const one = (v: number) => v.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+
+/** Self-rated discomfort per day next to the score: the place where better posture can show up as less pain. */
+function PainCard({ days, checkins }: { days: Day[]; checkins: Checkin[] }) {
+  const byKey = new Map(checkins.map((c) => [c.day, c]));
+  const cmp = painByScore(days, checkins);
+  const avg = painAverages(days, checkins);
+  // Numbers fit a cell at 7 days on a phone and at 14 on wider screens; past that the tooltip and table carry them.
+  const numbers = days.length <= 7 ? '' : days.length <= 14 ? 'max-sm:hidden' : 'hidden';
+  const every = days.length > 14 ? 5 : 1;
+
+  return (
+    <section className="card p-5 sm:p-6">
+      <h2 className="text-lg">Pegal dan postur</h2>
+      {avg.n === 0 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-4">
+          <p className="max-w-xl text-muted text-pretty">
+            Isi cek pegal di ruang kerja tiap udahan kerja. Setelah beberapa hari, di sini kelihatan apakah hari yang lebih tegak bikin
+            badanmu lebih enteng.
+          </p>
+          <Link href="/app" className="btn btn-sm">
+            Isi cek pegal
+            <IconArrowRight className="size-4" />
+          </Link>
+        </div>
+      ) : (
+        <>
+          <ol className="mt-5 flex gap-[3px] sm:gap-1.5" aria-hidden>
+            {days.map((d) => {
+              const c = byKey.get(d.key);
+              const v = c && painOf(c);
+              const score = dayScore(d);
+              return (
+                <li
+                  key={d.key}
+                  className={`grid aspect-square max-h-14 flex-1 place-items-center rounded-md text-sm font-bold tabular-nums ${c ? '' : 'border border-dashed border-edge/40'}`}
+                  // One hue from faint to strong; the number inside carries the value too. Capped so the ink stays readable.
+                  style={v === undefined ? undefined : { background: `color-mix(in oklab, var(--mengkudu) ${Math.round(8 + v * 4.7)}%, var(--surface))` }}
+                  title={`${dayLabel(d.date)}: ${c ? `leher ${c.neck}, punggung ${c.back}, mata ${c.eyes}` : 'belum diisi'}${score === null ? '' : `, skor ${score}`}`}
+                >
+                  {v !== undefined && <span className={numbers}>{one(v)}</span>}
+                </li>
+              );
+            })}
+          </ol>
+          <ol className="mt-2 flex gap-[3px] text-center text-[11px] text-muted tabular-nums sm:gap-1.5" aria-hidden>
+            {days.map((d, i) => (
+              <li key={d.key} className="flex-1">
+                {(days.length - 1 - i) % every === 0 ? d.date.getDate() : ''}
+              </li>
+            ))}
+          </ol>
+          <div className="mt-5 space-y-2 text-pretty">
+            {cmp.ready ? (
+              <p>
+                Di hari skormu {GOAL} ke atas, pegalmu rata-rata <strong className="tabular-nums">{one(cmp.good.mean!)}</strong>. Di hari lain{' '}
+                <strong className="tabular-nums">{one(cmp.low.mean!)}</strong>.{' '}
+                {cmp.low.mean! - cmp.good.mean! >= 0.5
+                  ? 'Hari yang lebih tegak kelihatan bikin badanmu lebih enteng.'
+                  : cmp.good.mean! - cmp.low.mean! >= 0.5
+                    ? 'Belum kelihatan bedanya ke arah yang bagus. Coba cek setup meja, atau stretching lebih sering.'
+                    : 'Bedanya masih tipis, terus isi biar polanya makin jelas.'}
+              </p>
+            ) : (
+              <p className="text-muted">
+                Biar kelihatan polanya, butuh minimal dua hari dengan skor {GOAL} ke atas dan dua hari di bawahnya yang ada cek pegalnya.
+                Sekarang {cmp.good.n} dan {cmp.low.n}.
+              </p>
+            )}
+            <p className="text-muted tabular-nums">
+              Rata-rata dari {avg.n} hari: leher {one(avg.neck!)} · punggung {one(avg.back!)} · mata {one(avg.eyes!)}
+            </p>
+          </div>
+          <table className="sr-only">
+            <caption>Pegal per hari, skala 0 sampai 10</caption>
+            <thead>
+              <tr>
+                <th>Hari</th>
+                <th>Leher dan bahu</th>
+                <th>Punggung</th>
+                <th>Mata</th>
+                <th>Skor postur</th>
+              </tr>
+            </thead>
+            <tbody>
+              {days.map((d) => {
+                const c = byKey.get(d.key);
+                return (
+                  <tr key={d.key}>
+                    <td>{dayLabel(d.date)}</td>
+                    <td>{c?.neck ?? 'belum diisi'}</td>
+                    <td>{c?.back ?? 'belum diisi'}</td>
+                    <td>{c?.eyes ?? 'belum diisi'}</td>
+                    <td>{dayScore(d) ?? 'belum ada'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </>
+      )}
+    </section>
+  );
+}
+
+function CoachCard({ week, today }: { week: Week; today: string }) {
+  const saved = useSyncExternalStore(coachStore.subscribe, coachStore.get, coachStore.server);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const enough = week.trackedMin >= 30;
+
+  async function ask() {
+    setBusy(true);
+    setError('');
+    try {
+      const res = await fetch('/api/coach', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(week) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Coach lagi nggak bisa dihubungi.');
+      coachStore.set({ day: today, coach: data });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const coach = saved?.coach;
+  return (
+    <section className="card space-y-5 p-5 sm:p-6" aria-live="polite">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2 className="text-xl">{coach ? coach.headline : 'Coach minggu ini'}</h2>
+        <button type="button" className={coach ? 'btn btn-sm' : 'btn btn-primary btn-sm'} onClick={ask} disabled={busy || !enough}>
+          {busy ? 'Coach lagi mikir…' : coach ? 'Minta saran baru' : 'Minta saran coach'}
+        </button>
+      </div>
+      {coach ? (
+        <ol className="grid gap-3 md:grid-cols-3">
+          {coach.tips.map((t, i) => (
+            <li key={t.title} className="rounded-xl bg-surface p-4">
+              <p className="font-semibold">
+                {i + 1}. {t.title}
+              </p>
+              <p className="mt-1.5 text-sm text-muted text-pretty">{t.body}</p>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="max-w-2xl text-muted text-pretty">
+          {enough
+            ? 'Gemini baca ringkasan 7 hari terakhirmu dan ngasih tiga saran yang pas buat kebiasaanmu.'
+            : 'Kumpulin minimal 30 menit yang dicek kamera atau demo minggu ini, terus minta saran di sini.'}
+        </p>
+      )}
+      {error && <p className="text-sm text-alert-ink">{error}</p>}
+      <details className="text-sm text-muted">
+        <summary className="cursor-pointer">
+          Yang dikirim cuma angka ringkasan yang dibulatkan{saved && saved.day !== today ? `. Saran di atas dari ${saved.day}` : ''}.
+        </summary>
+        <pre className="mt-2 overflow-x-auto rounded-xl bg-surface p-3 text-[12px] leading-relaxed">{JSON.stringify(week, null, 2)}</pre>
+      </details>
+    </section>
+  );
+}
+
 export default function HistoryView() {
   const sessions = useSyncExternalStore(sessionsStore.subscribe, sessionsStore.get, sessionsStore.server);
+  const checkins = useSyncExternalStore(checkinsStore.subscribe, checkinsStore.get, checkinsStore.server);
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [range, setRange] = useState<(typeof RANGES)[number]>(14);
 
@@ -107,6 +280,11 @@ export default function HistoryView() {
   const days = byDay(sessions, range, new Date());
   const t = totals(days);
   const active = days.filter((d) => d.active_s >= 600);
+  const scores = days.map(dayScore).filter((s) => s !== null);
+  const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  // The streak may reach further back than the range on screen.
+  const recent = byDay(sessions, 60, new Date());
+  const run = streak(recent);
   const best = active.length > 1 ? active.reduce((a, b) => (b.slouch_s / b.active_s < a.slouch_s / a.active_s ? b : a)) : null;
 
   return (
@@ -137,15 +315,23 @@ export default function HistoryView() {
       ) : (
         <>
           <div className="card grid gap-x-8 px-5 py-1 md:grid-cols-2 [&>*]:border-b [&>*]:border-rule md:[&>*:nth-last-child(-n+2)]:border-b-0 [&>*:last-child]:border-b-0">
+            <Stat icon={IconGauge} label="Skor rata-rata" value={avgScore === null ? 'Belum ada' : String(avgScore)} detail={`target ${GOAL}, dari ${scores.length} hari`} />
+            <Stat icon={IconCheck} hue="hue-daun" label="Hari beruntun" value={`${run} hari`} detail={`skor ${GOAL} ke atas`} />
             <Stat icon={IconTimer} hue="hue-kunyit" label="Waktu di layar" value={minutes(t.active_s)} detail={`dalam ${t.activeDays} hari`} />
             <Stat icon={IconPosture} label="Bungkuk atau miring" value={`${Math.round(t.leanShare * 100)}%`} detail={minutes(t.slouch_s)} tone={t.leanShare > 0.25 ? 'alert' : undefined} />
             <Stat icon={IconStretch} hue="hue-mengkudu" label="Jeda diambil" value={String(t.resets + t.eye_breaks)} detail={`${t.resets} stretching, ${t.eye_breaks} mata`} />
             <Stat icon={IconEye} hue="hue-daun" label="Rata-rata kedip" value={t.blink === null ? 'Belum ada' : `${Math.round(t.blink)}/mnt`} />
             <Stat icon={IconMoon} hue="hue-ungu" label="Lewat jam tidur" value={minutes(t.late_s)} />
-            <Stat icon={IconHistory} label="Disimpan di" value="browser ini" detail="nggak dikirim" />
+            <Stat icon={IconCheck} hue="hue-daun" label="Semua misi beres" value={`${t.missionDays} hari`} detail={`dari ${t.activeDays}`} />
+            <Stat icon={IconPosture} label="Latihan postur" value={`${t.trainings} kali`} />
+            <Stat icon={IconHistory} label="Disimpan di" value="browser ini" detail="coach cuma dapat ringkasan" />
           </div>
 
           <Chart days={days} />
+
+          <PainCard days={days} checkins={checkins} />
+
+          <CoachCard week={weekSummary(recent.slice(-7), run, checkins)} today={dayKey(new Date())} />
 
           {best && (
             <div className="card flex items-center gap-4 p-5">

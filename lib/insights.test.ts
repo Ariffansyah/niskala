@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { byDay, totals } from './insights.ts';
-import type { SessionSummary } from './store.ts';
+import { GOAL, byDay, dayScore, missions, painAverages, painByScore, streak, totals } from './insights.ts';
+import type { Checkin, SessionSummary } from './store.ts';
 
 const session = (started: Date, over: Partial<SessionSummary>): SessionSummary => ({
   id: crypto.randomUUID(),
@@ -10,6 +10,7 @@ const session = (started: Date, over: Partial<SessionSummary>): SessionSummary =
   active_s: 0,
   resets: 0,
   eye_breaks: 0,
+  trainings: 0,
   slouch_s: 0,
   low_blink_s: 0,
   late_s: 0,
@@ -49,4 +50,71 @@ test('totals are safe with no data', () => {
   const t = totals(byDay([], 14, new Date(2026, 0, 1)));
   assert.equal(t.leanShare, 0);
   assert.equal(t.blink, null);
+});
+
+test('a day scores from its tracked time only, and needs five tracked minutes', () => {
+  const now = new Date(2026, 10, 20, 15, 0);
+  const [timerOnly, camera] = byDay(
+    [
+      session(new Date(2026, 10, 19, 9, 0), { active_s: 3600, source: 'timer' }),
+      session(new Date(2026, 10, 20, 9, 0), { active_s: 1200, slouch_s: 240, low_blink_s: 120 }),
+      session(new Date(2026, 10, 20, 11, 0), { active_s: 3600, source: 'timer' }),
+    ],
+    2,
+    now,
+  );
+  assert.equal(dayScore(timerOnly), null);
+  // 20% leaning and 10% low blinking out of 20 tracked minutes: 100 * (1 - 0.15 - 0.025)
+  assert.equal(camera.tracked_s, 1200);
+  assert.equal(dayScore(camera), 83);
+});
+
+test('the streak counts goal days back from today without breaking on an unfinished today', () => {
+  const now = new Date(2026, 10, 20, 9, 0);
+  const good = (day: number) => session(new Date(2026, 10, day, 10, 0), { active_s: 1800, slouch_s: 60 });
+  const bad = (day: number) => session(new Date(2026, 10, day, 10, 0), { active_s: 1800, slouch_s: 1500 });
+  assert.ok(dayScore(byDay([good(20)], 1, now)[0])! >= GOAL);
+  assert.equal(streak(byDay([bad(16), good(17), good(18), good(19)], 10, now)), 3);
+  assert.equal(streak(byDay([good(17), good(18), good(19), good(20)], 10, now)), 4);
+  assert.equal(streak(byDay([good(17), bad(19)], 10, now)), 0);
+});
+
+test('missions add up across the day and every one has to be met for a full day', () => {
+  const now = new Date(2026, 10, 20, 18, 0);
+  const morning = session(new Date(2026, 10, 20, 9, 0), { active_s: 1800, slouch_s: 120, eye_breaks: 2, resets: 1 });
+  const [half] = byDay([morning], 1, now);
+  assert.deepEqual(
+    missions(half).map((m) => [m.id, m.done]),
+    [['eye', false], ['reset', false], ['train', false], ['score', true]],
+  );
+  const afternoon = session(new Date(2026, 10, 20, 14, 0), { active_s: 600, source: 'timer', eye_breaks: 1, resets: 1, trainings: 1 });
+  const days = byDay([morning, afternoon], 1, now);
+  assert.ok(missions(days[0]).every((m) => m.done));
+  assert.equal(totals(days).missionDays, 1);
+  // Under five tracked minutes there is no score, so the score mission stays open.
+  const [short] = byDay([session(new Date(2026, 10, 20, 9, 0), { active_s: 200, eye_breaks: 3, resets: 2, trainings: 1 })], 1, now);
+  assert.equal(missions(short).find((m) => m.id === 'score')!.done, false);
+});
+
+test('discomfort compares goal days with the rest only once each side has two days', () => {
+  const now = new Date(2026, 10, 20, 20, 0);
+  const at = (day: number, slouch: number) => session(new Date(2026, 10, day, 10, 0), { active_s: 1800, slouch_s: slouch });
+  // 16 and 17 meet the goal, 18 and 19 do not, 20 has a check-in but no tracked time.
+  const days = byDay([at(16, 60), at(17, 90), at(18, 1500), at(19, 1400)], 7, now);
+  const c = (day: number, neck: number, back: number, eyes: number): Checkin => ({ day: `2026-11-${day}`, neck, back, eyes });
+  const checkins = [c(16, 2, 1, 3), c(17, 1, 2, 3), c(18, 6, 5, 7), c(20, 9, 9, 9)];
+
+  const early = painByScore(days, checkins);
+  assert.equal(early.ready, false); // only one low day so far
+  assert.equal(early.good.n, 2);
+  assert.equal(early.good.mean, 2);
+
+  const full = painByScore(days, [...checkins, c(19, 5, 4, 6)]);
+  assert.equal(full.ready, true);
+  assert.equal(full.low.mean, 5.5);
+
+  const avg = painAverages(days, checkins);
+  assert.equal(avg.n, 4);
+  assert.equal(avg.neck, 4.5);
+  assert.equal(painAverages(days.slice(0, 2), checkins).n, 0);
 });

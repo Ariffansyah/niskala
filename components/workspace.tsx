@@ -5,18 +5,21 @@ import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type
 import { createPortal } from 'react-dom';
 import { duration, hhmm, minutes, parseHhmm, sideWord } from '@/lib/format';
 import { ROUTINES } from '@/lib/routines';
-import { SENSITIVITY, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
+import { SENSITIVITY, dominant, driftOf, glowFrom, type Posture, type Sensitivity } from '@/lib/signals';
 import { chime } from '@/lib/sound';
-import { clearAll, exportData, prefsStore, type CameraView, type Mode, type Prefs, type Warmth } from '@/lib/store';
+import { byDay, dayScore, missions, streak, type Mission, type MissionId } from '@/lib/insights';
+import { checkinsStore, clearAll, exportData, prefsStore, saveCheckin, sessionsStore, type CameraView, type Checkin, type Mode, type Prefs, type Warmth } from '@/lib/store';
 import { syncConfigured } from '@/lib/sync';
 import { allowNotifications, canNotify } from '@/lib/notify';
 import { toast } from '@/lib/toast';
-import { useMonitor, type Routine, type Sim, type Snapshot } from '@/lib/use-monitor';
+import { useMonitor, type BreakKind, type Routine, type Sim, type Snapshot } from '@/lib/use-monitor';
 import { describeCameraError, listCameras, startVision } from '@/lib/vision';
+import { SAY, doneLine, hush, speak } from '@/lib/voice';
 import CameraPanel, { type Camera } from './camera-panel';
 import {
   IconBell,
   IconCamera,
+  IconCheck,
   IconDownload,
   IconEye,
   IconGauge,
@@ -35,8 +38,9 @@ import {
 } from './icons';
 import { openMiniMonitor, usePipSupported } from './mini-monitor';
 import Onboarding from './onboarding';
-import PostureFigure, { FigurePicker, FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TILT_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
-import RoutineRunner from './routine';
+import { CastPicker } from './cast';
+import PostureFigure, { FrontFigure, HEAD_MAX_DEG, SIDE_MAX_DEG, TILT_MAX_DEG, TORSO_MAX_DEG } from './posture-figure';
+import RoutineRunner, { type Upright } from './routine';
 import { Badge, Meter, Stat } from './ui';
 import { ConfirmDialog, Segmented, Switch, Tabs } from './ui-client';
 
@@ -49,19 +53,10 @@ const SENSITIVITY_NOTE: Record<Sensitivity, string> = {
   strict: 'Geser dikit aja ketahuan, setelah sekitar 6 detik.',
 };
 
-const CUE_TEXT: Record<Routine, [string, string]> = {
+const CUE_TEXT: Record<BreakKind, [string, string]> = {
   eye: ['Waktunya istirahat mata 20 detik.', 'Lihat yang jauh, terus kedip penuh.'],
   reset: ['Waktunya stretching 60 detik.', 'Leher, bahu, dan mata, dipandu satu-satu.'],
 };
-
-/** Which way the posture has moved most: forward, sideways, or a head tilt. */
-function dominant(p: Posture) {
-  const forward = Math.max(p.head, p.torso);
-  const side = Math.abs(p.side);
-  const tilt = Math.abs(p.tilt);
-  if (forward >= side && forward >= tilt) return { kind: 'forward' as const };
-  return side >= tilt ? { kind: 'side' as const, dir: sideWord(p.side) } : { kind: 'tilt' as const, dir: sideWord(p.tilt) };
-}
 
 function postureWord(p: Posture, threshold: number) {
   const drift = driftOf(p);
@@ -72,7 +67,7 @@ function postureWord(p: Posture, threshold: number) {
 }
 
 function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: boolean, routine: Routine | null, view: CameraView) {
-  if (routine) return 'Lagi jeda. Pinggir layar nggak bakal nyala sampai selesai.';
+  if (routine) return routine === 'train' ? 'Lagi latihan postur. Pinggir layar nggak nyala sampai selesai.' : 'Lagi jeda. Pinggir layar nggak bakal nyala sampai selesai.';
   if (snap.away) return 'Kamu lagi nggak di depan layar. Waktu ini nggak dihitung waktu layar, tapi jadi jeda.';
   if (mode === 'timer') return 'Mode timer: jeda datang sesuai jadwal. Postur dan kedipan nggak dicek.';
   if (mode === 'camera' && !cameraOn) return 'Kamera mati. Nyalain di tab Mode, atau pakai mode timer.';
@@ -80,7 +75,7 @@ function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: b
   if (mode === 'camera' && !snap.posture)
     return view === 'front'
       ? 'Wajahmu nggak kelihatan. Lanjut lagi pas kamu balik.'
-      : 'Telinga, bahu, atau pinggul nggak kelihatan. Lanjut lagi pas badanmu masuk bingkai.';
+      : 'Telinga atau bahu nggak kelihatan. Lanjut lagi pas badanmu masuk bingkai.';
   if (snap.glow > 0 && snap.driftFor === 0 && snap.lowBlinkFor === 0) return 'Udah bagus lagi. Pinggir layar padam sebentar lagi.';
   if (snap.glow > 0 && snap.postureStrain >= snap.eyeStrain && snap.posture) {
     const d = dominant(snap.posture);
@@ -92,8 +87,10 @@ function statusLine(snap: Snapshot, mode: Mode, cameraOn: boolean, calibrated: b
   }
   if (snap.glow > 0)
     return `Pinggir layar nyala karena kamu cuma ngedip ${Math.round(snap.blinkRate ?? 0)} kali per menit${snap.lowBlinkFor >= 1 ? ` selama ${duration(snap.lowBlinkFor)}` : ''}. Kedip penuh, atau lihat jauh sebentar.`;
+  if (snap.tooClose && snap.distanceCm !== null) return `Kamu kedeketan ke layar, sekitar ${snap.distanceCm} cm. Mundur dikit sampai sekitar satu lengan, 50 sampai 75 cm.`;
   if (snap.driftFor > 0) return 'Postur mulai geser. Pinggir layar baru nyala kalau kelamaan.';
   if (snap.lowBlinkFor > 0) return 'Kedipan mulai jarang. Pinggir layar baru nyala kalau terus begitu.';
+  if (snap.backHidden) return 'Pinggulmu ketutup, jadi yang dicek cuma leher. Mundurin atau naikin kamera biar punggung ikut kebaca.';
   return 'Tegak, ngedip normal. Aman.';
 }
 
@@ -108,11 +105,11 @@ function nextBreak(snap: Snapshot) {
   return { value: `${Math.max(1, Math.ceil(n.s / 60))} mnt lagi`, detail: n.what };
 }
 
-function guidance(snap: Snapshot, bedtime: number) {
+function guidance(snap: Snapshot, bedtime: number, checkedIn: boolean) {
   const { stage, minutesToBed } = snap.night;
   if (stage === 'day') return `Layar mulai hangat jam ${hhmm((bedtime + 1440 - 120) % 1440)}, dua jam sebelum jam tidurmu (${hhmm(bedtime)}).`;
   if (stage === 'wind-down')
-    return `${minutesToBed} menit lagi jam tidur. Beresin yang lagi dikerjain, tugas baru simpan buat besok. Catat kamu berhenti di mana biar besok gampang lanjut.`;
+    return `${minutesToBed} menit lagi jam tidur. Beresin yang lagi dikerjain, tugas baru simpan buat besok. Catat kamu berhenti di mana biar besok gampang lanjut.${checkedIn ? '' : ' Sebelum udahan, isi cek pegal hari ini.'}`;
   const ran = snap.session ? minutes(snap.session.active_s) : '';
   return `Udah ${-minutesToBed} menit lewat jam tidurmu, dan sesi ini jalan ${ran}. Layar terang jam segini bikin susah ngantuk. Simpan kerjaanmu dan berhenti di jeda berikutnya.`;
 }
@@ -169,7 +166,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function CueBanner({ cue, onStart, onSnooze }: { cue: Routine; onStart: () => void; onSnooze: () => void }) {
+function CueBanner({ cue, onStart, onSnooze }: { cue: BreakKind; onStart: () => void; onSnooze: () => void }) {
   const [title, body] = CUE_TEXT[cue];
   return (
     <div role="status" className="enter card flex flex-wrap items-center gap-x-4 gap-y-3 border-cue px-4 py-3">
@@ -191,11 +188,147 @@ function CueBanner({ cue, onStart, onSnooze }: { cue: Routine; onStart: () => vo
   );
 }
 
+const MISSION_LOOK: Record<MissionId, [typeof IconEye, string]> = {
+  eye: [IconEye, 'hue-daun'],
+  reset: [IconStretch, 'hue-mengkudu'],
+  train: [IconPosture, 'hue-nila'],
+  score: [IconGauge, 'hue-nila'],
+};
+
+function Missions({ list, score, run, busy, onStart }: { list: Mission[]; score: number | null; run: number; busy: boolean; onStart: (r: Routine) => void }) {
+  return (
+    <section aria-labelledby="missions-title" className="card p-4">
+      <h2 id="missions-title" className="flex flex-wrap items-baseline gap-x-2 text-base">
+        Misi hari ini
+        <span className="text-sm font-normal text-muted tabular-nums">
+          {list.filter((m) => m.done).length}/{list.length} beres{run > 0 && ` · ${run} hari beruntun`}
+        </span>
+      </h2>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        {list.map((m) => {
+          const [Icon, hue] = MISSION_LOOK[m.id];
+          return (
+            <li key={m.id} className={`flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 ${m.done ? 'hue-daun bg-hue-soft' : 'bg-surface'}`}>
+              <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${m.done ? 'bg-daun text-raised' : `${hue} bg-hue-soft text-hue-ink`}`}>
+                {m.done ? <IconCheck className="size-4" /> : <Icon className="size-4" />}
+              </span>
+              <span className="min-w-0 flex-1 text-sm font-medium">{m.label}</span>
+              {m.done ? (
+                <span className="text-sm font-semibold text-hue-ink">Beres</span>
+              ) : m.id === 'score' ? (
+                <span className="text-sm text-muted tabular-nums">{score === null ? 'belum ada' : `sekarang ${score}`}</span>
+              ) : (
+                <>
+                  <span className="text-sm text-muted tabular-nums">
+                    {m.have}/{m.need}
+                  </span>
+                  <button type="button" className="btn btn-sm" disabled={busy} onClick={() => onStart(m.id as Routine)} aria-label={`Mulai ${ROUTINES[m.id as Routine].short.toLowerCase()}`}>
+                    Mulai
+                  </button>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+const PAIN_AREAS = [
+  { key: 'neck', label: 'Leher & bahu' },
+  { key: 'back', label: 'Punggung' },
+  { key: 'eyes', label: 'Mata' },
+] as const;
+
+const painWord = (v: number) => (v === 0 ? 'nggak pegal' : v <= 3 ? 'dikit' : v <= 6 ? 'lumayan' : v <= 8 ? 'pegal' : 'pegal banget');
+
+/** Once a day, how sore you feel. Riwayat sets it against the score, so better posture can show up as less pain. */
+function CheckinCard({ day, saved, evening }: { day: string; saved: Checkin | undefined; evening: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Checkin>(saved ?? { day, neck: 0, back: 0, eyes: 0 });
+
+  if (saved && !editing) {
+    return (
+      <section aria-labelledby="checkin-title" className="card flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+        <h2 id="checkin-title" className="text-base">
+          Cek pegal hari ini
+        </h2>
+        <p className="text-sm text-muted tabular-nums">
+          leher {saved.neck} · punggung {saved.back} · mata {saved.eyes}
+        </p>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm ml-auto"
+          onClick={() => {
+            setDraft(saved);
+            setEditing(true);
+          }}
+        >
+          Ubah
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-labelledby="checkin-title" className={`card p-4 transition-shadow ${evening ? 'ring-2 ring-cue/40' : ''}`}>
+      <h2 id="checkin-title" className="flex flex-wrap items-baseline gap-x-2 text-base">
+        Cek pegal hari ini
+        <span className="text-sm font-normal text-muted">{evening ? 'pas banget diisi sekarang' : 'paling pas diisi pas udahan kerja'}</span>
+      </h2>
+      <div className="mt-3 space-y-3">
+        {PAIN_AREAS.map((a) => {
+          const v = draft[a.key];
+          return (
+            <label key={a.key} className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-sm sm:grid-cols-[7.5rem_1fr_7rem]">
+              <span className="font-medium">{a.label}</span>
+              <span className="text-right text-muted tabular-nums sm:order-last sm:text-left">
+                <span className="font-bold text-ink">{v}</span> · {painWord(v)}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={10}
+                step={1}
+                value={v}
+                onChange={(e) => setDraft({ ...draft, [a.key]: Number(e.target.value) })}
+                aria-valuetext={`${v} dari 10, ${painWord(v)}`}
+                className="range col-span-2 sm:col-span-1"
+              />
+            </label>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        {saved && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
+            Batal
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => {
+            saveCheckin({ ...draft, day });
+            setEditing(false);
+            toast('Kesimpan. Polanya kelihatan di Riwayat setelah beberapa hari.');
+          }}
+        >
+          Simpan
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function Workspace() {
   const prefs = useSyncExternalStore(prefsStore.subscribe, prefsStore.get, prefsStore.server);
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const pipSupported = usePipSupported();
   const notifySupported = useSyncExternalStore(noop, canNotify, () => false);
+  const sessions = useSyncExternalStore(sessionsStore.subscribe, sessionsStore.get, sessionsStore.server);
+  const checkins = useSyncExternalStore(checkinsStore.subscribe, checkinsStore.get, checkinsStore.server);
   const [sim, setSim] = useState<Sim>({ head: 0, torso: 0, side: 0, tilt: 0, blink: 16, late: false });
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [camera, setCamera] = useState<Camera>({ state: 'off' });
@@ -204,6 +337,7 @@ export default function Workspace() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const cameraRun = useRef<{ token: number; stop?: () => void }>({ token: 0 });
+  const allDoneSeen = useRef<{ day: string; all: boolean } | null>(null);
 
   const mode = prefs.mode;
   const cameraOn = camera.state === 'on';
@@ -220,7 +354,7 @@ export default function Workspace() {
       const v = await startVision(mon.onSample, opts);
       if (token !== cameraRun.current.token) return v.stop();
       cameraRun.current.stop = v.stop;
-      setCamera({ state: 'on', video: v.video });
+      setCamera({ state: 'on', preview: v.preview });
       // Device names are only readable once permission is granted.
       listCameras().then(setCameras, () => {});
     } catch (e) {
@@ -272,22 +406,29 @@ export default function Workspace() {
     }
   }
 
-  function finishRoutine() {
+  function finishRoutine(upright: Upright) {
     if (!routine) return;
     mon.completeRoutine(routine);
-    toast(`${ROUTINES[routine].title} selesai.`);
+    const done = `${ROUTINES[routine].title} selesai.`;
+    // A score only means something when the camera saw you for a fair part of the checked steps.
+    const msg = routine === 'train' && upright.measured >= 10 ? `${done} Kamu tegak ${Math.round(upright.held)} dari ${Math.round(upright.measured)} detik.` : done;
+    toast(msg);
+    if (prefs.voice) speak(doneLine(routine, upright));
     setRoutine(null);
   }
 
   // Stopping early is not the same as taking the break: bring the reminder back in 5 minutes.
   function stopRoutine() {
     if (!routine) return;
-    mon.snooze(routine);
-    toast('Jeda distop. Diingetin lagi 5 menit lagi.', 'info');
+    hush();
+    if (routine !== 'train') {
+      mon.snooze(routine);
+      toast('Jeda distop. Diingetin lagi 5 menit lagi.', 'info');
+    }
     setRoutine(null);
   }
 
-  function snooze(kind: Routine) {
+  function snooze(kind: BreakKind) {
     mon.snooze(kind);
     toast('Oke, diingetin lagi 5 menit lagi.', 'info');
   }
@@ -307,7 +448,7 @@ export default function Workspace() {
     if (!pip || camera.state !== 'on') return;
     const holder = pip.document.createElement('div');
     holder.className = 'offscreen-video';
-    holder.append(camera.video);
+    holder.append(camera.preview);
     pip.document.body.append(holder);
   }, [pip, camera]);
 
@@ -326,6 +467,7 @@ export default function Workspace() {
     else if (routine || !prefs.onboarded) return;
     else if (e.key === 'r') setRoutine('reset');
     else if (e.key === 'e') setRoutine('eye');
+    else if (e.key === 'l') setRoutine('train');
     else if (e.key === 'm') toggleMini();
   });
   useEffect(() => {
@@ -340,6 +482,15 @@ export default function Workspace() {
   const posture = tracked ? snap.posture : null;
   const session = snap.session;
   const next = nextBreak(snap);
+  // The current session is saved every 15 s, so today's score follows it closely. The clock is read only
+  // after hydration: the prerendered page has no "today".
+  const days = hydrated ? byDay(sessions, 60, new Date()) : [];
+  const today = days.at(-1);
+  const todayMissions = today ? missions(today) : [];
+  const missionsDone = todayMissions.filter((m) => m.done).length;
+  const allDone = today !== undefined && missionsDone === todayMissions.length;
+  const run = streak(days);
+  const checkedIn = today ? checkins.find((c) => c.day === today.key) : undefined;
   const status = statusLine(snap, mode, cameraOn, calibrated, routine, view);
   // The tab title is visible from the taskbar or another monitor, so it carries the state too.
   const title = routine
@@ -370,12 +521,24 @@ export default function Workspace() {
     document.title = title;
   }, [title]);
 
+  // Cheer once per day, the moment the last mission ticks off; a score wobbling around the goal stays quiet.
+  const todayKey = today?.key;
+  useEffect(() => {
+    if (!todayKey) return;
+    const seen = allDoneSeen.current;
+    if (seen?.day === todayKey && !seen.all && allDone) toast('Semua misi hari ini beres. Mantap!');
+    allDoneSeen.current = { day: todayKey, all: allDone || (seen?.day === todayKey && seen.all) };
+  }, [todayKey, allDone]);
+
   const runner = routine && (
     <RoutineRunner
       key={routine}
       kind={routine}
+      who={prefs.figure}
       posture={snap.posture}
+      threshold={S.drift}
       blinkTotal={snap.blinkTotal}
+      voice={prefs.voice}
       onDone={finishRoutine}
       onExit={stopRoutine}
       compact={pip !== null}
@@ -415,14 +578,20 @@ export default function Workspace() {
             <span className="font-semibold tabular-nums">{next.value}</span>
             <span className="text-muted"> · {next.detail}</span>
           </p>
-          <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
-            <button type="button" className="btn btn-sm flex-1 sm:flex-none" disabled={routine !== null} onClick={() => setRoutine('reset')}>
-              <IconStretch className="size-4" />
-              Stretching 60 dtk
+          <div className="grid w-full grid-cols-3 gap-2 sm:ml-auto sm:flex sm:w-auto">
+            <button type="button" className="btn btn-sm px-2 sm:px-3" disabled={routine !== null} onClick={() => setRoutine('reset')}>
+              <IconStretch className="size-4 max-sm:hidden" />
+              Stretching
             </button>
-            <button type="button" className="btn btn-sm flex-1 sm:flex-none" onClick={toggleMini} aria-pressed={pip !== null}>
-              <IconPip className="size-4" />
-              {pip ? 'Tutup jendela kecil' : 'Jendela kecil'}
+            <button type="button" className="btn btn-sm px-2 sm:px-3" disabled={routine !== null} onClick={() => setRoutine('train')}>
+              <IconPosture className="size-4 max-sm:hidden" />
+              <span>
+                Latihan<span className="max-sm:hidden"> postur</span>
+              </span>
+            </button>
+            <button type="button" className="btn btn-sm px-2 sm:px-3" onClick={toggleMini} aria-pressed={pip !== null}>
+              <IconPip className="size-4 max-sm:hidden" />
+              {pip ? 'Tutup jendela' : 'Jendela kecil'}
             </button>
           </div>
         </div>
@@ -447,6 +616,10 @@ export default function Workspace() {
                     </p>
                   )}
                 </div>
+                {/* Its own radio name: the Setelan tab can show a second picker at the same time. */}
+                <div className="mt-1.5 flex justify-center">
+                  <CastPicker value={prefs.figure} onChange={(figure) => update({ figure })} size="size-8" label="Ganti figur" />
+                </div>
               </figure>
               {deg && (
                 <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5" aria-label="Sudut saat ini">
@@ -455,6 +628,7 @@ export default function Workspace() {
                   <span className="chip">
                     Miring {Math.abs(deg.side)}°{deg.side !== 0 && ` ${sideWord(deg.side)}`}
                   </span>
+                  {snap.distanceCm !== null && <span className={`chip ${snap.tooClose ? 'text-alert-ink' : ''}`}>Jarak ±{snap.distanceCm} cm</span>}
                 </div>
               )}
             </div>
@@ -468,59 +642,52 @@ export default function Workspace() {
             ) : (
               <>
                 {snap.cue && <CueBanner cue={snap.cue} onStart={() => setRoutine(snap.cue)} onSnooze={() => snooze(snap.cue!)} />}
-                <p className="flex gap-2.5 text-sm text-pretty">
-                  <IconInfo className="mt-0.5 size-4 shrink-0 text-muted" />
+                <p
+                  className={`flex gap-2.5 rounded-xl px-4 py-3 text-sm text-pretty transition-colors ${snap.glow > 0 ? 'bg-alert/15 text-alert-ink' : 'bg-surface'}`}
+                >
+                  <IconInfo className={`mt-0.5 size-4 shrink-0 ${snap.glow > 0 ? '' : 'text-muted'}`} />
                   {status}
                 </p>
-                {tracked && (
-                  <div className="card grid gap-5 p-4 sm:grid-cols-2">
-                    <Meter
-                      label="Tegang di postur"
-                      value={snap.postureStrain}
-                      threshold={0.3}
-                      hint={snap.glow > 0 && snap.postureStrain >= snap.eyeStrain ? 'pinggir nyala' : glowFrom(snap.postureStrain) > 0 ? 'hampir' : 'aman'}
+                <div className="card px-4">
+                  {tracked && (
+                    <div className="grid gap-5 border-b border-rule py-4 sm:grid-cols-2">
+                      <Meter
+                        label="Tegang di postur"
+                        value={snap.postureStrain}
+                        threshold={0.3}
+                        hint={snap.glow > 0 && snap.postureStrain >= snap.eyeStrain ? 'pinggir nyala' : glowFrom(snap.postureStrain) > 0 ? 'hampir' : 'aman'}
+                      />
+                      <Meter
+                        label="Capek di mata"
+                        value={snap.eyeStrain}
+                        threshold={0.3}
+                        hint={sideOnly ? 'nggak kebaca dari samping' : snap.blinkRate === null ? 'ngukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
+                      />
+                    </div>
+                  )}
+                  <div className="grid gap-x-8 py-1 sm:grid-cols-2 max-sm:[&>*:first-child]:border-b max-sm:[&>*:first-child]:border-rule">
+                    <Stat
+                      icon={IconLean}
+                      label="Miring"
+                      value={
+                        sideOnly && cameraOn
+                          ? 'Nggak kebaca'
+                          : !deg
+                            ? 'Nggak dicek'
+                            : Math.abs(deg.side) < 2 && Math.abs(deg.tilt) < 3
+                              ? 'Lurus'
+                              : Math.abs(deg.side) * (TILT_MAX_DEG / SIDE_MAX_DEG) >= Math.abs(deg.tilt)
+                                ? `Badan ${Math.abs(deg.side)}° ${sideWord(deg.side)}`
+                                : `Kepala ${Math.abs(deg.tilt)}° ${sideWord(deg.tilt)}`
+                      }
                     />
-                    <Meter
-                      label="Capek di mata"
-                      value={snap.eyeStrain}
-                      threshold={0.3}
-                      hint={sideOnly ? 'nggak kebaca dari samping' : snap.blinkRate === null ? 'ngukur…' : `${Math.round(snap.blinkRate)} kedip/mnt`}
-                    />
+                    <Stat icon={IconTimer} hue="hue-kunyit" label="Bungkuk sesi ini" value={minutes(session?.slouch_s ?? 0)} />
                   </div>
-                )}
-                <div className="card grid gap-x-8 px-4 py-1 sm:grid-cols-2 [&>*]:border-b [&>*]:border-rule sm:[&>*:nth-last-child(-n+2)]:border-b-0 [&>*:last-child]:border-b-0">
-                  <Stat
-                    icon={IconPosture}
-                    label="Postur"
-                    value={posture ? postureWord(posture, S.drift) : 'Nggak dicek'}
-                    tone={posture && driftOf(posture) >= S.drift ? 'alert' : undefined}
-                  />
-                  <Stat
-                    icon={IconLean}
-                    label="Miring"
-                    value={
-                      sideOnly && cameraOn
-                        ? 'Nggak kebaca'
-                        : !deg
-                          ? 'Nggak dicek'
-                          : Math.abs(deg.side) < 2 && Math.abs(deg.tilt) < 3
-                            ? 'Lurus'
-                            : Math.abs(deg.side) * (TILT_MAX_DEG / SIDE_MAX_DEG) >= Math.abs(deg.tilt)
-                              ? `Badan ${Math.abs(deg.side)}° ${sideWord(deg.side)}`
-                              : `Kepala ${Math.abs(deg.tilt)}° ${sideWord(deg.tilt)}`
-                    }
-                  />
-                  <Stat
-                    icon={IconEye}
-                    hue="hue-daun"
-                    label="Kedip"
-                    value={sideOnly ? 'Nggak kebaca' : snap.blinkRate === null ? (tracked ? 'Ngukur' : 'Nggak dicek') : `${Math.round(snap.blinkRate)}/mnt`}
-                    tone={snap.blinkRate !== null && snap.blinkRate < S.lowBlink ? 'alert' : undefined}
-                  />
-                  <Stat icon={IconTimer} hue="hue-kunyit" label="Bungkuk sesi ini" value={minutes(session?.slouch_s ?? 0)} />
                 </div>
               </>
             )}
+            {today && <Missions list={todayMissions} score={dayScore(today)} run={run} busy={routine !== null} onStart={setRoutine} />}
+            {today && <CheckinCard key={today.key} day={today.key} saved={checkedIn} evening={snap.night.stage !== 'day'} />}
           </section>
 
           <aside className="card self-start overflow-hidden lg:sticky lg:top-20">
@@ -555,6 +722,7 @@ export default function Workspace() {
                       onStop={stopCamera}
                       calibrated={calibrated}
                       calibrate={mon.calibrate}
+                      checkSetup={mon.checkSetup}
                       previewElsewhere={pip !== null}
                       view={view}
                       onViewChange={(cameraView) => changeCamera({ cameraView })}
@@ -638,6 +806,18 @@ export default function Workspace() {
                       Coba dengar
                     </button>
                   </div>
+                  <div>
+                    <Switch
+                      checked={prefs.voice}
+                      onChange={(voice) => update({ voice })}
+                      label="Suara pengingat"
+                      description="Ngasih tahu kalau kamu bungkuk atau miring, pas jeda datang, dan mandu tiap gerakan."
+                    />
+                    <button type="button" className="btn btn-ghost btn-sm mt-1 -ml-3" onClick={() => speak(SAY.back)}>
+                      <IconVolume className="size-4" />
+                      Coba dengar
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 gap-2 border-t border-rule pt-5">
                     <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('eye')}>
                       <IconEye className="size-4" />
@@ -646,6 +826,10 @@ export default function Workspace() {
                     <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('reset')}>
                       <IconStretch className="size-4" />
                       Stretching
+                    </button>
+                    <button type="button" className="btn btn-sm col-span-2" disabled={routine !== null} onClick={() => setRoutine('train')}>
+                      <IconPosture className="size-4" />
+                      Latihan postur 2 menit
                     </button>
                   </div>
                   <div className="rounded-xl bg-surface p-4 text-[13px] text-muted">
@@ -656,6 +840,9 @@ export default function Workspace() {
                       </li>
                       <li>
                         <kbd className="kbd">E</kbd> istirahat mata
+                      </li>
+                      <li>
+                        <kbd className="kbd">L</kbd> latihan postur
                       </li>
                       <li>
                         <kbd className="kbd">M</kbd> jendela kecil
@@ -705,7 +892,7 @@ export default function Workspace() {
                   </Field>
                   <div className="flex gap-3 rounded-xl bg-surface p-4 text-sm">
                     <IconMoon className="mt-0.5 size-4 shrink-0 text-accent" />
-                    <p className="text-pretty">{guidance(snap, prefs.bedtime)}</p>
+                    <p className="text-pretty">{guidance(snap, prefs.bedtime, checkedIn !== undefined)}</p>
                   </div>
                   <p className="text-sm text-pretty">Warna hangat ini cuma di Niskala. Nyalain juga night light di sistem biar seluruh layar ikut.</p>
                 </>
@@ -714,7 +901,7 @@ export default function Workspace() {
               {tab === 'settings' && (
                 <>
                   <Field label="Figur">
-                    <FigurePicker value={prefs.figure} onChange={(figure) => update({ figure })} />
+                    <CastPicker value={prefs.figure} onChange={(figure) => update({ figure })} />
                   </Field>
                   <div className="space-y-4 rounded-xl bg-surface p-4">
                     <p className="text-pretty">
@@ -753,7 +940,7 @@ export default function Workspace() {
                   </Field>
                   <div className="space-y-4 border-t border-rule pt-5">
                     <p className="text-sm text-muted text-pretty">
-                      Yang disimpan di browser ini: setelan, kalibrasi, dan ringkasan tiap sesi. Nggak ada gambar atau data wajah yang
+                      Yang disimpan di browser ini: setelan, kalibrasi, ringkasan tiap sesi, dan cek pegal. Nggak ada gambar atau data wajah yang
                       disimpan.
                     </p>
                     {syncConfigured && (
@@ -849,7 +1036,10 @@ export default function Workspace() {
                 ) : (
                   <p className="flex items-center gap-2 text-sm">
                     <IconTimer className="size-4 shrink-0 text-accent" />
-                    <span className="text-muted">{next.value === 'Mati' ? 'Jadwal jeda mati' : `Jeda berikutnya ${next.value}`}</span>
+                    <span className="text-muted">
+                      {next.value === 'Mati' ? 'Jadwal jeda mati' : `Jeda berikutnya ${next.value}`}
+                      {today && ` · misi ${missionsDone}/${todayMissions.length}`}
+                    </span>
                     <button type="button" className="btn btn-ghost btn-sm ml-auto" onClick={() => setRoutine('reset')}>
                       Stretching
                     </button>
