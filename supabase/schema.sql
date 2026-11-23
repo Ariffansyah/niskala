@@ -11,6 +11,7 @@ create table if not exists public.session_summaries (
   resets integer not null check (resets >= 0),
   eye_breaks integer not null default 0 check (eye_breaks >= 0),
   trainings integer not null default 0 check (trainings >= 0),
+  breaths integer not null default 0 check (breaths >= 0),
   slouch_s integer not null check (slouch_s >= 0),
   low_blink_s integer not null check (low_blink_s >= 0),
   late_s integer not null check (late_s >= 0),
@@ -18,8 +19,9 @@ create table if not exists public.session_summaries (
   source text not null check (source in ('camera', 'timer', 'simulation'))
 );
 
--- Projects created before posture trainings were counted.
+-- Projects created before posture trainings or breathing pauses were counted.
 alter table public.session_summaries add column if not exists trainings integer not null default 0 check (trainings >= 0);
+alter table public.session_summaries add column if not exists breaths integer not null default 0 check (breaths >= 0);
 
 create table if not exists public.preferences (
   user_id uuid primary key default auth.uid() references auth.users on delete cascade,

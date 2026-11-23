@@ -12,6 +12,7 @@ const session = (started: Date, over: Partial<SessionSummary>): SessionSummary =
   resets: 0,
   eye_breaks: 0,
   trainings: 0,
+  breaths: 0,
   slouch_s: 0,
   low_blink_s: 0,
   late_s: 0,

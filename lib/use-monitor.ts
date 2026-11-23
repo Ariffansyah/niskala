@@ -110,6 +110,7 @@ const INITIAL: Snapshot = {
 };
 
 const pad = (n: number) => String(n).padStart(2, '0');
+const COUNTER = { eye: 'eye_breaks', reset: 'resets', train: 'trainings', breath: 'breaths' } as const;
 
 export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }: {
   mode: Mode;
@@ -339,6 +340,7 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
       resets: 0,
       eye_breaks: 0,
       trainings: 0,
+      breaths: 0,
       slouch_s: 0,
       low_blink_s: 0,
       late_s: 0,
@@ -427,7 +429,9 @@ export function useMonitor({ mode, cameraOn, sim, prefs, routine, timerWindow }:
     const m = model.current;
     // Save on the next tick, so today's missions tick off right away instead of up to 15 s later.
     m.savedAt = -Infinity;
-    if (m.session) m.session[kind === 'train' ? 'trainings' : kind === 'reset' ? 'resets' : 'eye_breaks']++;
+    if (m.session) m.session[COUNTER[kind]]++;
+    // The breathing pause is for the mind, so the posture and eye timers carry on.
+    if (kind === 'breath') return;
     // Training is extra practice, not a scheduled break: it clears the posture strain and nothing else.
     if (kind === 'train') {
       m.postureStrain = 0;

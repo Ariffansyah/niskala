@@ -11,6 +11,7 @@ export type Day = {
   resets: number;
   eye_breaks: number;
   trainings: number;
+  breaths: number;
   blink: number | null; // active-time weighted mean
 };
 
@@ -23,7 +24,7 @@ export function byDay(sessions: SessionSummary[], count: number, now: Date): Day
   const index = new Map<string, Day & { blinkW: number; blinkT: number }>();
   for (let i = count - 1; i >= 0; i--) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const d = { key: dayKey(date), date, active_s: 0, tracked_s: 0, slouch_s: 0, low_blink_s: 0, late_s: 0, resets: 0, eye_breaks: 0, trainings: 0, blink: null, blinkW: 0, blinkT: 0 };
+    const d = { key: dayKey(date), date, active_s: 0, tracked_s: 0, slouch_s: 0, low_blink_s: 0, late_s: 0, resets: 0, eye_breaks: 0, trainings: 0, breaths: 0, blink: null, blinkW: 0, blinkT: 0 };
     index.set(d.key, d);
     days.push(d);
   }
@@ -38,6 +39,7 @@ export function byDay(sessions: SessionSummary[], count: number, now: Date): Day
     d.resets += s.resets;
     d.eye_breaks += s.eye_breaks;
     d.trainings += s.trainings;
+    d.breaths += s.breaths;
     if (s.avg_blink !== null) {
       d.blinkW += s.avg_blink * s.active_s;
       d.blinkT += s.active_s;
@@ -71,14 +73,15 @@ export function streak(days: Day[]) {
   return n;
 }
 
-export type MissionId = 'eye' | 'reset' | 'train' | 'score';
+export type MissionId = 'eye' | 'reset' | 'breath' | 'train' | 'score';
 export type Mission = { id: MissionId; label: string; have: number; need: number; done: boolean };
 
-/** A small daily checklist that ties the breaks, posture training and the score together. */
+/** A small daily checklist that ties the breaks, the breathing pause, posture training and the score together. */
 export function missions(d: Day): Mission[] {
   const list = [
     { id: 'eye' as const, label: 'Istirahat mata 3 kali', have: d.eye_breaks, need: 3 },
     { id: 'reset' as const, label: 'Stretching 2 kali', have: d.resets, need: 2 },
+    { id: 'breath' as const, label: 'Jeda napas sekali', have: d.breaths, need: 1 },
     { id: 'train' as const, label: 'Latihan postur sekali', have: d.trainings, need: 1 },
     { id: 'score' as const, label: `Skor ${GOAL} ke atas`, have: dayScore(d) ?? 0, need: GOAL },
   ];
@@ -99,6 +102,7 @@ export function totals(days: Day[]) {
     resets: sum((d) => d.resets),
     eye_breaks: sum((d) => d.eye_breaks),
     trainings: sum((d) => d.trainings),
+    breaths: sum((d) => d.breaths),
     missionDays: days.filter((d) => missions(d).every((m) => m.done)).length,
     activeDays: days.filter((d) => d.active_s > 0).length,
     blink: withBlink.length

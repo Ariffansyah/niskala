@@ -18,6 +18,7 @@ import { SAY, doneLine, hush, speak } from '@/lib/voice';
 import CameraPanel, { type Camera } from './camera-panel';
 import {
   IconBell,
+  IconBreath,
   IconCamera,
   IconCheck,
   IconDownload,
@@ -191,6 +192,7 @@ function CueBanner({ cue, onStart, onSnooze }: { cue: BreakKind; onStart: () => 
 const MISSION_LOOK: Record<MissionId, [typeof IconEye, string]> = {
   eye: [IconEye, 'hue-daun'],
   reset: [IconStretch, 'hue-mengkudu'],
+  breath: [IconBreath, 'hue-ungu'],
   train: [IconPosture, 'hue-nila'],
   score: [IconGauge, 'hue-nila'],
 };
@@ -421,7 +423,7 @@ export default function Workspace() {
   function stopRoutine() {
     if (!routine) return;
     hush();
-    if (routine !== 'train') {
+    if (routine === 'eye' || routine === 'reset') {
       mon.snooze(routine);
       toast('Jeda distop. Diingetin lagi 5 menit lagi.', 'info');
     }
@@ -468,6 +470,7 @@ export default function Workspace() {
     else if (e.key === 'r') setRoutine('reset');
     else if (e.key === 'e') setRoutine('eye');
     else if (e.key === 'l') setRoutine('train');
+    else if (e.key === 'n') setRoutine('breath');
     else if (e.key === 'm') toggleMini();
   });
   useEffect(() => {
@@ -827,9 +830,13 @@ export default function Workspace() {
                       <IconStretch className="size-4" />
                       Stretching
                     </button>
-                    <button type="button" className="btn btn-sm col-span-2" disabled={routine !== null} onClick={() => setRoutine('train')}>
+                    <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('breath')}>
+                      <IconBreath className="size-4" />
+                      Jeda napas
+                    </button>
+                    <button type="button" className="btn btn-sm" disabled={routine !== null} onClick={() => setRoutine('train')}>
                       <IconPosture className="size-4" />
-                      Latihan postur 2 menit
+                      Latihan postur
                     </button>
                   </div>
                   <div className="rounded-xl bg-surface p-4 text-[13px] text-muted">
@@ -843,6 +850,9 @@ export default function Workspace() {
                       </li>
                       <li>
                         <kbd className="kbd">L</kbd> latihan postur
+                      </li>
+                      <li>
+                        <kbd className="kbd">N</kbd> jeda napas
                       </li>
                       <li>
                         <kbd className="kbd">M</kbd> jendela kecil

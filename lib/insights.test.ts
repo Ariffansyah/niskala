@@ -11,6 +11,7 @@ const session = (started: Date, over: Partial<SessionSummary>): SessionSummary =
   resets: 0,
   eye_breaks: 0,
   trainings: 0,
+  breaths: 0,
   slouch_s: 0,
   low_blink_s: 0,
   late_s: 0,
@@ -85,14 +86,14 @@ test('missions add up across the day and every one has to be met for a full day'
   const [half] = byDay([morning], 1, now);
   assert.deepEqual(
     missions(half).map((m) => [m.id, m.done]),
-    [['eye', false], ['reset', false], ['train', false], ['score', true]],
+    [['eye', false], ['reset', false], ['breath', false], ['train', false], ['score', true]],
   );
-  const afternoon = session(new Date(2026, 10, 20, 14, 0), { active_s: 600, source: 'timer', eye_breaks: 1, resets: 1, trainings: 1 });
+  const afternoon = session(new Date(2026, 10, 20, 14, 0), { active_s: 600, source: 'timer', eye_breaks: 1, resets: 1, trainings: 1, breaths: 1 });
   const days = byDay([morning, afternoon], 1, now);
   assert.ok(missions(days[0]).every((m) => m.done));
   assert.equal(totals(days).missionDays, 1);
   // Under five tracked minutes there is no score, so the score mission stays open.
-  const [short] = byDay([session(new Date(2026, 10, 20, 9, 0), { active_s: 200, eye_breaks: 3, resets: 2, trainings: 1 })], 1, now);
+  const [short] = byDay([session(new Date(2026, 10, 20, 9, 0), { active_s: 200, eye_breaks: 3, resets: 2, trainings: 1, breaths: 1 })], 1, now);
   assert.equal(missions(short).find((m) => m.id === 'score')!.done, false);
 });
 
