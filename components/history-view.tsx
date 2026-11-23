@@ -82,25 +82,27 @@ function Chart({ days }: { days: Day[] }) {
           </ol>
         </div>
       </div>
-      <table className="sr-only">
-        <caption>Waktu di layar dan waktu bungkuk per hari</caption>
-        <thead>
-          <tr>
-            <th>Hari</th>
-            <th>Waktu di layar</th>
-            <th>Bungkuk atau miring</th>
-          </tr>
-        </thead>
-        <tbody>
-          {days.map((d) => (
-            <tr key={d.key}>
-              <td>{dayLabel(d.date)}</td>
-              <td>{minutes(d.active_s)}</td>
-              <td>{minutes(d.slouch_s)}</td>
+      <div className="sr-only">
+        <table>
+          <caption>Waktu di layar dan waktu bungkuk per hari</caption>
+          <thead>
+            <tr>
+              <th>Hari</th>
+              <th>Waktu di layar</th>
+              <th>Bungkuk atau miring</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {days.map((d) => (
+              <tr key={d.key}>
+                <td>{dayLabel(d.date)}</td>
+                <td>{minutes(d.active_s)}</td>
+                <td>{minutes(d.slouch_s)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }
@@ -203,32 +205,34 @@ function PainCard({ days, checkins }: { days: Day[]; checkins: Checkin[] }) {
               Rata-rata dari {avg.n} hari: leher {one(avg.neck!)} · punggung {one(avg.back!)} · mata {one(avg.eyes!)}
             </p>
           </div>
-          <table className="sr-only">
-            <caption>Pegal per hari, skala 0 sampai 10</caption>
-            <thead>
-              <tr>
-                <th>Hari</th>
-                <th>Leher dan bahu</th>
-                <th>Punggung</th>
-                <th>Mata</th>
-                <th>Skor postur</th>
-              </tr>
-            </thead>
-            <tbody>
-              {days.map((d) => {
-                const c = byKey.get(d.key);
-                return (
-                  <tr key={d.key}>
-                    <td>{dayLabel(d.date)}</td>
-                    <td>{c?.neck ?? 'belum diisi'}</td>
-                    <td>{c?.back ?? 'belum diisi'}</td>
-                    <td>{c?.eyes ?? 'belum diisi'}</td>
-                    <td>{dayScore(d) ?? 'belum ada'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="sr-only">
+            <table>
+              <caption>Pegal per hari, skala 0 sampai 10</caption>
+              <thead>
+                <tr>
+                  <th>Hari</th>
+                  <th>Leher dan bahu</th>
+                  <th>Punggung</th>
+                  <th>Mata</th>
+                  <th>Skor postur</th>
+                </tr>
+              </thead>
+              <tbody>
+                {days.map((d) => {
+                  const c = byKey.get(d.key);
+                  return (
+                    <tr key={d.key}>
+                      <td>{dayLabel(d.date)}</td>
+                      <td>{c?.neck ?? 'belum diisi'}</td>
+                      <td>{c?.back ?? 'belum diisi'}</td>
+                      <td>{c?.eyes ?? 'belum diisi'}</td>
+                      <td>{dayScore(d) ?? 'belum ada'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </section>
@@ -296,25 +300,27 @@ function StressCard({ days, checkins }: { days: Day[]; checkins: Checkin[] }) {
               Rata-rata dari {rated.length} hari: stres {one(rated.reduce((a, d) => a + stress.get(d.key)!, 0) / rated.length)}
             </p>
           </div>
-          <table className="sr-only">
-            <caption>Stres per hari, skala 0 sampai 10</caption>
-            <thead>
-              <tr>
-                <th>Hari</th>
-                <th>Stres</th>
-                <th>Semua jeda diambil</th>
-              </tr>
-            </thead>
-            <tbody>
-              {days.map((d) => (
-                <tr key={d.key}>
-                  <td>{dayLabel(d.date)}</td>
-                  <td>{stress.get(d.key) ?? 'belum diisi'}</td>
-                  <td>{d.active_s === 0 ? 'nggak kerja' : all(d) ? 'ya' : 'belum'}</td>
+          <div className="sr-only">
+            <table>
+              <caption>Stres per hari, skala 0 sampai 10</caption>
+              <thead>
+                <tr>
+                  <th>Hari</th>
+                  <th>Stres</th>
+                  <th>Semua jeda diambil</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {days.map((d) => (
+                  <tr key={d.key}>
+                    <td>{dayLabel(d.date)}</td>
+                    <td>{stress.get(d.key) ?? 'belum diisi'}</td>
+                    <td>{d.active_s === 0 ? 'nggak kerja' : all(d) ? 'ya' : 'belum'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </section>
