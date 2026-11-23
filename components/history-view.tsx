@@ -5,9 +5,10 @@ import { useState, useSyncExternalStore } from 'react';
 import { minutes } from '@/lib/format';
 import { weekSummary, type Week } from '@/lib/coach';
 import { GOAL, byDay, dayKey, dayScore, enoughBreaks, missions, painAverages, painByScore, painOf, streak, stressByBreaks, totals, type Day } from '@/lib/insights';
-import { checkinsStore, coachStore, exportData, sessionsStore, type Checkin } from '@/lib/store';
+import { sampleData } from '@/lib/sample';
+import { checkinsStore, clearSample, coachStore, exportData, loadSample, sampleStore, sessionsStore, type Checkin } from '@/lib/store';
 import { toast } from '@/lib/toast';
-import { IconArrowRight, IconCheck, IconDownload, IconEye, IconGauge, IconHistory, IconMoon, IconPosture, IconStretch, IconTimer } from './icons';
+import { IconArrowRight, IconCheck, IconDownload, IconEye, IconGauge, IconHistory, IconInfo, IconMoon, IconPosture, IconStretch, IconTimer } from './icons';
 import { Stat } from './ui';
 import { Segmented } from './ui-client';
 
@@ -389,6 +390,7 @@ function CoachCard({ week, today }: { week: Week; today: string }) {
 export default function HistoryView() {
   const sessions = useSyncExternalStore(sessionsStore.subscribe, sessionsStore.get, sessionsStore.server);
   const checkins = useSyncExternalStore(checkinsStore.subscribe, checkinsStore.get, checkinsStore.server);
+  const sample = useSyncExternalStore(sampleStore.subscribe, sampleStore.get, sampleStore.server);
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [range, setRange] = useState<(typeof RANGES)[number]>(14);
 
@@ -416,6 +418,16 @@ export default function HistoryView() {
         />
       </div>
 
+      {sample && (
+        <div className="hue-kunyit flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-hue-soft px-4 py-3 text-sm">
+          <IconInfo className="size-4 shrink-0 text-hue-ink" />
+          <p className="min-w-48 flex-1 text-pretty">Ini data contoh buat nyobain Riwayat. Data aslimu kesimpan begitu kamu pakai ruang kerja.</p>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={clearSample}>
+            Hapus data contoh
+          </button>
+        </div>
+      )}
+
       {t.activeDays === 0 ? (
         <div className="card grid place-items-center px-6 py-16 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-surface text-accent">
@@ -424,10 +436,18 @@ export default function HistoryView() {
           <p className="mt-5 max-w-md text-lg text-pretty">
             Belum ada sesi di rentang ini. Sesi di ruang kerja yang lebih dari 30 detik otomatis kesimpan di sini, mode apa pun.
           </p>
-          <Link href="/app" className="btn btn-primary mt-6">
-            Buka ruang kerja
-            <IconArrowRight className="size-4" />
-          </Link>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <Link href="/app" className="btn btn-primary">
+              Buka ruang kerja
+              <IconArrowRight className="size-4" />
+            </Link>
+            {/* Two weeks of use before Riwayat says anything is a long wait for someone just trying it out. */}
+            {sessions.length === 0 && checkins.length === 0 && (
+              <button type="button" className="btn" onClick={() => loadSample(sampleData(new Date()))}>
+                Lihat pakai data contoh
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <>
