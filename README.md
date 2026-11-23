@@ -32,7 +32,7 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 | --- | --- |
 | `/` | Landing page: the hero is the live demo, followed by the problem in numbers and what sets Niskala apart. The hero has Raka and Ayu act out a slouch and a lean until you take the sliders, and the real edge glow answers. Further down, a pinned room plays the six signals as you scroll, and the page runs from morning to night with it: the section's background goes from lontar through dusk to nila as the room's lights change, straight into the closing band. Behind the light sections a few faint kawung turn over minutes, and stars come out with the night; both stand still for reduced motion |
 | `/app` | Workspace: first-run setup, tracking, breaks and the breathing pause, daily missions, the daily check-in, the weekly WHO-5, evening, sensitivity, data |
-| `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks, late minutes, trainings and full-mission days, self-rated stress set against the breaks taken, and discomfort set against the score |
+| `/riwayat` | 7, 14 or 30 days of screen time, leaning share, breaks, late minutes, trainings and full-mission days, self-rated stress set against the breaks taken, and discomfort set against the score. A browser with no data yet can load two weeks of sample data (`lib/sample.ts`) to try it at once, clearly marked and removable without touching anything recorded since; sample sessions are never backed up |
 | `/privasi` | What is processed, stored, and optionally backed up |
 
 ## Workspace features
@@ -83,7 +83,7 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 
 **Debouncing.** Drift must pass the sensitivity threshold. Strain builds over 6 to 16 seconds, and the glow stays dark for the first 30%, so a glance at your phone never lights the edge.
 
-**Privacy.** Video frames and landmarks never leave the tab. The model and wasm are served from this origin.
+**Privacy.** Video frames and landmarks never leave the tab. The model and wasm are served from this origin. Every response carries `Permissions-Policy` (camera for this origin only; no microphone or location), `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, and `X-Frame-Options: DENY` with `frame-ancestors 'none'`, set in `next.config.ts`. There is no script CSP, because the pre-paint theme script is inline and MediaPipe compiles wasm.
 
 ## Supabase (optional)
 
@@ -127,7 +127,7 @@ The raw PNG renders go to `assets/story/render/` (ignored); convert them to WebP
 
 ## Tested
 
-On the production build (`pnpm build && pnpm start`): Chromium and Firefox, each at desktop size and at phone size (Pixel 7, and 375 px wide), with a couple of weeks of seeded data. In all four: the landing page, workspace and Riwayat have no sideways scroll; the check-in saves stress; WHO-5 waits for all five answers, scores them, and shows Healing119 under 50 with no diagnostic words; the breathing pause starts from `N` and the kawung grows on the breath in; Riwayat compares stress on days with every break against the rest; the coach payload carries the rounded stress and breathing pauses; and no page errors. With no camera, and with camera permission refused, the workspace shows a plain message and Timer mode keeps working. Safari/WebKit was not tested.
+On the production build (`pnpm build && pnpm start`): Chromium and Firefox, each at desktop size and at phone size (Pixel 7, and 375 px wide), with a couple of weeks of seeded data. In all four: the landing page, workspace and Riwayat have no sideways scroll; Riwayat's sample data loads, shows the stress comparison and clears again while keeping a check-in made today; the check-in saves stress; WHO-5 waits for all five answers, scores them, and shows Healing119 under 50 with no diagnostic words; the breathing pause starts from `N` and the kawung grows on the breath in; Riwayat compares stress on days with every break against the rest; the coach payload carries the rounded stress and breathing pauses; and no page errors. With no camera, and with camera permission refused, the workspace shows a plain message and Timer mode keeps working. Safari/WebKit was not tested.
 
 ## Known limits
 
