@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GOAL, byDay, dayScore, missions, painAverages, painByScore, streak, totals } from './insights.ts';
+import { GOAL, byDay, dayScore, missions, painAverages, painByScore, streak, stressByBreaks, totals } from './insights.ts';
 import type { Checkin, SessionSummary } from './store.ts';
 
 const session = (started: Date, over: Partial<SessionSummary>): SessionSummary => ({
@@ -118,4 +118,22 @@ test('discomfort compares goal days with the rest only once each side has two da
   assert.equal(avg.n, 4);
   assert.equal(avg.neck, 4.5);
   assert.equal(painAverages(days.slice(0, 2), checkins).n, 0);
+});
+
+test('stress compares work days that took every break with the rest, skipping days off and check-ins without stress', () => {
+  const now = new Date(2026, 10, 20, 20, 0);
+  const work = (day: number, over: Partial<SessionSummary> = {}) => session(new Date(2026, 10, day, 10, 0), { active_s: 1800, ...over });
+  const breaks = { eye_breaks: 3, resets: 2, breaths: 1 };
+  // 14 and 15 took every break; 16 skipped the breathing pause, 17 took none; 18 had no work at all.
+  const days = byDay([work(14, breaks), work(15, breaks), work(16, { eye_breaks: 3, resets: 2 }), work(17)], 7, now);
+  const c = (day: number, stress?: number): Checkin => ({ day: `2026-11-${day}`, neck: 0, back: 0, eyes: 0, stress });
+  const cmp = stressByBreaks(days, [c(14, 3), c(15, 4), c(16, 7), c(17, 8), c(18, 1)]);
+  assert.equal(cmp.ready, true);
+  assert.equal(cmp.good.mean, 3.5);
+  assert.equal(cmp.low.mean, 7.5);
+  assert.equal(cmp.low.n, 2); // the day off does not count
+
+  // A check-in from before stress was asked has no stress value and is left out.
+  assert.equal(stressByBreaks(days, [c(14, 3), c(15), c(16, 7), c(17, 8)]).ready, false);
+  assert.equal(painAverages(days, [c(14, 3), c(15)]).stress, 3);
 });

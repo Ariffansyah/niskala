@@ -61,8 +61,8 @@ export type SessionSummary = {
   source: 'camera' | 'timer' | 'simulation';
 };
 
-/** How sore one evening felt, 0 (not at all) to 10 (as bad as it gets), the usual pain rating scale. */
-export type Checkin = { day: string; neck: number; back: number; eyes: number };
+/** How sore and how stressed one evening felt, 0 (not at all) to 10 (as bad as it gets). Check-ins saved before stress was asked lack it. */
+export type Checkin = { day: string; neck: number; back: number; eyes: number; stress?: number };
 
 const KEY = {
   prefs: 'niskala:prefs',

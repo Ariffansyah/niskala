@@ -90,6 +90,10 @@ export function missions(d: Day): Mission[] {
 
 export const missionsDone = (d: Day) => missions(d).filter((m) => m.done).length;
 
+const BREAKS: MissionId[] = ['eye', 'reset', 'breath'];
+/** Every break mission met: the eye breaks, the stretching and the breathing pause. */
+export const enoughBreaks = (d: Day) => missions(d).every((m) => m.done || !BREAKS.includes(m.id));
+
 export function totals(days: Day[]) {
   const sum = (f: (d: Day) => number) => days.reduce((a, d) => a + f(d), 0);
   const active = sum((d) => d.active_s);
@@ -117,24 +121,34 @@ export const painOf = (c: Checkin) => (c.neck + c.back + c.eyes) / 3;
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
 /**
- * Discomfort on days that met the score goal against days that did not, over the given days. Only days with both a
- * score and a check-in count, and each side needs two of them before the comparison means anything.
+ * A check-in value on days that are on one side of a split against days on the other, over the given days. Only days
+ * the split applies to (`side` not null) and with that value count, and each side needs two of them before the
+ * comparison means anything.
  */
-export function painByScore(days: Day[], checkins: Checkin[]) {
+function compare(days: Day[], checkins: Checkin[], side: (d: Day) => boolean | null, value: (c: Checkin) => number | undefined) {
   const byDay = new Map(checkins.map((c) => [c.day, c]));
   const good: number[] = [];
   const low: number[] = [];
   for (const d of days) {
     const c = byDay.get(d.key);
-    const s = dayScore(d);
-    if (!c || s === null) continue;
-    (s >= GOAL ? good : low).push(painOf(c));
+    const v = c && value(c);
+    const s = side(d);
+    if (v === undefined || s === null) continue;
+    (s ? good : low).push(v);
   }
   const ready = good.length >= 2 && low.length >= 2;
   return { good: { n: good.length, mean: mean(good) }, low: { n: low.length, mean: mean(low) }, ready };
 }
 
-/** Each area's mean over the check-ins that fall on the given days, or null with none. */
+/** Discomfort on days that met the score goal against days that did not. */
+export const painByScore = (days: Day[], checkins: Checkin[]) =>
+  compare(days, checkins, (d) => { const s = dayScore(d); return s === null ? null : s >= GOAL; }, painOf);
+
+/** Stress on work days that took every break mission against work days that did not. */
+export const stressByBreaks = (days: Day[], checkins: Checkin[]) =>
+  compare(days, checkins, (d) => (d.active_s > 0 ? enoughBreaks(d) : null), (c) => c.stress);
+
+/** Each area's mean, and stress, over the check-ins that fall on the given days, or null with none. */
 export function painAverages(days: Day[], checkins: Checkin[]) {
   const keys = new Set(days.map((d) => d.key));
   const inRange = checkins.filter((c) => keys.has(c.day));
@@ -143,5 +157,6 @@ export function painAverages(days: Day[], checkins: Checkin[]) {
     neck: mean(inRange.map((c) => c.neck)),
     back: mean(inRange.map((c) => c.back)),
     eyes: mean(inRange.map((c) => c.eyes)),
+    stress: mean(inRange.flatMap((c) => c.stress ?? [])),
   };
 }
