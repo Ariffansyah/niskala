@@ -95,11 +95,11 @@ export default function Hero() {
       />
 
       <h1 className="text-[2.6rem] leading-[1.05] font-extrabold sm:text-6xl lg:col-start-1 lg:row-start-2 lg:text-[3.7rem]">
-        Lihat{' '}
+        Stres nggak kelihatan.{' '}
         <span className="marker" style={{ '--mark': `${30 + Math.max(slouch, Math.abs(lean)) * 0.7}%` } as CSSProperties}>
-          pegal
+          Bungkukmu
         </span>{' '}
-        sebelum terasa.
+        kelihatan.
       </h1>
 
       <figure className="relative isolate mt-24 min-w-0 lg:col-start-2 lg:row-span-4 lg:self-center">

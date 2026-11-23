@@ -425,7 +425,22 @@
   }
 }
 
+/* The landing page's breathing pacer: five seconds in, five out, like the workspace's breathing pause. */
+.breathe {
+  animation: breathe 10s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.55);
+  }
+  50% {
+    transform: scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .breathe,
   .kawung-turn,
   .drift,
   .drift > svg,
