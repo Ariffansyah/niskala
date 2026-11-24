@@ -81,6 +81,8 @@ pnpm test      # signal math and insights aggregation (node:test, no build step)
 
 **Sideways lean.** The midpoint between the eye corners is compared with the calibration in eye-widths; the midpoint barely moves when the head turns, so glancing at a second monitor is not read as a lean. Head tilt is the angle of the eye line in the raw frame, ordered by position so it never wraps around ±180°.
 
+**Looking up.** Front-camera head pitch only counts when the head nods down from the calibration. The face model's pitch grows as the head nods down wherever the camera sits, checked by running the landmarker on renders of a face looking up and down, so looking up at a shelf or a high monitor is never read as a slouch.
+
 **Debouncing.** Drift must pass the sensitivity threshold. Strain builds over 6 to 16 seconds, and the glow stays dark for the first 30%, so a glance at your phone never lights the edge.
 
 **Privacy.** Video frames and landmarks never leave the tab. The model and wasm are served from this origin. Every response carries `Permissions-Policy` (camera for this origin only; no microphone or location), `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, and `X-Frame-Options: DENY` with `frame-ancestors 'none'`, set in `next.config.ts`. There is no script CSP, because the pre-paint theme script is inline and MediaPipe compiles wasm.
@@ -133,5 +135,4 @@ On the production build (`pnpm build && pnpm start`): Chromium and Firefox, each
 
 - Without the floating window, tracking slows to about one frame a second while the tab is hidden, and blink rate is not measured.
 - The popup fallback (browsers without Picture-in-Picture) is a normal window, so it can be covered by other windows.
-- Head pitch is compared to the calibration as an absolute change, so looking up for a long time also counts as drift.
 - The warm shift tints Niskala only, not the whole screen.
