@@ -813,8 +813,8 @@ export default function Workspace() {
               </>
             )}
             {today && <Missions list={todayMissions} score={dayScore(today)} run={run} busy={routine !== null} onStart={setRoutine} />}
-            {today && <CheckinCard key={today.key} day={today.key} saved={checkedIn} evening={snap.night.stage !== 'day'} />}
-            {today && <Who5Card key={today.key} today={today.key} list={who5} />}
+            {today && <CheckinCard key={`checkin-${today.key}`} day={today.key} saved={checkedIn} evening={snap.night.stage !== 'day'} />}
+            {today && <Who5Card key={`who5-${today.key}`} today={today.key} list={who5} />}
           </section>
 
           <aside className="card self-start overflow-hidden lg:sticky lg:top-20">
