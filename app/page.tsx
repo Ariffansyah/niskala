@@ -82,8 +82,8 @@ export default function Home() {
         <section className="hue-ungu border-y border-rule bg-hue-soft">
           <div className="mx-auto grid max-w-6xl gap-x-16 gap-y-10 px-4 py-20 sm:px-8 sm:py-24 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <h2 className="text-3xl sm:text-[2.6rem] sm:leading-tight">
-              <span className="text-hue-ink">34,9%</span> remaja Indonesia punya masalah kesehatan mental. Dari mereka, cuma{' '}
-              <span className="text-hue-ink">2,6%</span> yang pernah ke layanan.
+              <span className="text-hue-ink">16%</span> orang dewasa usia kerja punya gangguan mental. Depresi dan kecemasan aja bikin{' '}
+              <span className="text-hue-ink">12 miliar</span> hari kerja hilang tiap tahun.
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               {WHY.map((w) => (
@@ -110,10 +110,10 @@ export default function Home() {
               </article>
               <p className="text-sm text-muted sm:col-span-2">
                 Sumber:{' '}
-                <a href="https://theconversation.com/data-bicara-hanya-2-6-remaja-dengan-masalah-kesehatan-mental-di-indonesia-yang-mengakses-layanan-bantuan-atau-konseling-196593" className="link">
-                  I-NAMHS 2022
+                <a href="https://www.who.int/news-room/fact-sheets/detail/mental-health-at-work" className="link">
+                  WHO, Mental health at work
                 </a>
-                , survei nasional remaja 10 sampai 17 tahun, soal 12 bulan terakhir.
+                , perkiraan global. Angka 16% itu data tahun 2023.
               </p>
             </div>
           </div>

@@ -6,7 +6,7 @@ Stress can't be seen; the body and work habits that carry it can. Niskala is a b
 
 ## The problem
 
-34.9% of Indonesian adolescents aged 10 to 17 had a mental health problem in the past 12 months, and only 2.6% of them used a mental health service or counselling ([I-NAMHS 2022](https://theconversation.com/data-bicara-hanya-2-6-remaja-dengan-masalah-kesehatan-mental-di-indonesia-yang-mengakses-layanan-bantuan-atau-konseling-196593); [UGM](https://ugm.ac.id/en/news/one-third-of-indonesian-adolescents-suffer-mental-health-issues/)). Most help is something you have to go and look for once things are already bad.
+An estimated 16% of working-age adults had a mental disorder in 2023, and depression and anxiety alone cost about 12 billion working days a year, US$ 1 trillion in lost productivity ([WHO, Mental health at work](https://www.who.int/news-room/fact-sheets/detail/mental-health-at-work)). Most help is something you have to go and look for once things are already bad.
 
 ## What is different
 
