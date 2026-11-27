@@ -404,6 +404,16 @@
     translate: 0 6px;
   }
 }
+/* A check that has just appeared overshoots a little, so a finished mission is felt, not only read. */
+.pop {
+  transition:
+    scale 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.2s ease;
+  @starting-style {
+    scale: 0.3;
+    opacity: 0;
+  }
+}
 
 /* 24 frames of the 3D kawung from assets/objects/objects.blend in one strip; jump-none lands each step on a frame. */
 .kawung-turn {
@@ -464,6 +474,7 @@
   .edge-cue,
   .warm-shift,
   .enter,
+  .pop,
   .sky,
   .sky-fill {
     transition: none;

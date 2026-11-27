@@ -212,9 +212,9 @@ function Missions({ list, score, run, busy, onStart }: { list: Mission[]; score:
         {list.map((m) => {
           const [Icon, hue] = MISSION_LOOK[m.id];
           return (
-            <li key={m.id} className={`flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 ${m.done ? 'hue-daun bg-hue-soft' : 'bg-surface'}`}>
+            <li key={m.id} className={`flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 transition-colors duration-500 ${m.done ? 'hue-daun bg-hue-soft' : 'bg-surface'}`}>
               <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${m.done ? 'bg-daun text-raised' : `${hue} bg-hue-soft text-hue-ink`}`}>
-                {m.done ? <IconCheck className="size-4" /> : <Icon className="size-4" />}
+                {m.done ? <IconCheck className="pop size-4" /> : <Icon className="size-4" />}
               </span>
               <span className="min-w-0 flex-1 text-sm font-medium">{m.label}</span>
               {m.done ? (
