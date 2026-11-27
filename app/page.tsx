@@ -77,6 +77,38 @@ export default function Home() {
   return (
     <>
       <main className="overflow-x-clip">
+        <section className="relative mx-auto grid min-h-[calc(100svh-4rem)] max-w-6xl content-center items-center gap-x-12 gap-y-8 px-4 py-12 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+          <Drift
+            spots={[
+              { top: '6%', left: '-4%', size: '24rem', turn: 150, float: 17 },
+              { top: '70%', left: '30%', size: '10rem', turn: 110, float: 13 },
+            ]}
+          />
+          <div>
+            <h1 className="text-[2.8rem] leading-[1.02] font-extrabold sm:text-7xl lg:text-[5.2rem]">
+              Stres nggak kelihatan. <span className="marker">Bungkukmu</span> kelihatan.
+            </h1>
+            <Link href="/app" className="btn btn-primary btn-lg mt-10">
+              Mulai sekarang
+              <IconArrowRight className="size-4" />
+            </Link>
+          </div>
+          {/* Sekala above, niskala below: the room you can see, standing on what it hides. */}
+          <figure className="iso-float relative isolate justify-self-center">
+            <div aria-hidden className="absolute -inset-x-16 -inset-y-10 -z-10 bg-[radial-gradient(closest-side_at_50%_40%,color-mix(in_oklab,var(--kunyit)_30%,transparent),transparent)]" />
+            <div aria-hidden className="iso-glow absolute top-[93%] left-1/2 -z-10 aspect-square w-[45%] -translate-1/2 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--kunyit)_70%,transparent),transparent)]" />
+            <Image
+              src="/3d/iso.webp"
+              alt="Ruang kerja yang melayang: Raka kerja di meja, Ayu stretching. Di bawah lantainya, garis kunyit turun lewat lapisan warna batik ke logo kawung yang nyala."
+              width={1162}
+              height={1613}
+              unoptimized
+              priority
+              className="h-auto max-h-[62svh] w-auto lg:max-h-[min(80svh,52rem)]"
+            />
+          </figure>
+        </section>
+
         <Hero />
 
         <section className="hue-ungu border-y border-rule bg-hue-soft">

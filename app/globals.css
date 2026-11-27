@@ -439,7 +439,28 @@
   }
 }
 
+/* The hero's floating room, and the kawung under it that glows on the same slow breath. */
+.iso-float {
+  animation: iso-float 8s ease-in-out infinite;
+}
+@keyframes iso-float {
+  50% {
+    translate: 0 -12px;
+  }
+}
+.iso-glow {
+  animation: iso-glow 5s ease-in-out infinite;
+}
+@keyframes iso-glow {
+  50% {
+    opacity: 0.45;
+    scale: 0.85;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .iso-float,
+  .iso-glow,
   .breathe,
   .kawung-turn,
   .drift,
