@@ -12,6 +12,7 @@ export type Day = {
   eye_breaks: number;
   trainings: number;
   breaths: number;
+  focus: number; // focus blocks finished
   blink: number | null; // active-time weighted mean
 };
 
@@ -24,7 +25,7 @@ export function byDay(sessions: SessionSummary[], count: number, now: Date): Day
   const index = new Map<string, Day & { blinkW: number; blinkT: number }>();
   for (let i = count - 1; i >= 0; i--) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const d = { key: dayKey(date), date, active_s: 0, tracked_s: 0, slouch_s: 0, low_blink_s: 0, late_s: 0, resets: 0, eye_breaks: 0, trainings: 0, breaths: 0, blink: null, blinkW: 0, blinkT: 0 };
+    const d = { key: dayKey(date), date, active_s: 0, tracked_s: 0, slouch_s: 0, low_blink_s: 0, late_s: 0, resets: 0, eye_breaks: 0, trainings: 0, breaths: 0, focus: 0, blink: null, blinkW: 0, blinkT: 0 };
     index.set(d.key, d);
     days.push(d);
   }
@@ -40,6 +41,7 @@ export function byDay(sessions: SessionSummary[], count: number, now: Date): Day
     d.eye_breaks += s.eye_breaks;
     d.trainings += s.trainings;
     d.breaths += s.breaths;
+    d.focus += s.focus;
     if (s.avg_blink !== null) {
       d.blinkW += s.avg_blink * s.active_s;
       d.blinkT += s.active_s;
@@ -107,6 +109,7 @@ export function totals(days: Day[]) {
     eye_breaks: sum((d) => d.eye_breaks),
     trainings: sum((d) => d.trainings),
     breaths: sum((d) => d.breaths),
+    focus: sum((d) => d.focus),
     missionDays: days.filter((d) => missions(d).every((m) => m.done)).length,
     activeDays: days.filter((d) => d.active_s > 0).length,
     blink: withBlink.length
@@ -121,17 +124,16 @@ export const painOf = (c: Checkin) => (c.neck + c.back + c.eyes) / 3;
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
 /**
- * A check-in value on days that are on one side of a split against days on the other, over the given days. Only days
- * the split applies to (`side` not null) and with that value count, and each side needs two of them before the
- * comparison means anything.
+ * A value of each day, or of its check-in, on days that are on one side of a split against days on the other, over
+ * the given days. Only days the split applies to (`side` not null) and with that value count, and each side needs two
+ * of them before the comparison means anything.
  */
-function compare(days: Day[], checkins: Checkin[], side: (d: Day) => boolean | null, value: (c: Checkin) => number | undefined) {
+function compare(days: Day[], checkins: Checkin[], side: (d: Day) => boolean | null, value: (d: Day, c: Checkin | undefined) => number | undefined) {
   const byDay = new Map(checkins.map((c) => [c.day, c]));
   const good: number[] = [];
   const low: number[] = [];
   for (const d of days) {
-    const c = byDay.get(d.key);
-    const v = c && value(c);
+    const v = value(d, byDay.get(d.key));
     const s = side(d);
     if (v === undefined || s === null) continue;
     (s ? good : low).push(v);
@@ -142,11 +144,14 @@ function compare(days: Day[], checkins: Checkin[], side: (d: Day) => boolean | n
 
 /** Discomfort on days that met the score goal against days that did not. */
 export const painByScore = (days: Day[], checkins: Checkin[]) =>
-  compare(days, checkins, (d) => { const s = dayScore(d); return s === null ? null : s >= GOAL; }, painOf);
+  compare(days, checkins, (d) => { const s = dayScore(d); return s === null ? null : s >= GOAL; }, (_, c) => c && painOf(c));
 
 /** Stress on work days that took every break mission against work days that did not. */
 export const stressByBreaks = (days: Day[], checkins: Checkin[]) =>
-  compare(days, checkins, (d) => (d.active_s > 0 ? enoughBreaks(d) : null), (c) => c.stress);
+  compare(days, checkins, (d) => (d.active_s > 0 ? enoughBreaks(d) : null), (_, c) => c?.stress);
+
+/** Focus blocks finished on work days that took every break mission against work days that did not. */
+export const focusByBreaks = (days: Day[]) => compare(days, [], (d) => (d.active_s > 0 ? enoughBreaks(d) : null), (d) => d.focus);
 
 /** Each area's mean, and stress, over the check-ins that fall on the given days, or null with none. */
 export function painAverages(days: Day[], checkins: Checkin[]) {

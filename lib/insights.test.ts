@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GOAL, byDay, dayScore, missions, painAverages, painByScore, streak, stressByBreaks, totals, who5DueOn, who5Score } from './insights.ts';
+import { GOAL, byDay, dayScore, focusByBreaks, missions, painAverages, painByScore, streak, stressByBreaks, totals, who5DueOn, who5Score } from './insights.ts';
 import type { Checkin, SessionSummary } from './store.ts';
 
 const session = (started: Date, over: Partial<SessionSummary>): SessionSummary => ({
@@ -137,6 +137,24 @@ test('stress compares work days that took every break with the rest, skipping da
   // A check-in from before stress was asked has no stress value and is left out.
   assert.equal(stressByBreaks(days, [c(14, 3), c(15), c(16, 7), c(17, 8)]).ready, false);
   assert.equal(painAverages(days, [c(14, 3), c(15)]).stress, 3);
+});
+
+test('focus blocks add up per day and compare work days that took every break with the rest', () => {
+  const now = new Date(2026, 10, 20, 20, 0);
+  const work = (day: number, over: Partial<SessionSummary> = {}) => session(new Date(2026, 10, day, 10, 0), { active_s: 1800, ...over });
+  const breaks = { eye_breaks: 3, resets: 2, breaths: 1 };
+  // 14 and 15 took every break; 16 and 17 did not; 18 had no work at all.
+  const sessions = [work(14, { ...breaks, focus: 2 }), work(14, { focus: 1 }), work(15, { ...breaks, focus: 4 }), work(16, { focus: 2 }), work(17)];
+  const days = byDay(sessions, 7, now);
+  assert.equal(days.find((d) => d.key === '2026-11-14')!.focus, 3);
+  assert.equal(totals(days).focus, 9);
+
+  const cmp = focusByBreaks(days);
+  assert.equal(cmp.ready, true);
+  assert.equal(cmp.good.mean, 3.5);
+  assert.equal(cmp.low.mean, 1);
+  assert.equal(cmp.low.n, 2); // the day off does not count
+  assert.equal(focusByBreaks(days.filter((d) => d.key !== '2026-11-17')).ready, false);
 });
 
 test('WHO-5 scores 0 to 100 and comes due a week after the last one', () => {
