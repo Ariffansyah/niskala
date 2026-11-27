@@ -110,13 +110,14 @@ function Chart({ days }: { days: Day[] }) {
 
 const one = (v: number) => v.toLocaleString('id-ID', { maximumFractionDigits: 1 });
 
-/** One cell per day, tinted by a 0-10 value (more tints as 10) with the number inside, and the day of the month under it. */
-function DayStrip({ days, value, color, title, ring }: {
+/** One cell per day, tinted by a value from 0 to `max` (more tints as `max`) with the number inside, and the day of the month under it. */
+function DayStrip({ days, value, color, title, ring, max = 10 }: {
   days: Day[];
   value: (d: Day) => number | undefined;
   color: string;
   title: (d: Day) => string;
   ring?: (d: Day) => boolean;
+  max?: number;
 }) {
   // Numbers fit a cell at 7 days on a phone and at 14 on wider screens; past that the tooltip and table carry them.
   const numbers = days.length <= 7 ? '' : days.length <= 14 ? 'max-sm:hidden' : 'hidden';
@@ -131,7 +132,7 @@ function DayStrip({ days, value, color, title, ring }: {
               key={d.key}
               className={`grid aspect-square max-h-14 flex-1 place-items-center rounded-md text-sm font-bold tabular-nums ${v === undefined ? 'border border-dashed border-edge/40' : ''} ${ring?.(d) ? 'ring-2 ring-daun ring-inset' : ''}`}
               // One hue from faint to strong; the number inside carries the value too. Capped so the ink stays readable.
-              style={v === undefined ? undefined : { background: `color-mix(in oklab, ${color} ${Math.round(8 + Math.min(v, 10) * 4.7)}%, var(--surface))` }}
+              style={v === undefined ? undefined : { background: `color-mix(in oklab, ${color} ${Math.round(8 + Math.min(v / max, 1) * 47)}%, var(--surface))` }}
               title={title(d)}
             >
               {v !== undefined && <span className={numbers}>{one(v)}</span>}
@@ -361,6 +362,8 @@ function FocusCard({ days }: { days: Day[] }) {
             days={days}
             value={(d) => d.focus || undefined}
             color="var(--accent)"
+            // A day rarely holds more than six blocks; on a 0-10 scale the usual three or four barely tint.
+            max={6}
             ring={all}
             title={(d) =>
               `${dayLabel(d.date)}: ${d.focus ? `${d.focus} blok fokus` : 'belum ada blok fokus'}${d.active_s > 0 ? (all(d) ? ', semua jeda diambil' : ', jeda kurang') : ''}`
