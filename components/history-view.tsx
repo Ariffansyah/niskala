@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useSyncExternalStore } from 'react';
 import { minutes } from '@/lib/format';
 import { weekSummary, type Week } from '@/lib/coach';
-import { GOAL, byDay, dayKey, dayScore, enoughBreaks, missions, painAverages, painByScore, painOf, streak, stressByBreaks, totals, type Day } from '@/lib/insights';
+import { GOAL, byDay, dayKey, dayScore, enoughBreaks, focusByBreaks, missions, painAverages, painByScore, painOf, streak, stressByBreaks, totals, type Day } from '@/lib/insights';
 import { sampleData } from '@/lib/sample';
 import { checkinsStore, clearSample, coachStore, exportData, loadSample, sampleStore, sessionsStore, type Checkin } from '@/lib/store';
 import { toast } from '@/lib/toast';
@@ -110,7 +110,7 @@ function Chart({ days }: { days: Day[] }) {
 
 const one = (v: number) => v.toLocaleString('id-ID', { maximumFractionDigits: 1 });
 
-/** One cell per day, tinted by a 0-10 value with the number inside, and the day of the month under it. */
+/** One cell per day, tinted by a 0-10 value (more tints as 10) with the number inside, and the day of the month under it. */
 function DayStrip({ days, value, color, title, ring }: {
   days: Day[];
   value: (d: Day) => number | undefined;
@@ -131,7 +131,7 @@ function DayStrip({ days, value, color, title, ring }: {
               key={d.key}
               className={`grid aspect-square max-h-14 flex-1 place-items-center rounded-md text-sm font-bold tabular-nums ${v === undefined ? 'border border-dashed border-edge/40' : ''} ${ring?.(d) ? 'ring-2 ring-daun ring-inset' : ''}`}
               // One hue from faint to strong; the number inside carries the value too. Capped so the ink stays readable.
-              style={v === undefined ? undefined : { background: `color-mix(in oklab, ${color} ${Math.round(8 + v * 4.7)}%, var(--surface))` }}
+              style={v === undefined ? undefined : { background: `color-mix(in oklab, ${color} ${Math.round(8 + Math.min(v, 10) * 4.7)}%, var(--surface))` }}
               title={title(d)}
             >
               {v !== undefined && <span className={numbers}>{one(v)}</span>}
@@ -328,6 +328,90 @@ function StressCard({ days, checkins }: { days: Day[]; checkins: Checkin[] }) {
   );
 }
 
+/** Focus blocks per day next to the breaks: the place where taking every break can show it costs no work. */
+function FocusCard({ days }: { days: Day[] }) {
+  const cmp = focusByBreaks(days);
+  const used = days.filter((d) => d.focus > 0);
+  const all = (d: Day) => d.active_s > 0 && enoughBreaks(d);
+
+  return (
+    <section className="card p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+        <h2 className="text-lg">Fokus dan jeda</h2>
+        {used.length > 0 && (
+          <span className="flex items-center gap-1.5 text-[13px] text-muted">
+            <span className="size-2.5 rounded-sm ring-2 ring-daun ring-inset" /> semua jeda diambil
+          </span>
+        )}
+      </div>
+      {used.length === 0 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-4">
+          <p className="max-w-xl text-muted text-pretty">
+            Kerja pakai blok fokus 25 atau 50 menit di ruang kerja. Setelah beberapa hari, di sini kelihatan apakah ngambil semua jeda
+            bikin kerjaanmu molor atau nggak.
+          </p>
+          <Link href="/app" className="btn btn-sm">
+            Mulai blok fokus
+            <IconArrowRight className="size-4" />
+          </Link>
+        </div>
+      ) : (
+        <>
+          <DayStrip
+            days={days}
+            value={(d) => d.focus || undefined}
+            color="var(--accent)"
+            ring={all}
+            title={(d) =>
+              `${dayLabel(d.date)}: ${d.focus ? `${d.focus} blok fokus` : 'belum ada blok fokus'}${d.active_s > 0 ? (all(d) ? ', semua jeda diambil' : ', jeda kurang') : ''}`
+            }
+          />
+          <div className="mt-5 space-y-2 text-pretty">
+            {cmp.ready ? (
+              <p>
+                Di hari kamu ngambil semua jeda, kamu nyelesain rata-rata <strong className="tabular-nums">{one(cmp.good.mean!)}</strong> blok
+                fokus. Di hari kerja lain <strong className="tabular-nums">{one(cmp.low.mean!)}</strong>.{' '}
+                {cmp.good.mean! - cmp.low.mean! > -0.5
+                  ? 'Jeda nggak bikin kerjaanmu molor.'
+                  : 'Di hari yang jedanya kurang, blokmu lebih banyak. Coba lihat juga stresmu di hari-hari itu.'}
+              </p>
+            ) : (
+              <p className="text-muted">
+                Biar kelihatan polanya, butuh minimal dua hari kerja yang semua jedanya diambil dan dua yang nggak. Sekarang {cmp.good.n} dan{' '}
+                {cmp.low.n}.
+              </p>
+            )}
+            <p className="text-muted tabular-nums">
+              Total {used.reduce((a, d) => a + d.focus, 0)} blok fokus dalam {used.length} hari
+            </p>
+          </div>
+          <div className="sr-only">
+            <table>
+              <caption>Blok fokus per hari</caption>
+              <thead>
+                <tr>
+                  <th>Hari</th>
+                  <th>Blok fokus</th>
+                  <th>Semua jeda diambil</th>
+                </tr>
+              </thead>
+              <tbody>
+                {days.map((d) => (
+                  <tr key={d.key}>
+                    <td>{dayLabel(d.date)}</td>
+                    <td>{d.focus}</td>
+                    <td>{d.active_s === 0 ? 'nggak kerja' : all(d) ? 'ya' : 'belum'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 function CoachCard({ week, today }: { week: Week; today: string }) {
   const saved = useSyncExternalStore(coachStore.subscribe, coachStore.get, coachStore.server);
   const [busy, setBusy] = useState(false);
@@ -473,6 +557,8 @@ export default function HistoryView() {
           <Chart days={days} />
 
           <StressCard days={days} checkins={checkins} />
+
+          <FocusCard days={days} />
 
           <PainCard days={days} checkins={checkins} />
 
