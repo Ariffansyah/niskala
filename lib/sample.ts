@@ -5,7 +5,8 @@ import { SAMPLE_ID, type Checkin, type SessionSummary } from './store.ts';
 type Breaks = 'all' | 'some' | 'none';
 // Oldest first, ending yesterday. Hours of work (0 = a day off), breaks taken, share of time leaning, minutes past
 // bedtime, and the evening's check-in. Days with every break run calmer, but not on every single day, and the last
-// four meet the score goal, so the streak has something to show.
+// four meet the score goal, so the streak has something to show. Days with every break finish as many focus blocks or
+// more, so the breaks cost no work.
 const DAYS: { h: number; breaks: Breaks; lean: number; late: number; check?: [neck: number, back: number, eyes: number, stress: number] }[] = [
   { h: 4, breaks: 'some', lean: 0.42, late: 40, check: [5, 4, 6, 7] },
   { h: 3.5, breaks: 'all', lean: 0.22, late: 0, check: [2, 1, 3, 2] },
@@ -22,12 +23,12 @@ const DAYS: { h: number; breaks: Breaks; lean: number; late: number; check?: [ne
   { h: 3, breaks: 'all', lean: 0.2, late: 0, check: [2, 2, 3, 3] },
 ];
 
-const BREAKS: Record<Breaks, Pick<SessionSummary, 'eye_breaks' | 'resets' | 'breaths' | 'trainings'>> = {
-  all: { eye_breaks: 3, resets: 2, breaths: 1, trainings: 1 },
-  some: { eye_breaks: 3, resets: 1, breaths: 0, trainings: 0 },
-  none: { eye_breaks: 1, resets: 0, breaths: 0, trainings: 0 },
+const BREAKS: Record<Breaks, Pick<SessionSummary, 'eye_breaks' | 'resets' | 'breaths' | 'trainings' | 'focus'>> = {
+  all: { eye_breaks: 3, resets: 2, breaths: 1, trainings: 1, focus: 4 },
+  some: { eye_breaks: 3, resets: 1, breaths: 0, trainings: 0, focus: 3 },
+  none: { eye_breaks: 1, resets: 0, breaths: 0, trainings: 0, focus: 3 },
 };
-const NO_BREAKS = { eye_breaks: 0, resets: 0, breaths: 0, trainings: 0 };
+const NO_BREAKS = { eye_breaks: 0, resets: 0, breaths: 0, trainings: 0, focus: 0 };
 
 /** The sample for the days before `now`: sessions with ids starting with SAMPLE_ID, check-ins, and every day it covers. */
 export function sampleData(now: Date) {
@@ -50,7 +51,6 @@ export function sampleData(now: Date) {
         started_at: start,
         updated_at: start,
         active_s: active,
-        focus: 0,
         ...breaks,
         slouch_s: Math.round(active * d.lean),
         low_blink_s: Math.round(active * 0.1),
