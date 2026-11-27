@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Wide and tall enough for the workspace to fit one screen, with long columns scrolling on their own. */
+@custom-variant desk {
+  @media (min-width: 80rem) and (min-height: 40rem) {
+    @slot;
+  }
+}
+
 /* Palette from batik dyes, matched to the figures:
    lontar palm-leaf cream (paper), soga brown (ink and line art),
    nila indigo (the brand and every primary action), kunyit turmeric (strain, and the lit petal of the logo).

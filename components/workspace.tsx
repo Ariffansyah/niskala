@@ -208,7 +208,7 @@ function Missions({ list, score, run, busy, onStart }: { list: Mission[]; score:
           {list.filter((m) => m.done).length}/{list.length} beres{run > 0 && ` · ${run} hari beruntun`}
         </span>
       </h2>
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
         {list.map((m) => {
           const [Icon, hue] = MISSION_LOOK[m.id];
           return (
@@ -296,13 +296,13 @@ function CheckinCard({ day, saved, evening }: { day: string; saved: Checkin | un
         Cek pegal dan stres hari ini
         <span className="text-sm font-normal text-muted">{evening ? 'pas banget diisi sekarang' : 'paling pas diisi pas udahan kerja'}</span>
       </h2>
-      <div className="mt-3 space-y-3">
+      <div className="@container mt-3 space-y-3">
         {CHECKIN_ROWS.map((a) => {
           const v = draft[a.key] ?? 0;
           return (
-            <label key={a.key} className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-sm sm:grid-cols-[7.5rem_1fr_7rem]">
+            <label key={a.key} className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-sm @sm:grid-cols-[7.5rem_1fr_7rem]">
               <span className="font-medium">{a.label}</span>
-              <span className="text-right text-muted tabular-nums sm:order-last sm:text-left">
+              <span className="text-right text-muted tabular-nums @sm:order-last @sm:text-left">
                 <span className="font-bold text-ink">{v}</span> · {a.word(v)}
               </span>
               <input
@@ -313,7 +313,7 @@ function CheckinCard({ day, saved, evening }: { day: string; saved: Checkin | un
                 value={v}
                 onChange={(e) => setDraft({ ...draft, [a.key]: Number(e.target.value) })}
                 aria-valuetext={`${v} dari 10, ${a.word(v)}`}
-                className="range col-span-2 sm:col-span-1"
+                className="range col-span-2 @sm:col-span-1"
               />
             </label>
           );
@@ -418,15 +418,15 @@ function Who5Card({ today, list }: { today: string; list: Who5[] }) {
         Kabar mingguan
         <span className="text-sm font-normal text-muted">dua minggu terakhir, seberapa sering…</span>
       </h2>
-      <ol className="mt-3 space-y-4">
+      <ol className="@container mt-3 space-y-4">
         {WHO5_ITEMS.map((q, i) => (
           <li key={q}>
             <p className="mb-1.5 text-sm font-medium">{q}</p>
             <Segmented<number>
               label={q}
               size="sm"
-              // A grid keeps six answers in tidy rows on a phone, in the scale's order.
-              className="grid grid-cols-2 sm:grid-cols-3 [&>*]:justify-center [&>*]:text-center"
+              // A grid keeps six answers in tidy rows on a phone or in a narrow column, in the scale's order.
+              className="grid grid-cols-2 @sm:grid-cols-3 [&>*]:justify-center [&>*]:text-center"
               value={items[i]}
               onChange={(v) => setItems(items.map((x, j) => (j === i ? v : x)))}
               options={WHO5_OPTIONS}
@@ -710,9 +710,10 @@ export default function Workspace() {
   return (
     <>
       {overlays}
-      <main className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-8">
+      {/* 65px is the sticky header: 4rem plus its border. */}
+      <main className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-8 xl:max-w-[90rem] desk:flex desk:h-[calc(100dvh-65px)] desk:flex-col desk:py-4">
         <h1 className="sr-only">Ruang kerja Niskala</h1>
-        <div className="card mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+        <div className="card mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 desk:mb-4">
           <Badge tone={cameraOn ? 'accent' : 'neutral'} live={cameraOn} icon={cameraOn ? undefined : modeBadge.icon}>
             {modeBadge.text}
           </Badge>
@@ -754,10 +755,10 @@ export default function Workspace() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-8">
-          <section aria-label="Postur langsung" className="min-w-0 space-y-4">
-            <div className="stage card relative overflow-hidden">
-              <div className="mx-auto aspect-[1150/1180] max-h-[52vh] w-full lg:max-h-[60vh]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-x-8 lg:[grid-template-areas:'live_side'_'day_side'] xl:grid-cols-[minmax(0,1fr)_22rem_22rem] xl:gap-x-5 xl:[grid-template-areas:'live_day_side'] desk:min-h-0 desk:flex-1 desk:grid-rows-[minmax(0,1fr)]">
+          <section aria-label="Postur langsung" className="min-w-0 space-y-4 lg:[grid-area:live] desk:flex desk:flex-col desk:overflow-y-auto">
+            <div className="stage card relative overflow-hidden desk:min-h-48 desk:flex-1">
+              <div className="mx-auto aspect-[1150/1180] max-h-[52vh] w-full lg:max-h-[60vh] desk:aspect-auto desk:h-full desk:max-h-none">
                 <PostureFigure posture={posture} who={prefs.figure} />
               </div>
               {posture && (
@@ -765,8 +766,8 @@ export default function Workspace() {
                   <StatePill posture={posture} threshold={S.drift} />
                 </div>
               )}
-              <figure className="card absolute top-3 right-3 w-[30%] max-w-48 min-w-24 p-1.5">
-                <div className="relative aspect-[560/760] rounded-xl bg-surface">
+              <figure className="card absolute top-3 right-3 w-[30%] max-w-48 min-w-24 p-1.5 desk:flex desk:max-h-[calc(100%-1.5rem)] desk:flex-col">
+                <div className="relative aspect-[560/760] rounded-xl bg-surface desk:min-h-0 desk:flex-1">
                   <FrontFigure posture={sideOnly ? null : posture} who={prefs.figure} />
                   {sideOnly && (
                     <p className="absolute inset-0 grid place-items-center rounded-xl bg-raised/85 p-2 text-center text-[11px] leading-snug font-semibold text-muted">
@@ -800,8 +801,9 @@ export default function Workspace() {
             ) : (
               <>
                 {snap.cue && <CueBanner cue={snap.cue} onStart={() => setRoutine(snap.cue)} onSnooze={() => snooze(snap.cue!)} />}
+                {/* Room for two lines on desk, so the figure above keeps its size as the message changes. */}
                 <p
-                  className={`flex gap-2.5 rounded-xl px-4 py-3 text-sm text-pretty transition-colors ${snap.glow > 0 ? 'bg-alert/15 text-alert-ink' : 'bg-surface'}`}
+                  className={`flex gap-2.5 rounded-xl px-4 py-3 text-sm text-pretty transition-colors desk:min-h-16 desk:items-center ${snap.glow > 0 ? 'bg-alert/15 text-alert-ink' : 'bg-surface'}`}
                 >
                   <IconInfo className={`mt-0.5 size-4 shrink-0 ${snap.glow > 0 ? '' : 'text-muted'}`} />
                   {status}
@@ -844,12 +846,15 @@ export default function Workspace() {
                 </div>
               </>
             )}
+          </section>
+
+          <section aria-label="Hari ini" className="min-w-0 space-y-4 lg:[grid-area:day] desk:overflow-y-auto">
             {today && <Missions list={todayMissions} score={dayScore(today)} run={run} busy={routine !== null} onStart={setRoutine} />}
             {today && <CheckinCard key={`checkin-${today.key}`} day={today.key} saved={checkedIn} evening={snap.night.stage !== 'day'} />}
             {today && <Who5Card key={`who5-${today.key}`} today={today.key} list={who5} />}
           </section>
 
-          <aside className="card self-start overflow-hidden lg:sticky lg:top-20">
+          <aside className="card self-start overflow-hidden lg:sticky lg:top-20 lg:[grid-area:side] desk:flex desk:max-h-full desk:flex-col">
             <Tabs<Tab>
               label="Pengaturan ruang kerja"
               value={tab}
@@ -861,7 +866,7 @@ export default function Workspace() {
                 { value: 'settings', label: 'Setelan', icon: IconGauge },
               ]}
             />
-            <div role="tabpanel" className="space-y-6 p-5">
+            <div role="tabpanel" className="space-y-6 p-5 desk:min-h-0 desk:overflow-y-auto">
               {tab === 'track' && (
                 <>
                   <Segmented<Mode>
