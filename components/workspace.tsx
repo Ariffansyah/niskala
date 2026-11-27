@@ -29,9 +29,11 @@ import {
   IconLean,
   IconMoon,
   IconPip,
+  IconPlay,
   IconPosture,
   IconRefresh,
   IconSliders,
+  IconStop,
   IconStretch,
   IconTimer,
   IconTrash,
@@ -553,6 +555,10 @@ export default function Workspace() {
     setRoutine(null);
   }
 
+  function toggleFocus() {
+    mon.setFocus(snap.focusLeftS === null ? prefs.focusMin * 60 : null);
+  }
+
   function snooze(kind: BreakKind) {
     mon.snooze(kind);
     toast('Oke, diingetin lagi 5 menit lagi.', 'info');
@@ -585,6 +591,10 @@ export default function Workspace() {
     toast(`Selamat datang lagi. ${minutes(t)} tadi dihitung ${t >= 300 ? 'stretching' : 'istirahat mata'}.`);
   }, [snap.returnedAfter]);
 
+  useEffect(() => {
+    if (snap.focusDone) toast('Blok fokus selesai. Stretching 60 detik dulu, terus lanjut.');
+  }, [snap.focusDone]);
+
   const onKey = useEffectEvent((e: KeyboardEvent) => {
     const typing = e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"]');
     if (e.metaKey || e.ctrlKey || e.altKey || typing) return;
@@ -595,6 +605,7 @@ export default function Workspace() {
     else if (e.key === 'l') setRoutine('train');
     else if (e.key === 'n') setRoutine('breath');
     else if (e.key === 'm') toggleMini();
+    else if (e.key === 'f') toggleFocus();
   });
   useEffect(() => {
     const h = (e: KeyboardEvent) => onKey(e);
@@ -608,6 +619,7 @@ export default function Workspace() {
   const posture = tracked ? snap.posture : null;
   const session = snap.session;
   const next = nextBreak(snap);
+  const focusLeft = snap.focusLeftS === null ? null : `${Math.max(1, Math.ceil(snap.focusLeftS / 60))} mnt`;
   // The current session is saved every 15 s, so today's score follows it closely. The clock is read only
   // after hydration: the prerendered page has no "today".
   const days = hydrated ? byDay(sessions, 60, new Date()) : [];
@@ -627,7 +639,9 @@ export default function Workspace() {
         ? `${snap.postureStrain >= snap.eyeStrain && snap.posture ? postureWord(snap.posture, S.drift) : 'Kedip jarang'} · Niskala`
         : snap.away
           ? 'Lagi pergi · Niskala'
-          : 'Ruang Kerja · Niskala';
+          : focusLeft
+            ? `Fokus ${focusLeft} · Niskala`
+            : 'Ruang Kerja · Niskala';
   // A side camera sees the profile: forward lean only, no sideways lean or blinks.
   const sideOnly = mode === 'camera' && view === 'side';
   const deg = posture && {
@@ -704,7 +718,18 @@ export default function Workspace() {
             <span className="font-semibold tabular-nums">{next.value}</span>
             <span className="text-muted"> · {next.detail}</span>
           </p>
-          <div className="grid w-full grid-cols-3 gap-2 sm:ml-auto sm:flex sm:w-auto">
+          {(focusLeft || (today?.focus ?? 0) > 0) && (
+            <p className="text-sm">
+              <span className="text-muted">Fokus </span>
+              <span className="font-semibold tabular-nums">{focusLeft ? `${focusLeft} lagi` : `${today!.focus} blok`}</span>
+              {!focusLeft && <span className="text-muted"> hari ini</span>}
+            </p>
+          )}
+          <div className="grid w-full grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto">
+            <button type="button" className="btn btn-sm px-2 sm:px-3" onClick={toggleFocus} aria-pressed={focusLeft !== null}>
+              {focusLeft ? <IconStop className="size-4 max-sm:hidden" /> : <IconPlay className="size-4 max-sm:hidden" />}
+              {focusLeft ? 'Stop fokus' : 'Fokus'}
+            </button>
             <button type="button" className="btn btn-sm px-2 sm:px-3" disabled={routine !== null} onClick={() => setRoutine('reset')}>
               <IconStretch className="size-4 max-sm:hidden" />
               Stretching
@@ -893,6 +918,9 @@ export default function Workspace() {
                         <button type="button" className="btn btn-sm" onClick={() => mon.triggerCue('reset')}>
                           Stretching
                         </button>
+                        <button type="button" className="btn btn-sm" disabled={focusLeft === null} onClick={() => mon.setFocus(0)}>
+                          Fokus selesai
+                        </button>
                       </div>
                     </div>
                   )}
@@ -901,6 +929,17 @@ export default function Workspace() {
 
               {tab === 'breaks' && (
                 <>
+                  <Field label="Blok fokus">
+                    <Segmented<Prefs['focusMin']>
+                      label="Blok fokus"
+                      value={prefs.focusMin}
+                      onChange={(focusMin) => update({ focusMin })}
+                      options={[
+                        { value: 25, label: '25 mnt' },
+                        { value: 50, label: '50 mnt' },
+                      ]}
+                    />
+                  </Field>
                   <Field label="Istirahat mata 20 detik">
                     <Segmented
                       label="Istirahat mata"
@@ -977,6 +1016,9 @@ export default function Workspace() {
                       </li>
                       <li>
                         <kbd className="kbd">N</kbd> jeda napas
+                      </li>
+                      <li>
+                        <kbd className="kbd">F</kbd> blok fokus
                       </li>
                       <li>
                         <kbd className="kbd">M</kbd> jendela kecil
@@ -1172,6 +1214,7 @@ export default function Workspace() {
                     <IconTimer className="size-4 shrink-0 text-accent" />
                     <span className="text-muted">
                       {next.value === 'Mati' ? 'Jadwal jeda mati' : `Jeda berikutnya ${next.value}`}
+                      {focusLeft && ` · fokus ${focusLeft}`}
                       {today && ` · misi ${missionsDone}/${todayMissions.length}`}
                     </span>
                     <button type="button" className="btn btn-ghost btn-sm ml-auto" onClick={() => setRoutine('reset')}>
