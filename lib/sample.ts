@@ -50,6 +50,7 @@ export function sampleData(now: Date) {
         started_at: start,
         updated_at: start,
         active_s: active,
+        focus: 0,
         ...breaks,
         slouch_s: Math.round(active * d.lean),
         low_blink_s: Math.round(active * 0.1),

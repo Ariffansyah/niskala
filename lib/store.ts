@@ -22,6 +22,7 @@ export type Prefs = {
   sound: boolean;
   voice: boolean; // spoken reminders and step guidance
   notify: boolean; // system notifications while Niskala is not in focus
+  focusMin: 25 | 50; // length of one focus block
   figure: FigureId; // who stands in for you on screen
   sync: boolean;
   onboarded: boolean;
@@ -39,6 +40,7 @@ export const DEFAULT_PREFS: Prefs = {
   sound: false,
   voice: false,
   notify: false,
+  focusMin: 25,
   figure: 'raka',
   sync: false,
   onboarded: false,
@@ -54,6 +56,7 @@ export type SessionSummary = {
   eye_breaks: number;
   trainings: number; // posture trainings finished
   breaths: number; // breathing pauses finished
+  focus: number; // focus blocks finished
   slouch_s: number;
   low_blink_s: number;
   late_s: number;
@@ -138,8 +141,8 @@ export const themeStore = stored<Theme>(KEY.theme, 'auto');
 export const coachStore = stored<{ day: string; coach: Coach } | null>(KEY.coach, null);
 const NO_SESSIONS: SessionSummary[] = [];
 export const sessionsStore = stored<SessionSummary[]>(KEY.sessions, NO_SESSIONS, (v) =>
-  // Rows saved before eye breaks, trainings or breathing pauses were counted lack the field.
-  (v ?? NO_SESSIONS).map((s) => ({ ...s, eye_breaks: s.eye_breaks ?? 0, trainings: s.trainings ?? 0, breaths: s.breaths ?? 0 })),
+  // Rows saved before eye breaks, trainings, breathing pauses or focus blocks were counted lack the field.
+  (v ?? NO_SESSIONS).map((s) => ({ ...s, eye_breaks: s.eye_breaks ?? 0, trainings: s.trainings ?? 0, breaths: s.breaths ?? 0, focus: s.focus ?? 0 })),
 );
 
 export function saveSession(s: SessionSummary) {
