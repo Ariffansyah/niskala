@@ -257,25 +257,34 @@ function CheckinCard({ day, saved, evening }: { day: string; saved: Checkin | un
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Checkin>(saved ?? { day, neck: 0, back: 0, eyes: 0, stress: 0 });
 
-  if (saved && !editing) {
+  // One line until opened, like the weekly card, so the column stays short; in the evening it only lights up.
+  if (!editing) {
     return (
-      <section aria-labelledby="checkin-title" className="card flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+      <section aria-labelledby="checkin-title" className={`card flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 ${evening && !saved ? 'ring-2 ring-cue/40' : ''}`}>
         <h2 id="checkin-title" className="text-base">
           Cek pegal dan stres hari ini
         </h2>
         <p className="text-sm text-muted tabular-nums">
-          leher {saved.neck} · punggung {saved.back} · mata {saved.eyes}
-          {saved.stress !== undefined && ` · stres ${saved.stress}`}
+          {saved ? (
+            <>
+              leher {saved.neck} · punggung {saved.back} · mata {saved.eyes}
+              {saved.stress !== undefined && ` · stres ${saved.stress}`}
+            </>
+          ) : evening ? (
+            'pas banget diisi sekarang'
+          ) : (
+            'paling pas diisi pas udahan kerja'
+          )}
         </p>
         <button
           type="button"
-          className="btn btn-ghost btn-sm ml-auto"
+          className={`btn btn-sm ml-auto ${saved ? 'btn-ghost' : ''}`}
           onClick={() => {
-            setDraft({ stress: 0, ...saved });
+            if (saved) setDraft({ stress: 0, ...saved });
             setEditing(true);
           }}
         >
-          Ubah
+          {saved ? 'Ubah' : 'Isi'}
         </button>
       </section>
     );
@@ -311,11 +320,9 @@ function CheckinCard({ day, saved, evening }: { day: string; saved: Checkin | un
         })}
       </div>
       <div className="mt-4 flex justify-end gap-2">
-        {saved && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
-            Batal
-          </button>
-        )}
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
+          {saved ? 'Batal' : 'Nanti aja'}
+        </button>
         <button
           type="button"
           className="btn btn-sm"
