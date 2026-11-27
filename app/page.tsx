@@ -35,13 +35,13 @@ const WHY = [
     icon: IconWorkspace,
     hue: 'hue-nila',
     title: 'Nemenin pas kerja',
-    body: 'Nggak nunggu kamu udah drop baru dibuka. Niskala jalan di samping kerjaanmu dan ngajak jeda sebelum capeknya numpuk.',
+    body: 'Nggak nunggu kamu udah drop baru dibuka. Kerja dalam blok fokus 25 atau 50 menit, dan Niskala ngajak jeda sebelum capeknya numpuk.',
   },
   {
     icon: IconHistory,
     hue: 'hue-daun',
     title: 'Buktinya dari datamu sendiri',
-    body: 'Riwayat ngebandingin stres yang kamu isi di hari yang cukup jeda sama yang nggak. Polanya punyamu, bukan rata-rata orang lain.',
+    body: 'Riwayat ngebandingin stres dan blok fokusmu di hari yang cukup jeda sama yang nggak. Polanya punyamu, bukan rata-rata orang lain.',
   },
   {
     icon: IconSun,
@@ -66,7 +66,7 @@ const STAYS = [
   'Bahkan modelnya diambil dari situs ini, bukan CDN',
 ];
 const CAN_LEAVE = [
-  'Ringkasan sesi yang dibulatkan: menit aktif, menit bungkuk, jeda, rata-rata kedip',
+  'Ringkasan sesi yang dibulatkan: menit aktif, menit bungkuk, jeda, blok fokus, rata-rata kedip',
   'Setelan: jam tidur, layar hangat, jadwal jeda, kepekaan',
   'Rata-rata stres dan pegal seminggu yang dibulatkan, cuma pas kamu minta saran coach',
   'Cuma setelah kamu nyalain “Cadangkan ringkasan”, pakai ID anonim',

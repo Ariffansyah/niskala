@@ -57,8 +57,8 @@ export default function PrivacyPage() {
           <Block icon={IconHistory} title="Yang kesimpan di browsermu">
             <p>
               Di local storage browser ini: <strong>setelan</strong>, <strong>kalibrasi</strong> (beberapa angka soal posisi tegakmu,
-              buat kamera depan dan samping), <strong>ringkasan sesi</strong> (menit aktif, menit bungkuk, jeda yang diambil, rata-rata
-              kedip), dan yang kamu isi sendiri: <strong>cek pegal dan stres</strong> tiap hari dan <strong>kabar mingguan</strong>{' '}
+              buat kamera depan dan samping), <strong>ringkasan sesi</strong> (menit aktif, menit bungkuk, jeda yang diambil, blok fokus,
+              rata-rata kedip), dan yang kamu isi sendiri: <strong>cek pegal dan stres</strong> tiap hari dan <strong>kabar mingguan</strong>{' '}
               (kuesioner WHO-5). Semua itu jadi bahan halaman Riwayat. Cek harian dan kabar mingguan itu data kesehatan, yang di UU PDP
               (UU No. 27 Tahun 2022) masuk data pribadi spesifik, jadi nggak pernah ikut dicadangkan. Kalau kamu minta saran coach, yang
               dikirim cuma rata-rata pegal dan stres seminggu yang dibulatkan. Jawaban kabar mingguan nggak pernah dikirim ke mana-mana.
