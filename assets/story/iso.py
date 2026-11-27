@@ -1,6 +1,7 @@
 # Run headless, without saving:  blender -b story.blend --python iso.py -- [preview]
 # Renders the landing hero: the story room as an isometric diorama (sekala, the seen world) standing on
 # a cut-away of dyed strata (niskala, the unseen), where the kawung lights up what the room keeps hidden.
+# render.py execs this file for its helpers and camera, so the story's room is seen the same way.
 import math
 import os
 import sys
@@ -194,6 +195,19 @@ def actor():
     bpy.context.scene.frame_set(0)
 
 
+def camera(name, look, scale):
+    """True isometric: 45 degrees round, 35.26 degrees down, looking into the room's open corner."""
+    cam = O.get(name) or bpy.data.objects.new(name, bpy.data.cameras.new(name))
+    if cam.name not in bpy.context.scene.collection.objects:
+        bpy.context.scene.collection.objects.link(cam)
+    cam.data.type = 'ORTHO'
+    cam.data.ortho_scale = scale
+    cam.location = look + Vector((1, -1, 1)).normalized() * 20
+    cam.rotation_euler = (look - cam.location).to_track_quat('-Z', 'Y').to_euler()
+    cam.data.clip_end = 60
+    return cam
+
+
 def main():
     sc = bpy.context.scene
     sc.render.film_transparent = True
@@ -215,16 +229,7 @@ def main():
     # The traces gather just above the logo, so it hangs from them.
     traces(layers, tuple(core + Vector((-1, 1, 2)).normalized() * 0.5))
 
-    # True isometric: 45 degrees round, 35.26 degrees down, looking into the room's open corner.
-    look = Vector(((X0 + X1) / 2, (Y0 + Y1) / 2, (bottom - 1.4 + 2.7) / 2))
-    cam = bpy.data.objects.new('Iso', bpy.data.cameras.new('Iso'))
-    sc.collection.objects.link(cam)
-    cam.data.type = 'ORTHO'
-    cam.data.ortho_scale = 9.2
-    cam.location = look + Vector((1, -1, 1)).normalized() * 20
-    cam.rotation_euler = (look - cam.location).to_track_quat('-Z', 'Y').to_euler()
-    cam.data.clip_end = 60
-    sc.camera = cam
+    sc.camera = camera('Iso', Vector(((X0 + X1) / 2, (Y0 + Y1) / 2, (bottom - 1.4 + 2.7) / 2)), 9.2)
     size = 800 if PREVIEW else 1800
     sc.render.resolution_x = sc.render.resolution_y = size
     os.makedirs(OUT, exist_ok=True)
@@ -232,4 +237,5 @@ def main():
     bpy.ops.render.render(write_still=True)
 
 
-main()
+if __name__ == '__main__':
+    main()
